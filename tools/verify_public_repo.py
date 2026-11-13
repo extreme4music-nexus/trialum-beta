@@ -23,6 +23,9 @@ for p in root.rglob("*"):
     if not p.is_file():
         continue
     relative = p.relative_to(root)
+    # Ignore transient checkout metadata: it is not part of the published source tree.
+    if relative.parts[0] == ".git":
+        continue
     if any(x in blocked_parts or x.startswith(".env") for x in relative.parts):
         issues.append(f"Blocked path: {relative}")
         continue
