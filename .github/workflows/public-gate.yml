@@ -1,0 +1,21 @@
+name: Public beta repository checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Repository policy checks
+        run: python3 tools/verify_public_repo.py

@@ -1,0 +1,51 @@
+TRIALUM SOURCE-AVAILABLE PROPRIETARY NOTICE — ALL RIGHTS RESERVED
+Version 1.0 — 13 November 2026
+
+Copyright (c) 2026 Toni Cvetkovski.
+All rights reserved in original Trialum material owned by the copyright holder.
+
+1. SCOPE
+This notice covers only the original Trialum source code, art, characters,
+game content, documentation and other protected work owned or lawfully
+controlled by the copyright holder and distributed under this notice
+(the "Work"). It does not replace licenses of third-party materials.
+
+2. PUBLIC INSPECTION
+The Work is available for inspection and learning. GitHub Terms of Service
+govern the permissions required for platform display and forking. Availability
+of source code does not make this an open-source license or grant unlimited
+rights to copy, execute, adapt, repackage, redistribute or commercialize it.
+
+3. RIGHTS RESERVED
+Unless expressly authorized in writing by the copyright holder, or permitted
+under applicable mandatory law or GitHub's applicable Terms of Service,
+no permission is granted to:
+  - publish, sell or distribute the Trialum game or copies of it;
+  - modify, adapt or distribute derivatives of the protected Work;
+  - incorporate protected portions of the Work into other programs;
+  - commercially exploit the Work;
+  - represent an unofficial build as an official Trialum release.
+
+4. BRAND
+No trademark or branding license is granted. See TRADEMARKS.md.
+This notice does not claim an unverified registered trademark.
+
+5. PREEXISTING AND THIRD-PARTY LICENSES
+Materials owned by others retain their own licenses. Any rights validly
+granted for material under a previous license (including MIT) cannot be
+retroactively revoked by adding this notice. A source snapshot must be
+reviewed for preexisting grants and contributors' rights before publication.
+
+6. CONTRIBUTIONS
+Suggestions do not confer Trialum ownership. No code is accepted into the
+official project without owner's express approval and a separate, adequate
+written rights agreement. Compensation or profit share must be separately
+agreed; it does not arise automatically.
+
+7. WARRANTY
+The Work is supplied "AS IS", without warranties to the fullest extent
+permitted by applicable law.
+
+This is a proprietary, source-available notice. It is NOT an OSI-approved
+open-source license. For additional permissions, contact the owner through
+a non-sensitive GitHub issue requesting licensing contact.
