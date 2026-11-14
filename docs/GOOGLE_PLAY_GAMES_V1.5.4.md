@@ -4,7 +4,7 @@
 
 # ТРИАЛУМ 1.5.4 — Google Play Games Services v2
 
-**8 ноември 2026 · развојна beta · НЕ Е објавена во Google Play.**  
+**14 ноември 2026 · LW-C beta snapshot · НЕ Е објавена во Google Play.**  
 **Развојна гранка:** \`feature/trialum-v1.5.4-play-games\`.  
 **Стабилната \`main\` останува ТРИАЛУМ 1.4.1.**  
 Ова е самостојна фаза, изведена врз успешно тестираната 1.5.3 со Android SDK 36. **Нема нов LLM, нова еволуција, платени токени, реклами или промена на P2P протоколот.**
@@ -62,51 +62,38 @@
 
 Официјална документација: [PGS authentication](https://developer.android.com/games/pgs/android/android-signin) · [Enable Saved Games](https://developer.android.com/games/pgs/console/enable-features) · [Snapshots Android](https://developer.android.com/games/pgs/android/saved-games) · [PGS testers](https://support.google.com/googleplay/android-developer/answer/9845334).
 
-### B. GitHub Actions променливи (јавни ID-а, НЕ тајни)
+### B. Beta GitHub Actions променливи (јавни ID-а, НЕ тајни)
 
-Во \`extreme4music-nexus/Trialum → Settings → Secrets and variables → Actions → Variables\`:
+Во `extreme4music-nexus/trialum-beta → Settings → Secrets and variables → Actions → Variables` внеси ги јавните вредности од Play Console:
 
 | Repository variable | Вредност од Play Console |
 |---|---|
-| \`TRIALUM_PGS_PROJECT_ID\` | **Game services project ID**, само бројки |
-| \`TRIALUM_PGS_ACH_FIRST_PET\` | ID на \`first-pet\` |
-| \`TRIALUM_PGS_ACH_FIRST_PLANT\` | ID на \`first-plant\` |
-| \`TRIALUM_PGS_ACH_LEARNED\` | ID на \`learned\` |
-| \`TRIALUM_PGS_ACH_ADVANCED\` | ID на \`advanced\` |
-| \`TRIALUM_PGS_ACH_ECOLOGY\` | ID на \`ecology\` |
-| \`TRIALUM_PGS_ACH_LAB6\` | ID на \`lab6\` |
-| \`TRIALUM_PGS_ACH_DNA\` | ID на \`dna\` |
-| \`TRIALUM_PGS_BOARD_XP\` | Leaderboard „Вкупен XP“ |
-| \`TRIALUM_PGS_BOARD_SPECIES\` | Leaderboard „Откриени видови“ |
+| `TRIALUM_PGS_PROJECT_ID` | **Game services project ID**, само бројки |
+| `TRIALUM_PGS_ACH_FIRST_PET` | ID на `first-pet` |
+| `TRIALUM_PGS_ACH_FIRST_PLANT` | ID на `first-plant` |
+| `TRIALUM_PGS_ACH_LEARNED` | ID на `learned` |
+| `TRIALUM_PGS_ACH_ADVANCED` | ID на `advanced` |
+| `TRIALUM_PGS_ACH_ECOLOGY` | ID на `ecology` |
+| `TRIALUM_PGS_ACH_LAB6` | ID на `lab6` |
+| `TRIALUM_PGS_ACH_DNA` | ID на `dna` |
+| `TRIALUM_PGS_BOARD_XP` | Leaderboard „Вкупен XP“ |
+| `TRIALUM_PGS_BOARD_SPECIES` | Leaderboard „Откриени видови“ |
 
-За користење без Google можеш да ги оставиш празни: кодот тогаш го прикажува „Потребна е Play Console конфигурација“, без да ја наруши играта. Не внесувај лажни ID-а.
+Овие се јавни service identifiers, не лозинки. Beta workflow ги предава на Gradle. Ако се празни, PGS останува исклучен и играта продолжува offline; не внесувај примерни или измислени ID-а.
 
-### C. Стабилно потпишување (приватна GitHub Secret)
+### C. Локално потпишување и точен OAuth SHA-1
 
-Во \`Actions → Secrets\` постави:
+Beta Actions намерно создава **unsigned** APK/AAB кандидати и нема пристап до signing keys. Потпиши го APK локално со оригиналниот owner keystore, без да испраќаш клуч, лозинка или certificate private key во GitHub.
 
-\`TRIALUM_PGS_DEBUG_KEYSTORE_B64\` — Base64 од тестен \`debug.keystore\` со стандарден alias \`androiddebugkey\` и лозинка \`android\`. **Ова е приватна содржина: не ја праќај во разговор, issue, Markdown, PR или јавен ZIP.**
+Google Play Games Android OAuth client мора да го содржи точниот package ID и SHA-1 од сертификатот што го потпишал тестниот APK. QA package-ите `com.trialum.ziivaiskra.signqa` и `com.trialum.ziivaiskra.signdebug` се посебни Android идентитети и бараат соодветни OAuth client записи. За Play инсталација, додај го и SHA-1 на Play App Signing сертификатот за официјалниот package.
 
-Во GitHub Actions подготвената задача ја враќа датотеката во \`~/.android/debug.keystore\` само за тој CI build, за Google OAuth да го препознава истиот SHA-1. Ако нема Secret, се користи обичен краткотраен GitHub runner debug key и Play Games authentication **не е сигурна** меѓу build-ови.
+SHA-1 отпечатокот може локално да се провери со `keytool -list -v` врз постојниот keystore. Не креирај замена за owner key и не инсталирај APK со друг signer врз постојната апликација.
 
-За проверка на SHA-1 локално:
-\`\`\`bash
-keytool -list -v -keystore /path/to/debug.keystore -alias androiddebugkey -storepass android
-\`\`\`
+### D. Изградба и локален тест
 
-Публикацискиот **Play App Signing сертификат може да има друг SHA-1**, и тој ќе мора одделно да биде додаден во Google OAuth за официјалниот Play release.
+GitHub Actions workflow-от `Trialum LW-C beta build` се стартува од Beta гранката. По regression тестовите компајлира три APK варијанти и AAB, проверува package/version и ги објавува како unsigned artifact. Откако ќе ги внесеш вистинските Beta repository Variables, пушти нов workflow за да се вградат Play Games ID-ата. Потоа преземи го artifact-от локално, потпиши го со соодветниот оригинален owner keystore и тестирај го на уред.
 
-### D. Изградба и независна проверка
-
-GitHub workflow: \`Build Trialum Android APK\` → \`feature/trialum-v1.5.4-play-games\` → \`Run workflow\`. Првично без Play Console ID-ата се добива компајлиран **debug APK со безбеден исклучен PGS режим**; откако ќе ги поставиш \`Variables\` и \`Secret\`, пушти нов build за **вистинска тестна најава**.
-
-Локално, со јавни ID-а:
-\`\`\`bash
-gradle -p android-template :app:assembleDebug \
-  -PtrialumPgsProjectId=1234567890 \
-  -PtrialumPgsAchievement_first_pet=YOUR_REAL_ID \
-  -PtrialumPgsLeaderboard_xp=YOUR_REAL_ID
-\`\`\`
+Не користи signing Secret во `trialum-beta`; официјалното потпишување за оваа Beta фаза е локално.
 Овие вредности се **пример**, не активна конфигурација.
 
 ## Задолжителен физички QA пред следна верзија

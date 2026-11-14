@@ -61,8 +61,30 @@ jobs:
           for file in js/*.js; do node --check "$file"; done
 
       - name: Build unsigned APK and Play bundle candidates
+        env:
+          PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+          PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
+          PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
+          PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
+          PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
+          PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
+          PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
+          PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
+          PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
+          PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
         run: |
-          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:bundleRelease --no-daemon --stacktrace
+          args=()
+          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
+          [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
+          [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
+          [ -n "$PGS_ACH_LEARNED" ] && args+=("-PtrialumPgsAchievement_learned=$PGS_ACH_LEARNED")
+          [ -n "$PGS_ACH_ADVANCED" ] && args+=("-PtrialumPgsAchievement_advanced=$PGS_ACH_ADVANCED")
+          [ -n "$PGS_ACH_ECOLOGY" ] && args+=("-PtrialumPgsAchievement_ecology=$PGS_ACH_ECOLOGY")
+          [ -n "$PGS_ACH_LAB6" ] && args+=("-PtrialumPgsAchievement_lab6=$PGS_ACH_LAB6")
+          [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
+          [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
+          [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
+          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:bundleRelease --no-daemon --stacktrace "${args[@]}"
 
       - name: Verify candidate package identities and version
         run: |
