@@ -16,11 +16,11 @@ Official signing is local only. The intended key mapping is the existing Release
 
 ## Play Games Services
 
-Play Games project ID `330148794383` is linked to the app. Saved Games is **On**, the console shows its changes saved, and the required Google Play Games and Google Drive APIs are enabled. `toniadrenalin@gmail.com` is on the PGS tester list. Cloud Save remains a player opt-in.
+Play Games project ID `330148794383` is linked to the app. Saved Games is **On** and saved. The required Google Play Games and Google Drive APIs are enabled. `toniadrenalin@gmail.com` is on the PGS tester list. Cloud Save remains a player opt-in.
 
-The Play Games project is still **Draft**. Its publishing page is blocked by specific missing assets: one 512×512 game icon, one 1024×500 feature graphic, and icons for each of the seven existing achievements. Leaderboards and credentials are listed as ready, but the two Android credentials remain Draft. These items must be completed and the test APK's package/signing certificate matched to the correct Android credential before PGS APIs are declared verified. The user-visible profile sign-in alone does not prove that achievements, leaderboards, or snapshots work.
+The Play Games project remains **Draft**. Its game icon, feature graphic, and all seven achievement icons are saved. The publishing page now shows Credentials, Achievements, and Leaderboards as **Ready to publish**. The project Publish action is intentionally not used: it activates the configured PGS changes for users. The profile sign-in alone does not prove that achievement, leaderboard, or Saved Games API calls succeed. Validate those on-device using each package with its matching signing certificate before claiming PGS functionality.
 
-Publishing the PGS project makes its configured PGS services available to users; it does **not** publish the Play Store app. Keep the PGS project Draft until its assets and credential mapping are finished and the owner approves activation. Do not use the Play Console PGS Publish action yet.
+Publishing the PGS project does **not** publish the Play Store app. Keep the project Draft until the owner explicitly approves activation.
 
 ## Play Store Internal Testing
 
