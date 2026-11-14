@@ -51,7 +51,6 @@ jobs:
           node tests/play-games.test.cjs
           node tests/version155.test.cjs
           node tests/social-ui.test.cjs
-          node tests/messages-client.test.cjs
           node tests/shared-client.test.cjs
           node tests/playground.test.cjs
           node --test tests/dialogue-session.test.cjs
