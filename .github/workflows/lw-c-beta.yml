@@ -1,0 +1,118 @@
+name: Trialum LW-C beta build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [release/lw-c-1.6-LW-dev.12]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Install headless test dependencies
+        run: npm install --no-save --ignore-scripts --no-audit jsdom@26.1.0 gifuct-js@2.1.2
+
+      # The upstream full CI already ran all historical acceptance gates for the exact source SHA.
+      # This clean export omits legacy acceptance records and owner-signing workflow by design.
+      - name: Run app and LW-C regression tests
+        run: |
+          node tests/engine.test.cjs
+          node tests/evolution.test.cjs
+          node tests/progression.test.cjs
+          node tests/longplay.test.cjs
+          TRIALUM_LOCALE_AUDIT=1 node tests/ui.test.cjs
+          node tests/creature-media.test.cjs
+          node tests/play-games.test.cjs
+          node tests/version155.test.cjs
+          node tests/social-ui.test.cjs
+          node tests/shared-client.test.cjs
+          node tests/playground.test.cjs
+          node --test tests/dialogue-session.test.cjs
+          node --test tests/playground-ai.test.cjs
+          node --test tests/dialogue-mix.test.cjs
+          node --test tests/playground-memory.test.cjs
+          node --test tests/presence.test.cjs
+          for file in js/*.js; do node --check "$file"; done
+
+      - name: Build unsigned APK and Play bundle candidates
+        env:
+          PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+          PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
+          PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
+          PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
+          PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
+          PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
+          PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
+          PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
+          PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
+          PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
+        run: |
+          args=()
+          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
+          [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
+          [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
+          [ -n "$PGS_ACH_LEARNED" ] && args+=("-PtrialumPgsAchievement_learned=$PGS_ACH_LEARNED")
+          [ -n "$PGS_ACH_ADVANCED" ] && args+=("-PtrialumPgsAchievement_advanced=$PGS_ACH_ADVANCED")
+          [ -n "$PGS_ACH_ECOLOGY" ] && args+=("-PtrialumPgsAchievement_ecology=$PGS_ACH_ECOLOGY")
+          [ -n "$PGS_ACH_LAB6" ] && args+=("-PtrialumPgsAchievement_lab6=$PGS_ACH_LAB6")
+          [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
+          [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
+          [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
+          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:bundleRelease --no-daemon --stacktrace "${args[@]}"
+
+      - name: Verify candidate package identities and version
+        run: |
+          set -euo pipefail
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+          mkdir -p candidates
+          for variant in release signqa signdebug; do
+            apk=$(find "android-template/app/build/outputs/apk/$variant" -name '*.apk' -print -quit)
+            test -s "$apk"
+            badge=$("$AAPT" dump badging "$apk")
+            echo "$badge" | grep -Fq "versionCode='36'"
+            case "$variant" in
+              release) pkg='com.trialum.ziivaiskra'; ver='1.0' ;;
+              signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa' ;;
+              signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.0-signdebug' ;;
+            esac
+            echo "$badge" | grep -Fq "package: name='$pkg'"
+            echo "$badge" | grep -Fq "versionName='$ver'"
+            cp "$apk" "candidates/trialum-$variant-UNSIGNED.apk"
+          done
+          aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)
+          test -s "$aab"
+          unzip -t "$aab" >/dev/null
+          cp "$aab" candidates/trialum-release-UNSIGNED.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trialum-lw-c-unsigned-local-signing-candidates
+          path: candidates/*
+          if-no-files-found: error
+          retention-days: 7

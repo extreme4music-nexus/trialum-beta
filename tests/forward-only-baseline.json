@@ -1,0 +1,349 @@
+{
+  "title": "Trialum forward-only accepted feature contract",
+  "asOf": "2026-11-11",
+  "scope": "Owner-confirmed functional acceptance or explicitly stated CI verification; not Google Play/public launch proof.",
+  "statusSemantics": {
+    "OWNER_PASS": "Owner reported testing this functional scope on device/server; independent assurance is separate.",
+    "OWNER_ACCEPTED_AS_IS": "Owner closed this private feature scope while independent publication gates remain open.",
+    "CI_PASS_NOT_OWNER_ACCEPTED": "Source and automated tests exist; never substitute for owner acceptance.",
+    "PARTIAL_ACCEPTED_AS_IS": "Only explicitly listed behavior is closed; deferred functionality is not falsely complete.",
+    "DEFERRED": "Recorded future scope, not an accepted implementation."
+  },
+  "accepted": [
+    {
+      "id": "155-01",
+      "feature": "SmolLM2 local tier",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_QA_STATUS_2026-11-10.md",
+      "files": [
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/ModelRuntime.kt",
+        "tests/version155.test.cjs"
+      ],
+      "mustContain": {
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/ModelRuntime.kt": [
+          "SmolLM2-135M",
+          "GGUF"
+        ]
+      }
+    },
+    {
+      "id": "155-02",
+      "feature": "Qwen2.5 0.5B & 1.5B local tiers",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_QA_STATUS_2026-11-10.md",
+      "files": [
+        "js/advanced-intelligence.js",
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/ModelRuntime.kt"
+      ],
+      "mustContain": {
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/ModelRuntime.kt": [
+          "qwen2.5-0.5b",
+          "qwen2.5-1.5b",
+          "verifiedFile("
+        ]
+      }
+    },
+    {
+      "id": "155-03",
+      "feature": "Learned-skill display (not full visible emotions)",
+      "status": "PARTIAL_ACCEPTED_AS_IS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/playground.js",
+        "tests/playground.test.cjs"
+      ],
+      "mustContain": {
+        "js/playground.js": [
+          "skill",
+          "sandbox",
+          "seesaw"
+        ]
+      }
+    },
+    {
+      "id": "155-04",
+      "feature": "Light/Dark/System design and theme persistence",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/V1.5.5_V1.5.6_CLOSEOUT_2026-11-10.md",
+      "files": [
+        "js/theme.js",
+        "assets/style.css",
+        "tests/theme-preview.html",
+        "tests/version155.test.cjs"
+      ],
+      "mustContain": {
+        "js/theme.js": [
+          "system",
+          "light",
+          "dark"
+        ],
+        "assets/style.css": [
+          "155-04: Trialum's original layered visual language"
+        ]
+      }
+    },
+    {
+      "id": "155-05",
+      "feature": "MK/EN baseline and synchronized source translation",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/V1.5.5_V1.5.6_CLOSEOUT_2026-11-10.md",
+      "files": [
+        "js/i18n.js",
+        "locales/en.json",
+        "tests/accepted-english-156-archive.json",
+        "tests/ui.test.cjs",
+        "tests/english-sync-guard.cjs",
+        ".github/workflows/english-text-sync.yml",
+        "tests/accepted-english-complete-baseline-20261111.json"
+      ],
+      "mustContain": {
+        "js/i18n.js": [
+          "fallbackStrings",
+          "translateDOM"
+        ],
+        ".github/workflows/english-text-sync.yml": [
+          "Require matching English text update"
+        ]
+      }
+    },
+    {
+      "id": "155-07",
+      "feature": "Local JSON Backup/Restore",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/storage.js",
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumBackupVault.kt",
+        "tests/lw-recovery-regression.test.cjs"
+      ],
+      "mustContain": {
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumBackupVault.kt": [
+          "rescue_keep_",
+          "verifyFile",
+          "MessageDigest.isEqual"
+        ]
+      }
+    },
+    {
+      "id": "156-A",
+      "feature": "Private backend with server-owner functional PASS",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_QA_STATUS_2026-11-10.md",
+      "files": [
+        "server/compose.yaml",
+        "server/src/social.mjs",
+        "server/tests/presence.integration.mjs",
+        ".github/workflows/social-server-foundation.yml"
+      ],
+      "mustContain": {
+        "server/compose.yaml": [
+          "127.0.0.1"
+        ]
+      }
+    },
+    {
+      "id": "156-B",
+      "feature": "Friends + consent invites + Android Nearby",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/social.js",
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumNearby.kt",
+        "tests/social-ui.test.cjs"
+      ],
+      "mustContain": {
+        "js/social.js": [
+          "invites/preview",
+          "invites/accept",
+          "socialApiUrl"
+        ]
+      }
+    },
+    {
+      "id": "156-C",
+      "feature": "Six skills and offline playground",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/playground.js",
+        "tests/playground.test.cjs"
+      ],
+      "mustContain": {
+        "js/playground.js": [
+          "sandbox",
+          "seesaw",
+          "slide",
+          "pool",
+          "obstacle",
+          "trampoline"
+        ]
+      }
+    },
+    {
+      "id": "156-D",
+      "feature": "Shared playground + consented visits",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/shared-playground.js",
+        "server/src/shared.mjs",
+        "tests/shared-client.test.cjs",
+        "server/tests/presence.integration.mjs"
+      ],
+      "mustContain": {
+        "js/shared-playground.js": [
+          "WebSocket",
+          "visit",
+          "presence/renew"
+        ]
+      }
+    },
+    {
+      "id": "156-E",
+      "feature": "Friend message cards + opt-in notification framework",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_SCOPE_DECISIONS_2026-11-10.md",
+      "files": [
+        "js/messages.js",
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumPush.kt",
+        "tests/messages-client.test.cjs",
+        "server/src/messaging.mjs",
+        "server/tests/messages.integration.mjs"
+      ],
+      "mustContain": {
+        "js/messages.js": [
+          "message",
+          "push"
+        ],
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumPush.kt": [
+          "SocialCredentialVault.read(c).isNotEmpty()"
+        ],
+        "server/src/messaging.mjs": [
+          "SELECT pg_advisory_xact_lock(hashtextextended($1 || $2,0))",
+          "if(!await permitted(c,to,actor))return null;",
+          "SELECT id,sender_id,receiver_id,kind,preset_id,text_ciphertext FROM message_cards",
+          "previous.kind!==data.kind",
+          "previous.preset_id!==preset",
+          "err(409,'event_conflict')"
+        ],
+        "server/tests/messages.integration.mjs": [
+          "same operation UUID must not hide changed message content",
+          "assert.equal(keyConflict.status,409"
+        ]
+      }
+    },
+    {
+      "id": "156-F",
+      "feature": "Private feature-scope release data/safety gates; no public certification",
+      "status": "OWNER_ACCEPTED_AS_IS",
+      "evidence": "docs/V1.5.5_V1.5.6_CLOSEOUT_2026-11-10.md",
+      "files": [
+        "tests/release-f.test.cjs",
+        "tests/release-f-gates.test.cjs",
+        "android-template/app/src/main/res/xml/trialum_backup_rules.xml",
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt"
+      ],
+      "mustContain": {
+        "android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt": [
+          "WebSettings.MIXED_CONTENT_NEVER_ALLOW",
+          "allowUniversalAccessFromFileURLs = false",
+          "uri.scheme == \"https\""
+        ],
+        "android-template/app/src/main/res/xml/trialum_backup_rules.xml": [
+          "trialum_social_v1.xml",
+          "trialum_push_v1.xml"
+        ]
+      }
+    },
+    {
+      "id": "LW-A-PRESENCE",
+      "feature": "Single-location pet / safe return and network recovery",
+      "status": "OWNER_PASS",
+      "evidence": "docs/OWNER_QA_STATUS_2026-11-10.md",
+      "files": [
+        "js/presence.js",
+        "server/src/presence.mjs",
+        "tests/presence.test.cjs"
+      ],
+      "mustContain": {
+        "js/presence.js": [
+          "returnHome",
+          "adoptServer",
+          "expireLocal"
+        ]
+      }
+    },
+    {
+      "id": "LW-A-SESSIONS",
+      "feature": "Finite session expiry and safe remote reconciliation",
+      "status": "CI_PASS_NOT_OWNER_ACCEPTED",
+      "evidence": "https://github.com/extreme4music-nexus/Trialum/pull/26",
+      "files": [
+        "js/presence.js",
+        "js/shared-playground.js",
+        "tests/shared-client.test.cjs"
+      ],
+      "mustContain": {
+        "js/presence.js": [
+          "LOCAL_SESSION_MS",
+          "expireLocal"
+        ],
+        "js/shared-playground.js": [
+          "maybeRenewPresence",
+          "reconcileAway"
+        ]
+      }
+    },
+    {
+      "id": "ANDROID-SIGNING",
+      "feature": "Stable owner-held Release and QA certificates, Friends endpoint and Git sync",
+      "status": "CI_PASS_NOT_OWNER_ACCEPTED",
+      "evidence": "https://github.com/extreme4music-nexus/Trialum/actions/runs/43029923204",
+      "files": [
+        ".github/workflows/android-signing.yml",
+        "tests/signing-package-separation.test.cjs"
+      ],
+      "mustContain": {
+        ".github/workflows/android-signing.yml": [
+          "sign_one release",
+          "sign_one signqa",
+          "sign_one signdebug",
+          "TRIALUM_SOCIAL_API_URL",
+          "Git-sync package"
+        ]
+      }
+    }
+  ],
+  "deferred": [
+    {
+      "id": "155-03-EMOTIONS",
+      "feature": "Rendered emotions and evolving personality/behavior",
+      "status": "DEFERRED",
+      "target": "LW program"
+    },
+    {
+      "id": "155-06",
+      "feature": "15 other language packs' complete translation",
+      "status": "DEFERRED",
+      "target": "After LW milestones; partial catalogs retained"
+    },
+    {
+      "id": "N17",
+      "feature": "Consent-aware redownload of optional LLM after reinstall/JSON Restore",
+      "status": "DEFERRED",
+      "target": "Future LW; not coded"
+    },
+    {
+      "id": "GOOGLE-PLAY",
+      "feature": "Verified Play Games cloud/OAuth, FCM device matrix and public distribution",
+      "status": "DEFERRED",
+      "target": "Owner-approved later QA and public release"
+    },
+    {
+      "id": "LW-B-F",
+      "feature": "Further Living World phases B–F",
+      "status": "DEFERRED",
+      "target": "Strict sequential after formal LW-A acceptance"
+    }
+  ]
+}
