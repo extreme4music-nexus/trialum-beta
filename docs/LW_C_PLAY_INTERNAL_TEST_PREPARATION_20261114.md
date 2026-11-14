@@ -1,62 +1,40 @@
 # LW-C: Google Play Internal Testing preparation
 
-**Status:** preparation draft only. No Play Console app entry, upload, test-track activation or public release has been performed. Google Play Games is the current final LW-C workstream; the SDK integration is included, but the live game project, OAuth credentials, service IDs and device sign-in test remain pending.
+**Status:** beta preparation is active; no Play Store track is released. The Play app entry and Play Games Services project exist. The beta PR is a draft and the latest unsigned candidates are built by GitHub Actions. Physical owner QA is still pending.
 
-## Android build identity
+## Android candidate
 
-| Purpose | Application ID | Current version |
+| Variant | Application ID | Version |
 |---|---|---|
-| Main candidate for Play | `com.trialum.ziivaiskra` | `Trialum - Living World` · versionCode `36`, versionName `1.0` · English default |
-| Signing QA device candidate | `com.trialum.ziivaiskra.signqa` | QA only; never upload as the Play app |
-| Friends Debug device candidate | `com.trialum.ziivaiskra.signdebug` | QA only; never upload as the Play app |
+| Release candidate | `com.trialum.ziivaiskra` | `Trialum - Living World`, versionName `1.0`, versionCode `36` |
+| Signing QA | `com.trialum.ziivaiskra.signqa` | QA-only variant |
+| Friends Debug | `com.trialum.ziivaiskra.signdebug` | QA-only, debuggable variant |
 
-Current Android configuration: min SDK 26, target/compile SDK 36. The target SDK meets the current Google Play requirement for new apps and updates taking effect on 31 August 2026. Confirm the Play Console's existing package and version history before uploading; Play rejects reused version codes.
+The package IDs are preserved. CI built and validated unsigned APKs for all three variants and an unsigned Release AAB from public snapshot commit `9a3e81fc7d109bf341e268430b1a6bd1750afd4d`. Regression tests and Android build passed in [Actions run #43625153896](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/43625153896). [Unsigned candidates](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/43625153896/artifacts/14125049307) expire 2026-11-21; artifact SHA-256 is `7f578802b4b6d44f1d227bb162cedab08e2f262d33a564962c3c98b83bc2a678`.
 
-The private LW-C CI now builds an unsigned Release AAB alongside the three unsigned APK candidates. A pull-request artifact is intended for short-lived, owner-only download and local signing. CI must never receive the official upload or app-signing private key. The three package identities remain unchanged.
+Official signing is local only. The intended key mapping is the existing Release key for the main package and the existing QA key for both QA packages. Keep package IDs, signers, data, and installed apps unchanged; update in place, never uninstall to work around a signer mismatch. CI does not receive private signing keys.
 
-## Signing and Play App Signing
+## Play Games Services
 
-1. Download the unsigned Release AAB from the successful private GitHub Actions run.
-2. Sign it locally with the existing Play upload key, then verify the signature and record the SHA-256 of the AAB.
-3. In Play Console, verify the app's package identity and the displayed upload certificate before uploading.
-4. If the app is new to Play App Signing, review Google's key choice carefully: Google can manage the app-signing key while the owner keeps the upload key. Existing published apps must use the signing setup already registered to that package.
-5. Keep the owner’s existing APK signing identities for the three device QA packages. Never substitute CI/debug signing for an installed package's owner signer.
+Play Games project ID `330148794383` is linked to the app. Saved Games is **On**, the console shows its changes saved, and the required Google Play Games and Google Drive APIs are enabled. `toniadrenalin@gmail.com` is on the PGS tester list. Cloud Save remains a player opt-in.
 
-Keystore files, aliases, passwords, and private certificates remain local. GitHub **Variables** are visible configuration values; private keystore bytes and passwords belong in GitHub **Secrets** only when a workflow explicitly needs them. This LW-C flow does not need or read those signing secrets.
+The Play Games project is still **Draft**. Its publishing page is blocked by specific missing assets: one 512×512 game icon, one 1024×500 feature graphic, and icons for each of the seven existing achievements. Leaderboards and credentials are listed as ready, but the two Android credentials remain Draft. These items must be completed and the test APK's package/signing certificate matched to the correct Android credential before PGS APIs are declared verified. The user-visible profile sign-in alone does not prove that achievements, leaderboards, or snapshots work.
 
-## Internal testing setup (not activated)
+Publishing the PGS project makes its configured PGS services available to users; it does **not** publish the Play Store app. Keep the PGS project Draft until its assets and credential mapping are finished and the owner approves activation. Do not use the Play Console PGS Publish action yet.
 
-- Create or select the Play app for package `com.trialum.ziivaiskra`.
-- Use the **Internal testing** track and a private tester list. Internal testing supports up to 100 testers.
-- Upload only the locally upload-key-signed main Release AAB. Do not upload `.signqa` or `.signdebug`.
-- Review the generated device APKs and Play pre-launch report before sharing the opt-in link.
-- Do not promote to closed testing, open testing, production, or publish a public listing without the owner's separate approval.
+## Play Store Internal Testing
 
-## Data Safety and privacy form — draft evidence, owner completion required
+The app exists in Play Console under the exact main package ID. A separate internal-QA tester list is prepared, but there is no uploaded signed Release AAB, active internal-testing release, or tester opt-in link yet. Only the locally signed main Release AAB belongs on the Internal testing track; never upload the QA or Friends Debug APKs.
 
-Source code indicates these behaviors, but the owner must confirm actual production/server settings and complete Google's form truthfully:
+Before creating the track release, verify versionCode 36 is unused, confirm the registered upload certificate, upload the signed AAB, review Play's generated APKs and pre-launch report, and then create/share the opt-in link. Do not promote to closed/open testing or production without owner approval.
 
-- World progress and local pet state are stored on-device; backups/restores are part of the app. Do not claim cloud backup or transcript persistence from this LW-C change.
-- Optional social features send account/profile and room activity to the configured Trialum social service. Shared pet speech is relayed to authenticated room members. The LW-C session ledger is ephemeral in memory; it does not send private player-to-pet chat.
-- Optional social messages, nearby discovery, and friend features need separate data-flow confirmation against the enabled production server settings before any declaration.
-- Push registration is opt-in in the app; Firebase automatic initialization and analytics collection are disabled in the manifest. Confirm the production configuration and actual Firebase processing before declaring.
-- The Android manifest requests Internet/network, notifications, foreground service, and version-limited nearby-device/Bluetooth permissions. Nearby permissions are marked `neverForLocation`; verify runtime behavior and Play Console declarations.
-- The app includes an explicitly started special-use foreground service for optional on-device background pet dialogue, with an ongoing notification and Stop action. This requires a truthful Play Console foreground-service declaration and policy review before enabling it for Play distribution.
+## Data Safety, content rating, and listing
 
-**Do not submit a “no data collected/shared” answer based on this draft.** Internal-only testing tracks are exempt from the Data Safety section while the app is active exclusively on that track, but this does not remove the need to prepare accurate privacy disclosures for any later track.
+- **Data Safety:** not submitted. The source has local/offline progress and JSON backup, optional Google Play Games, optional social features that use the separate Trialum service, opt-in push, nearby permissions, and optional on-device background pet dialogue. The owner must confirm actual production server and Firebase behavior before declarations; do not state “no data collected/shared.”
+- **Content rating:** not completed. Answer the IARC questionnaire against the shipping build, including optional social text features.
+- **Store listing:** prepare the final icon, feature graphic, screenshots, short/full descriptions, privacy-policy URL, support contact, and localization before any track submission. Keep user-facing default language English.
+- **In-game About & Help:** included in the draft beta snapshot in English and Macedonian. Device review remains part of owner QA.
 
-## Content rating — not yet rated
+## Testing and release boundary
 
-Complete the IARC questionnaire in Play Console based on the shipping build and enabled social features. The app contains a fictional creature game and optional user-generated social text; the correct age rating must come from complete, truthful questionnaire answers, not a guessed rating.
-
-## Remaining owner-only confirmations
-
-- Create/confirm the Play Console app entry with the exact package `com.trialum.ziivaiskra`, English default language, and app title `Trialum - Living World`; confirm versionCode 36 is unused.
-- Confirm which local upload keystore/certificate is registered in Play Console. A Play app-signing certificate is public; its private signing key is not retrievable from GitHub Variables or Play Console.
-- Confirm production social, messaging, push, and nearby settings before Data Safety or Content Rating submission.
-- Complete device QA personally. CI success is not OWNER PASS.
-- Defer Play Games Services linking/OAuth/achievement activation until the final integration step, after the rest of LW-C is stable.
-
-## Public source publication
-
-No source or build artifact has been transferred to `extreme4music-nexus/trialum-beta`. Public export requires the owner's explicit approval for the exact source SHA and the repository's licensing/security release gates.
+GitHub Actions performs tests and Android compilation. Local work is limited to owner-key signing and verification. No public Play app release, PGS project publication, or OWNER PASS is claimed. Keep the private development repo and LW-D unchanged; the public repo contains only the beta build snapshot and excludes private history, secrets, and signing material.
