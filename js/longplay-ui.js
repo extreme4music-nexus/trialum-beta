@@ -209,7 +209,34 @@ function plants(s){
  '<div class="notice">Активно живеалиште: '+(h?esc(h.name)+' · '+h.flora.length+'/'+h.floraSlots+' растенија':'не е изградено')+'</div>'+
  '<div class="cards">'+cards+'</div></div>';
 }
+function help(){
+ const en=root.TrialumI18n?.language?.()==='en';
+ const sections=en?[
+  ['About Trialum','Trialum — Living World is an offline-first, long-form creature and ecosystem game. Beta 1.0 tests the LW-C feature set. Later Living World phases are still in development.'],
+  ['How to play','Explore the Lab, discover materials and research, create life, grow plants, build habitats, and care for your pets. Actions and resources recover over time. Use the journal and menus to follow discoveries and pet needs.'],
+  ['A fictional world','The chemistry, organisms, evolution and ecosystems in Trialum are fictional game systems. They are not a scientific model, medical advice, or instructions for creating real life.'],
+  ['Play offline and protect your save','Core play is local and works offline. Create and keep a JSON backup from Settings before changing devices or reinstalling. Google Cloud Save is separate, optional, and begins only after you opt in.'],
+  ['Google Play Games','Google Play Games is optional. Google handles profile sign-in, achievements and leaderboards; Trialum never asks for your Google password. Cloud Save uses Google Play Games only after you enable it.'],
+  ['Friends, messages and pet conversations','Friends, invitations, private phrases and shared-room activity use Trialum’s separate social service when you choose those features. Pet conversation context is a limited session memory; it is not kept as a transcript on the Trialum server. AI participation is optional per pet.'],
+  ['Beta and payments','This is a beta. Some systems may change after testing; report reproducible issues with the screen and steps. No purchases are enabled in Beta 1.0; credits are earned through play.']
+ ]:[
+  ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. Бета 1.0 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
+  ['Како се игра','Истражувај ја Лабораторијата, откривај материјали и сознанија, создавај живот, одгледувај растенија, гради биосветови и грижи се за милениците. Акциите и ресурсите се обновуваат со време. Дневникот и менијата ги следат откритијата и потребите на милениците.'],
+  ['Измислен свет','Хемијата, организмите, еволуцијата и екосистемите во Trialum се измислени системи за игра. Тие не се научен модел, медицински совет или упатство за создавање вистински живот.'],
+  ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. Од Поставки направи и зачувај JSON бекап пред промена на уред или повторна инсталација. Google Cloud Save е посебна опција и почнува само откако ќе ја вклучиш.'],
+  ['Google Play Games','Google Play Games е опционален. Google ја обработува најавата на профилот, достигнувањата и рангирањата; Trialum никогаш не ја бара твојата Google лозинка. Cloud Save користи Google Play Games само откако ќе го вклучиш.'],
+  ['Пријатели, пораки и разговори на милениците','Пријателствата, поканите, приватните фрази и активноста во заедничките простории го користат посебниот Trialum социјален сервис кога ќе ги избереш тие функции. Контекстот на разговорите меѓу милениците е ограничена меморија за тековната сесија и не се чува како транскрипт на Trialum серверот. Учество на AI се вклучува по миленик.'],
+  ['Бета и плаќања','Ова е бета-верзија. Дел од системите може да се менуваат по тестирањето; пријави проблем со чекорите за повторување и екранот. Во Бета 1.0 нема купувања; кредитите се заработуваат со играње.']
+ ];
+ const cards=sections.map(([title,body])=>'<section class="card"><h3>'+esc(title)+'</h3><p>'+esc(body)+'</p></section>').join('');
+ const contact=en?'Feedback and support':'Повратни информации и поддршка';
+ const note=en?'Tell us what you did and what happened.':'Напиши што направи и што се случи.';
+ const link=en?'Email Trialum support':'Испрати е-пошта до поддршката';
+ return '<div class="tab-main"><h2>ℹ️ '+(en?'About & Help':'За играта и помош')+'</h2><p class="desc">'+(en?'A quick guide to the beta, gameplay and optional online features.':'Краток водич за бетата, играњето и опционалните онлајн функции.')+'</p>'+cards+
+ '<section class="card"><h3>'+contact+'</h3><p>'+note+'</p><a href="mailto:toniadrenalin@gmail.com?subject=Trialum%20Beta%20Feedback">'+link+' · toniadrenalin@gmail.com</a></section></div>';
+}
 function more(){
+ const en=root.TrialumI18n?.language?.()==='en';
  const items=[
  ['🧬','ДНК лабораторија','dna','Еволутивни трансформации'],
  ['🌿','Флора','plants','Растенија и откритија'],
@@ -222,13 +249,14 @@ function more(){
  ['🏆','Галерија','achievements','Слики и постигнувања'],
  ['📖','Дневник','diary','Целата хронологија'],
  ['🔔','Известувања','notifications','Потребите на милениците'],
- ['⚙️','Поставки','settings','Звук, бекап, дебаг']
+ ['⚙️','Поставки','settings','Звук, бекап, дебаг'],
+ ['ℹ️',en?'About & Help':'За играта','about',en?'Help, beta and privacy':'Помош, бета и приватност']
  ];
  return '<div class="tab-main"><h2>☰ Повеќе можности</h2><p class="desc">Брзо најди го вистинскиот дел од играта. Заклучените функции ги објаснуваат условите.</p>'+
  '<div class="more-grid">'+items.map(([ico,name,id,note])=>'<button class="more-item" data-tab="'+id+'"><span class="more-icon">'+ico+'</span>'+
  '<span><b>'+name+'</b><small>'+note+'</small></span><span aria-hidden="true">›</span></button>').join('')+'</div></div>';
 }
-const views={more,lab:catalog,research,habitats:habitat,food,dna,pets,plants,settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
+const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants,settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
 const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
 root.TrialumExpansion={
  render(page,s){if(!s)return '';E.ensureLongplay(s);if(views[page])return (['lab','habitats','pets','research','more'].includes(page)?'':'<button class="section-back" data-tab="more">‹ Повеќе</button>')+views[page](s);return previous.render(page,s);},
