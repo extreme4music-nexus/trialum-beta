@@ -412,7 +412,7 @@ async function importBackupState(backup){
   if(!saved?.ok)throw Error(en()?'Could not store the restored world. Your current game remains unchanged.':'Не успеав да го зачувам вратениот свет. Тековната игра останува непроменета.');
   // Switch only AFTER all earlier queued saves and this restore commit.
   globalThis.TrialumPlaygroundAI?.stop?.();s=candidate;Shared?.bindWorld?.(s);el('welcome').hidden=true;
-  await globalThis.TrialumI18n?.change(s.settings?.language||'auto');
+  await globalThis.TrialumI18n?.change(s.settings?.language||'en');
   // Theme is UI metadata only. Keep the LW-A pinned rescue + safe restore path unchanged.
   if(['system','light','dark'].includes(s.settings?.theme))Theme?.set(s.settings.theme);
   W.setState(s);A.sync(s.settings);render();sendNative();

@@ -10,8 +10,8 @@ android {
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "1.6-LW-dev.12"
+        versionCode = 36
+        versionName = "1.0"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
         val socialApiUrl = (project.findProperty("trialumSocialApiUrl") as? String)

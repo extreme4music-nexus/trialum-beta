@@ -8,7 +8,7 @@ const d=fs.readFileSync('android-template/app/src/signdebug/res/values/trialum_a
 for(const s of ['create("signqa")','initWith(getByName("release"))','applicationIdSuffix = ".signqa"','versionNameSuffix = "-signqa"','isDebuggable = false','trialum-signqa']) {
   assert(g.includes(s),'Missing signed QA separation: '+s);
 }
-for(const s of ['create("lwa")','create("lw16")','versionCode = 35','versionName = "1.6-LW-dev.12"']) {
+for(const s of ['create("lwa")','create("lw16")','versionCode = 36','versionName = "1.0"']) {
   assert(g.includes(s),'Historical or current QA configuration removed: '+s);
 }
 assert(q.includes('<string name="trialum_app_label">Trialum Signing QA</string>'));
@@ -35,7 +35,7 @@ assert(y.includes('for variant in release signqa signdebug; do'),
   'Check manifest/package and Friends backend URL for all three APKs');
 assert(y.includes('assembleRelease :app:assembleSignqa :app:assembleSigndebug'),
   'Release, QA and Friends Debug must compile from the same source');
-assert(y.includes('com.trialum.ziivaiskra.signdebug 1.6-LW-dev.12-signdebug "$work/qa.p12"') &&
+assert(y.includes('com.trialum.ziivaiskra.signdebug 1.0-signdebug "$work/qa.p12"') &&
   y.includes('trialum-qa "$QA_CERT_SHA256" QA_STORE_PASS QA_KEY_PASS true'),
   'Friends Debug MUST share fixed QA private key and SHA256 pin, not Release or transient debug signer');
 assert(y.includes('trialum-qa "$QA_CERT_SHA256" QA_STORE_PASS QA_KEY_PASS false'),
@@ -43,7 +43,7 @@ assert(y.includes('trialum-qa "$QA_CERT_SHA256" QA_STORE_PASS QA_KEY_PASS false'
 assert(y.includes('if [ "$expects_debug" = true ]; then') &&
   y.includes('elif [ "$expects_debug" = false ]; then'),
   'Require debuggable only for Friends Debug and reject it for Release and Signing QA');
-assert(y.includes("versionCode='35'") && y.includes('version_code=35'),
+assert(y.includes("versionCode='36'") && y.includes('version_code=36'),
   'Increment package versionCode for existing QA updates (never reuse v24)');
 
 

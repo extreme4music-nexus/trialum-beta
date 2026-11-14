@@ -95,11 +95,11 @@ jobs:
             apk=$(find "android-template/app/build/outputs/apk/$variant" -name '*.apk' -print -quit)
             test -s "$apk"
             badge=$("$AAPT" dump badging "$apk")
-            echo "$badge" | grep -Fq "versionCode='35'"
+            echo "$badge" | grep -Fq "versionCode='36'"
             case "$variant" in
-              release) pkg='com.trialum.ziivaiskra'; ver='1.6-LW-dev.12' ;;
-              signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.6-LW-dev.12-signqa' ;;
-              signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.6-LW-dev.12-signdebug' ;;
+              release) pkg='com.trialum.ziivaiskra'; ver='1.0' ;;
+              signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa' ;;
+              signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.0-signdebug' ;;
             esac
             echo "$badge" | grep -Fq "package: name='$pkg'"
             echo "$badge" | grep -Fq "versionName='$ver'"

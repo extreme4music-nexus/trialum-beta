@@ -1,6 +1,6 @@
-# Trialum LW-C Beta Snapshot
+# Trialum - Living World 1.0 Beta
 
-**Candidate:** 1.6-LW-dev.12 (Android versionCode 35)  
+**Candidate:** Trialum - Living World 1.0 (Android versionCode 36)  
 **Source:** [Trialum commit 04457df48b9c012f8667504b935a7ca501d13f07](https://github.com/extreme4music-nexus/Trialum/commit/04457df48b9c012f8667504b935a7ca501d13f07)  
 **Package identities:** `com.trialum.ziivaiskra`, `.signqa`, `.signdebug`
 

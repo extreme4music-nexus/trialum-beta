@@ -2,7 +2,7 @@
    Gameplay state stays language-neutral. Player names and journal history untouched. */
 (function(root){
 'use strict';
-let lang='mk',preference='auto',strings={},words={},fallbackStrings={},fallbackWords={},generation=0;
+let lang='en',preference='en',strings={},words={},fallbackStrings={},fallbackWords={},generation=0;
 const originals=new WeakMap(),attributes=new WeakMap();
 const catalog=[['mk','Македонски','🇲🇰'],['en','English','🇬🇧'],['es','Español','🇪🇸'],['fr','Français','🇫🇷'],['de','Deutsch','🇩🇪'],['it','Italiano','🇮🇹'],['pt','Português','🇵🇹'],['tr','Türkçe','🇹🇷'],['sq','Shqip','🇦🇱'],['ar','العربية','🇸🇦'],['zh','中文','🇨🇳'],['ja','日本語','🇯🇵'],['ko','한국어','🇰🇷'],['ru','Русский','🇷🇺'],['hi','हिन्दी','🇮🇳'],['id','Bahasa Indonesia','🇮🇩'],['pl','Polski','🇵🇱']];
 const allow=catalog.map(x=>x[0]);

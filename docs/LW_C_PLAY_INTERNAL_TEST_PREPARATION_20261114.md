@@ -1,12 +1,12 @@
 # LW-C: Google Play Internal Testing preparation
 
-**Status:** preparation draft only. No Play Console changes, upload, test-track activation or public release has been performed. Google Play Games setup is intentionally deferred to the final integration step.
+**Status:** preparation draft only. No Play Console app entry, upload, test-track activation or public release has been performed. Google Play Games is the current final LW-C workstream; the SDK integration is included, but the live game project, OAuth credentials, service IDs and device sign-in test remain pending.
 
 ## Android build identity
 
 | Purpose | Application ID | Current version |
 |---|---|---|
-| Main candidate for Play | `com.trialum.ziivaiskra` | versionCode `35`, versionName `1.6-LW-dev.12` |
+| Main candidate for Play | `com.trialum.ziivaiskra` | `Trialum - Living World` · versionCode `36`, versionName `1.0` · English default |
 | Signing QA device candidate | `com.trialum.ziivaiskra.signqa` | QA only; never upload as the Play app |
 | Friends Debug device candidate | `com.trialum.ziivaiskra.signdebug` | QA only; never upload as the Play app |
 
@@ -51,7 +51,7 @@ Complete the IARC questionnaire in Play Console based on the shipping build and 
 
 ## Remaining owner-only confirmations
 
-- Confirm the exact Play Console app/package entry and whether versionCode 35 has already been used.
+- Create/confirm the Play Console app entry with the exact package `com.trialum.ziivaiskra`, English default language, and app title `Trialum - Living World`; confirm versionCode 36 is unused.
 - Confirm which local upload keystore/certificate is registered in Play Console. A Play app-signing certificate is public; its private signing key is not retrievable from GitHub Variables or Play Console.
 - Confirm production social, messaging, push, and nearby settings before Data Safety or Content Rating submission.
 - Complete device QA personally. CI success is not OWNER PASS.
