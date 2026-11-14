@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import com.google.android.gms.games.PlayGames
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.games.GamesClientStatusCodes
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.games.PlayGamesSdk
 import com.google.android.gms.games.SnapshotsClient
 import com.google.android.gms.games.snapshot.Snapshot
@@ -61,7 +64,62 @@ class TrialumPlayGames(
 
     private fun reason(e: Exception?): String {
         val value = e?.localizedMessage ?: e?.javaClass?.simpleName ?: "unknown"
-        return value.take(180)
+        val status = (e as? ApiException)?.statusCode
+        val detail = status?.let { " (status $it: ${GamesClientStatusCodes.getStatusCodeString(it)})" } ?: ""
+        return (value + detail).take(220)
+    }
+
+    /**
+     * PGS can show/create a player's profile before the game API session is
+     * authenticated. On SIGN_IN_REQUIRED, perform one explicit sign-in attempt
+     * and retry that same operation exactly once.
+     */
+    private fun <T> withAuthRecovery(
+        label: String,
+        operation: () -> Task<T>,
+        onSuccess: (T) -> Unit
+    ) {
+        fun run(retried: Boolean) {
+            val task = try {
+                operation()
+            } catch (e: Exception) {
+                event("error", "$label: " + reason(e))
+                return
+            }
+            task.addOnSuccessListener { result -> onSuccess(result) }
+                .addOnFailureListener { error ->
+                    val apiError = error as? ApiException
+                    if (!retried && apiError?.statusCode == GamesClientStatusCodes.SIGN_IN_REQUIRED) {
+                        event("authRetry", "$label requires Play Games sign-in; retrying once.")
+                        PlayGames.getGamesSignInClient(activity).signIn()
+                            .addOnSuccessListener { result ->
+                                authenticated = result.isAuthenticated
+                                if (authenticated) {
+                                    loadPlayer()
+                                    run(true)
+                                } else {
+                                    playerId = null
+                                    playerName = null
+                                    event("signedOut", "$label still requires a Play Games profile.")
+                                }
+                            }
+                            .addOnFailureListener { signInError ->
+                                authenticated = false
+                                playerId = null
+                                playerName = null
+                                event("error", "$label sign-in retry failed: " + reason(signInError))
+                            }
+                    } else {
+                        if (apiError?.statusCode == GamesClientStatusCodes.SIGN_IN_REQUIRED) {
+                            authenticated = false
+                            playerId = null
+                            playerName = null
+                        }
+                        event("error", "$label: " + reason(error))
+                    }
+                }
+        }
+        run(false)
     }
 
     // Consent and upload baselines are tied to the authenticated gamer profile.
@@ -359,16 +417,20 @@ class TrialumPlayGames(
 
     fun showAchievements() {
         if (!canUse()) return
-        PlayGames.getAchievementsClient(activity).achievementsIntent
-            .addOnSuccessListener { intent: Intent -> activity.startActivityForResult(intent, 1804) }
-            .addOnFailureListener { e -> event("error", "Achievements: " + reason(e)) }
+        withAuthRecovery(
+            "Achievements",
+            { PlayGames.getAchievementsClient(activity).achievementsIntent },
+            { intent: Intent -> activity.startActivityForResult(intent, 1804) }
+        )
     }
 
     fun showLeaderboards() {
         if (!canUse()) return
-        PlayGames.getLeaderboardsClient(activity).allLeaderboardsIntent
-            .addOnSuccessListener { intent: Intent -> activity.startActivityForResult(intent, 1805) }
-            .addOnFailureListener { e -> event("error", "Leaderboards: " + reason(e)) }
+        withAuthRecovery(
+            "Leaderboards",
+            { PlayGames.getLeaderboardsClient(activity).allLeaderboardsIntent },
+            { intent: Intent -> activity.startActivityForResult(intent, 1805) }
+        )
     }
 
     private fun achievementResource(key: String): Int? {
