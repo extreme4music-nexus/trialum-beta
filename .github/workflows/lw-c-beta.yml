@@ -38,7 +38,9 @@ jobs:
       - name: Install headless test dependencies
         run: npm install --no-save --ignore-scripts --no-audit jsdom@26.1.0 gifuct-js@2.1.2
 
-      - name: Run LW-C and app regression tests
+      # The upstream full CI already ran all historical acceptance gates for the exact source SHA.
+      # This clean export omits legacy acceptance records and owner-signing workflow by design.
+      - name: Run app and LW-C regression tests
         run: |
           node tests/engine.test.cjs
           node tests/evolution.test.cjs
@@ -48,20 +50,15 @@ jobs:
           node tests/creature-media.test.cjs
           node tests/play-games.test.cjs
           node tests/version155.test.cjs
-          node tests/forward-only.test.cjs
           node tests/social-ui.test.cjs
           node tests/messages-client.test.cjs
-          node --test tests/release-f-gates.test.cjs
           node tests/shared-client.test.cjs
           node tests/playground.test.cjs
-          node --test tests/lw-c-autonomy.test.cjs
           node --test tests/dialogue-session.test.cjs
           node --test tests/playground-ai.test.cjs
           node --test tests/dialogue-mix.test.cjs
           node --test tests/playground-memory.test.cjs
           node --test tests/presence.test.cjs
-          node tests/lw-recovery-regression.test.cjs
-          node --test tests/release-f.test.cjs
           for file in js/*.js; do node --check "$file"; done
 
       - name: Build unsigned APK and Play bundle candidates
