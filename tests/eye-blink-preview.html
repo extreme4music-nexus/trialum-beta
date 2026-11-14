@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="mk">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRIALUM 1.5.2 — wink regression</title>
+<style>html,body{margin:0;background:#091e30;color:#edfff8;font:16px system-ui}canvas{max-width:100%;display:block;margin:auto}</style></head>
+<body><canvas id="preview" width="1260" height="480"></canvas>
+<script src="../js/creature-art.js"></script>
+<script>
+const c=document.getElementById('preview'),ctx=c.getContext('2d'),tau=Math.PI*2;
+const pet={id:'wink-test',name:'Лумира',shape:'jelly',species:0,seed:5,hue:168,eyes:2,joy:86,growth:100,evolution:{level:75},skills:{wave:1}};
+const firstSeed=pet.seed,phase=8*tau;
+const times=[(3*Math.PI/2+phase-firstSeed)/1.15,(Math.asin(.982)+phase-firstSeed)/1.15,(Math.PI/2+phase-firstSeed)/1.15];
+const labels=['Отворени очи · OPEN','Полузатворено · HALF','Намигнување · WINK'];
+const background=ctx.createLinearGradient(0,0,0,c.height);background.addColorStop(0,'#092f4d');background.addColorStop(1,'#155e60');ctx.fillStyle=background;ctx.fillRect(0,0,c.width,c.height);
+ctx.font='bold 29px system-ui';ctx.fillStyle='#effff7';ctx.textAlign='center';ctx.fillText('TRIALUM 1.5.2 — Очи со природно намигнување',c.width/2,40);
+for(let i=0;i<3;i++){
+ const x=220+i*410;
+ ctx.save();ctx.translate(x,245);
+ TrialumCreatureArt.draw(ctx,pet,{x:0,y:0,size:1},times[i],false,{level:75},null);
+ ctx.restore();
+ ctx.font='bold 18px system-ui';ctx.fillStyle='#d3ffe9';ctx.fillText(labels[i],x,446);
+}
+</script></body></html>

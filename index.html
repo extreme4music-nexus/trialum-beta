@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="mk">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071626"><meta name="description" content="ТРИАЛУМ: Жива искра — оригинална долгорочна игра за измислен живот, флора и мили миленици.">
+<title>ТРИАЛУМ 1.6-LW — Жива искра</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="shell">
+<header class="mast">
+ <div class="mark"><div class="emblem">✺</div><div><div class="microcap">ЖИВА ИСКРА · EVOLUTION SANDBOX</div><h1>ТРИАЛУМ <span>1.6-LW</span></h1><p>Од атоми до твојот непознат жив свет</p></div></div>
+ <div class="head-tools" role="group" aria-label="Ден, XP, кредити и ресурси">
+  <span id="dayPill" class="chip">Ден 1</span>
+  <div class="resource-hud">
+   <span class="hud-stat hud-xp" title="Севкупен заработен XP"><span>⭐ XP</span><strong id="hudXP">0</strong></span>
+   <span class="hud-stat hud-tokens" title="Бесплатно заработени токени"><span>💠 Кредити</span><strong id="hudTokens">0</strong></span>
+   <span class="hud-stat" title="Сложени молекули"><span>⚗️ Молекули</span><strong id="hudMolecules">0</strong></span>
+   <span class="hud-stat" title="Биомаса"><span>🌿 Биомаса</span><strong id="hudBiomass">0</strong></span>
+   <span class="hud-stat" title="Научни сознанија"><span>🧠 Сознание</span><strong id="hudInsight">0</strong></span>
+  </div>
+ </div>
+</header>
+<main class="dashboard">
+ <section class="left-col">
+  <div class="world panel">
+   <div class="panel-title"><div><div class="microcap">ИНТЕРАКТИВЕН БИОСВЕТ</div><h2>Аквариумот на животот</h2></div><div class="world-switch"><label for="habitatSwitch">Живеалиште</label><select id="habitatSwitch" aria-label="Активно живеалиште"></select></div></div>
+   <div class="scene"><canvas id="world" width="1100" height="625" aria-label="Интерактивен аквариум: допри миленик за да го избереш"></canvas><div class="scene-overlay"><span class="scene-stage" id="sceneStage">АТОМИ</span><span id="sceneHint">Допрете суштество за избор</span></div><div class="scene-bottom" id="sceneBottom">Експериментот започнува без живи клетки.</div></div>
+   <div class="scene-actions"><span class="small">✨ Селектирај со допир · Одгледувај сопствени видови · Грижи се за хемијата</span><button data-do="saveScreenshot">📷 Слика</button><button data-do="shareScreenshot">📤 Сподели</button><button data-do="inspect">🔎 Состојба</button></div>
+  </div>
+  <div class="panel pad dashboard-tabs"><nav class="tabs primary-game-nav" aria-label="Главни менија" id="tabs">
+ <button class="tab active" data-tab="lab">🧪<span>Лаб</span></button>
+ <button class="tab" data-tab="habitats">🏝️<span>Биосвет</span></button>
+ <button class="tab" data-tab="pets">🐾<span>Миленици</span></button>
+ <button class="tab" data-tab="research">🔬<span>Истражувања</span></button>
+ <button class="tab" data-tab="more">☰<span>Повеќе</span></button>
+ </nav><div id="tabContent"></div></div>
+ </section>
+ <aside class="right-col">
+  <section class="panel pad"><div class="microcap">ПАРАМЕТРИ НА СВЕТОТ</div><div class="stats"><div><strong id="cellsStat">0</strong><span>Клетки</span></div><div><strong id="molsStat">0</strong><span>Молекули</span></div><div><strong id="insightStat">0</strong><span>Сознание</span></div><div><strong id="biomassStat">0</strong><span>Биомаса</span></div></div><div class="phasebar"><div id="phaseFill"></div></div><div id="phaseCaption" class="subtle">Фаза 1 / 8</div></section>
+  <section class="panel pad"><div class="panel-heading"><h2>👨‍🔬 Маестро · водич</h2><span class="tag">ЖИВ ПРОЕКТ</span></div><p id="guideText" class="guide-text"></p><div id="goals" class="goal-list"></div></section>
+  <section class="panel pad" id="selectedPanel"><div class="panel-heading"><h2>🐾 Избрано милениче</h2><span id="careBadge" class="tag">0 / 4 акции</span></div><div id="petDetails" class="subtle">Создај суштество за да го одгледуваш.</div></section>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+ </aside>
+</main>
+<footer>ТРИАЛУМ 1.6-LW (тест) · Симулирана хемија и целосно измислени видови — ова не е физички точен биолошки модел. · Звуци: ZzFX (MIT) + оригинална генерирана музика.</footer>
+</div>
+<div class="welcome" id="welcome" hidden><div class="welcome-card"><div class="welcome-icon">✺</div><div class="microcap">НОВА ВСЕЛЕНА, НОВ ЖИВОТ</div><h2>Создај живот што никогаш не постоел.</h2><p>Започни од неживи атоми, создај клетка, истражи повеќеклеточни организми, изгради биосветови и одгледувај необични миленици со сопствени гласови.</p><button class="modechoice" data-do="pgsSignIn"><b>🎮 Поврзи Google Play Games (опционално)</b><span>За играчи што сакаат да ги вратат своите облачни достигнувања. Не е потребно за локално играње.</span></button><button class="modechoice" data-do="pgsCloudRestore"><b>☁️ Врати свет од Google Play Games</b><span>Опционално. Потребен е Google Play Games профил; локалната игра работи и без него.</span></button><button class="modechoice" data-start="real"><b>🕰 Еден свет, бескрајна еволуција</b><span>Првите клетки за неколку минути, потоа месеци и години откритија. Акциите се обновуваат со време и заработени кредити.</span></button><div class="small subtle">Напредокот се чува локално. Можеш да го извезеш како JSON.</div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="vendor/zzfx.min.js"></script><script src="js/theme.js"></script><script src="js/i18n.js"></script><script src="js/onboarding.js"></script><script src="js/engine.js"></script><script src="js/evolution.js"></script><script src="js/progression.js"></script><script src="js/longplay.js"></script><script src="js/fauna-lab.js"></script><script src="js/debug-tools.js"></script><script src="js/storage.js"></script><script src="js/presence.js"></script><script src="js/playground.js"></script><script src="js/peer.js"></script><script src="js/social.js"></script><script src="js/shared-playground.js"></script><script src="js/messages.js"></script><script src="js/shared-scene.js"></script><script src="js/audio.js"></script><script src="js/creature-art.js"></script><script src="js/world.js"></script><script src="js/share.js"></script><script src="js/gif-encoder.js"></script><script src="js/media.js"></script><script src="js/expansion-ui.js"></script><script src="js/play-games.js"></script><script src="js/advanced-intelligence.js"></script><script src="js/playground-memory.js"></script><script src="js/playground-dialogue-session.js"></script><script src="js/playground-ai.js"></script><script src="js/longplay-ui.js"></script><script src="js/app.js"></script>
+</body></html>

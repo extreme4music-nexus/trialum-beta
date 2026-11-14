@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Offline world (WebView IndexedDB/localStorage) remains backed up by Android
+         when supported; social and Firebase opt-in cannot silently transfer. -->
+    <exclude domain="sharedpref" path="trialum_push_v1.xml" />
+    <exclude domain="sharedpref" path="trialum_social_v1.xml" />
+    <exclude domain="sharedpref" path="trialum_background_ai_memory_v1.xml" />
+        <exclude domain="file" path="models/" />
+</full-backup-content>

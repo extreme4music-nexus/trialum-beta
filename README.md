@@ -1,54 +1,13 @@
-# TRIALUM — Жива искра / Living Spark
+# Trialum LW-C Beta Snapshot
 
-**Official public beta source snapshots — Source available, all rights reserved.**
+**Candidate:** 1.6-LW-dev.12 (Android versionCode 35)  
+**Source:** [Trialum commit 04457df48b9c012f8667504b935a7ca501d13f07](https://github.com/extreme4music-nexus/Trialum/commit/04457df48b9c012f8667504b935a7ca501d13f07)  
+**Package identities:** `com.trialum.ziivaiskra`, `.signqa`, `.signdebug`
 
-## Македонски
+This branch is an isolated source snapshot for owner-led beta testing. It contains no upstream Git history, signing keys, passwords, credentials, server deployment files, or prebuilt APKs.
 
-Ова е јавен канал за **финални, одобрени бета-верзии од изворниот код** на Trialum.
-Главниот развој, експериментите, серверските поставки и работните гранки
-остануваат во **одделен приватен репозиториум**.
+GitHub Actions runs the regression suite and creates unsigned APK/AAB candidates. Official signing is performed locally from this repository; no signing secrets are configured here. Google Play Games Services remains optional and must be configured in Play Console and physically tested before the beta is considered complete.
 
-**Сѐ уште нема објавен бета-изворен код на играта.**
-Нови изданија се објавуваат само по изречно одобрување од сопственикот и
-завршени правни, безбедносни и технички проверки.
+**Owner device QA and Google Play publication are pending. This is not an official Play Store release.**
 
-Кодот, кога ќе биде објавен, може да се разгледува и проучува во согласност
-со условите на GitHub. **Не е open-source лиценциран.** Не се доделува
-слободна дозвола за копирање, модификација, реиздавање, дистрибуција,
-комерцијална употреба или создавање деривати. Важат правата што ги даваат
-условите на платформата, законските исклучоци и лиценците на трети страни.
-
-Идеи и пријави за грешки се добредојдени преку Issues.
-Само сопственикот одлучува за официјалниот код и изданијата.
-
-## English
-
-This repository is a **public distribution channel for owner-approved
-Trialum beta source snapshots**, not the active development repository.
-
-**No beta game source code has been published here yet.**
-Source snapshots require the owner's explicit permission and completed
-licensing, security, privacy and quality reviews.
-
-This is **source-available, not open-source**. Viewing and forking on GitHub
-are subject to GitHub's Terms of Service. No general license is granted
-to reuse, modify, repackage, distribute, commercialize or create derivatives
-of Trialum. Mandatory legal exceptions and third-party licenses apply.
-
-Suggestions and bug reports are welcome; code changes and publication remain
-under the project owner's control.
-
-## Repository policies
-
-- [LICENSE](LICENSE) — proprietary source-available notice
-- [TRADEMARKS.md](TRADEMARKS.md) — Trialum identity
-- [CONTRIBUTING.md](CONTRIBUTING.md) — ideas and code submissions
-- [SECURITY.md](SECURITY.md) — vulnerability reporting
-- [RELEASE_POLICY.md](RELEASE_POLICY.md) — public beta release rules
-- [Publication checklist](docs/PUBLICATION_CHECKLIST.md) — owner approval gate
-
-**Official Android signing is local only.**
-Public CI must not hold release keys or publish official signed packages.
-
-Copyright © 2026 Toni Cvetkovski. All rights reserved in original material.
-Third-party assets and components retain their own licenses.
+See [Google Play Games setup](docs/GOOGLE_PLAY_GAMES_V1.5.4.md) and [Internal Testing preparation](docs/LW_C_PLAY_INTERNAL_TEST_PREPARATION_20261114.md).
