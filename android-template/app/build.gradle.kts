@@ -79,17 +79,6 @@ android {
             manifestPlaceholders["trialumInviteScheme"] = "trialum-lw16"
         }
     }
-    // One-time crash-report test app. Unique package means it installs beside
-    // Trialum and any existing signqa/signdebug app without sharing their data.
-    buildTypes {
-        create("crashdiag") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".crashdiag"
-            versionNameSuffix = "-crashdiag"
-            isDebuggable = true
-            manifestPlaceholders["trialumInviteScheme"] = "trialum-crashdiag"
-        }
-    }
     // Owner-controlled GitHub Actions signing only. No keystores/passwords in Gradle.
     // The APKs remain UNSIGNED at build time; apksigner signs only on the protected
     // manual Actions job after independent checks. This QA package never replaces

@@ -2,6 +2,7 @@ package com.trialum.ziivaiskra
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import org.json.JSONArray
@@ -49,8 +50,23 @@ object TrialumDiagnostics {
     }
 
     fun report(context: Context): JSONObject {
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val packageInfo = context.packageManager.getPackageInfo(
+            context.packageName,
+            if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        )
         val versionCode = if (Build.VERSION.SDK_INT >= 28) packageInfo.longVersionCode else packageInfo.versionCode.toLong()
+        val signingCertificateSha1 = try {
+            @Suppress("DEPRECATION")
+            val signatures = if (Build.VERSION.SDK_INT >= 28) {
+                packageInfo.signingInfo?.apkContentsSigners
+            } else {
+                packageInfo.signatures
+            }
+            signatures?.firstOrNull()?.toByteArray()?.let { certificate ->
+                java.security.MessageDigest.getInstance("SHA-1").digest(certificate)
+                    .joinToString(":") { "%02X".format(it.toInt() and 0xff) }
+            }.orEmpty()
+        } catch (_: Exception) { "" }
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val crash = try { JSONObject(prefs.getString(CRASH_KEY, "{}")) } catch (_: Exception) { JSONObject() }
         val events = try { JSONArray(prefs.getString(EVENTS_KEY, "[]")) } catch (_: Exception) { JSONArray() }
@@ -62,7 +78,8 @@ object TrialumDiagnostics {
             .put("app", JSONObject()
                 .put("package", context.packageName)
                 .put("versionName", packageInfo.versionName ?: "")
-                .put("versionCode", versionCode))
+                .put("versionCode", versionCode)
+                .put("signingCertificateSha1", signingCertificateSha1))
             .put("device", JSONObject()
                 .put("manufacturer", sanitize(Build.MANUFACTURER).take(80))
                 .put("model", sanitize(Build.MODEL).take(80))

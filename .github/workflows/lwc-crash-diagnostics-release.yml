@@ -1,0 +1,94 @@
+name: LW-C crash diagnostics release candidate (unsigned)
+
+on:
+  push:
+    branches: [feature/lwc-pgs-crash-diagnostics-20261115]
+    paths-ignore:
+      - '.github/workflows/lwc-crash-diagnostics-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-unsigned-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
+      PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+      PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
+      PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
+      PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
+      PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
+      PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
+      PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
+      PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
+      PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
+      PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build the real application package (no tests or signing)
+        run: |
+          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
+          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
+          : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
+          args=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
+            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
+            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
+            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
+            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID")
+          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
+          [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
+          [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
+          [ -n "$PGS_ACH_LEARNED" ] && args+=("-PtrialumPgsAchievement_learned=$PGS_ACH_LEARNED")
+          [ -n "$PGS_ACH_ADVANCED" ] && args+=("-PtrialumPgsAchievement_advanced=$PGS_ACH_ADVANCED")
+          [ -n "$PGS_ACH_ECOLOGY" ] && args+=("-PtrialumPgsAchievement_ecology=$PGS_ACH_ECOLOGY")
+          [ -n "$PGS_ACH_LAB6" ] && args+=("-PtrialumPgsAchievement_lab6=$PGS_ACH_LAB6")
+          [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
+          [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
+          [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
+          gradle -p android-template :app:assembleRelease --no-daemon --stacktrace "${args[@]}"
+          apk=$(find android-template/app/build/outputs/apk/release -name '*.apk' -print -quit)
+          test -s "$apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+          badge=$("$AAPT" dump badging "$apk")
+          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='36' versionName='1.0'"
+          mkdir -p release-candidate
+          cp "$apk" release-candidate/Trialum-LW-C-1.0-v36-CRASH-DIAGNOSTICS-UNSIGNED.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trialum-lwc-crash-diagnostics-release-unsigned
+          path: release-candidate/*.apk
+          if-no-files-found: error
+          retention-days: 7

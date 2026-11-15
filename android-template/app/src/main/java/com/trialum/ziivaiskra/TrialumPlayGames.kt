@@ -251,16 +251,20 @@ class TrialumPlayGames(
 
     fun signIn() {
         if (!configured) { event("unconfigured"); return }
+        event("signInRequested", "Explicit Play Games sign-in requested.")
         PlayGames.getGamesSignInClient(activity).signIn()
             .addOnSuccessListener { result ->
                 authenticated = result.isAuthenticated
-                if (authenticated) loadPlayer() else {
+                if (authenticated) {
+                    event("signInResult", "Explicit Play Games sign-in authenticated=true.")
+                    loadPlayer()
+                } else {
                     playerId = null; playerName = null
                     pendingRestoreDigest = null; pendingRestorePlayerId = null
-                    event("signedOut")
+                    event("signInResult", "Explicit Play Games sign-in authenticated=false.")
                 }
             }
-            .addOnFailureListener { e -> event("error", "Play Games sign-in: " + reason(e)) }
+            .addOnFailureListener { e -> event("error", "Explicit Play Games sign-in failed: " + reason(e)) }
     }
 
     private fun loadPlayer() {
