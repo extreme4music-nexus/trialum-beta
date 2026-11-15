@@ -14,6 +14,16 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # Client configuration only. Firebase service-account credentials and
+    # server keys stay on the private social server and are never placed here.
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +61,7 @@ jobs:
           node tests/play-games.test.cjs
           node tests/version155.test.cjs
           node tests/social-ui.test.cjs
+          node tests/beta-contract.test.cjs
           node tests/shared-client.test.cjs
           node tests/playground.test.cjs
           node --test tests/dialogue-session.test.cjs
@@ -73,7 +84,22 @@ jobs:
           PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
           PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
         run: |
+          : "${TRIALUM_SOCIAL_API_URL:?Missing repository variable TRIALUM_SOCIAL_API_URL}"
+          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] || { echo "::error::Friends requires the configured HTTPS hostname"; exit 1; }
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing repository variable TRIALUM_FIREBASE_API_KEY}"
+          : "${TRIALUM_FIREBASE_APP_ID:?Missing repository variable TRIALUM_FIREBASE_APP_ID}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNQA:?Missing repository variable TRIALUM_FIREBASE_APP_ID_SIGNQA}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNDEBUG:?Missing repository variable TRIALUM_FIREBASE_APP_ID_SIGNDEBUG}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing repository variable TRIALUM_FIREBASE_PROJECT_ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing repository variable TRIALUM_FIREBASE_SENDER_ID}"
           args=()
+          args+=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL")
+          args+=("-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY")
+          args+=("-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID")
+          args+=("-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA")
+          args+=("-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG")
+          args+=("-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID")
+          args+=("-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID")
           [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
           [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
           [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
@@ -97,12 +123,17 @@ jobs:
             badge=$("$AAPT" dump badging "$apk")
             echo "$badge" | grep -Fq "versionCode='36'"
             case "$variant" in
-              release) pkg='com.trialum.ziivaiskra'; ver='1.0' ;;
-              signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa' ;;
-              signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.0-signdebug' ;;
+              release) pkg='com.trialum.ziivaiskra'; ver='1.0'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID" ;;
+              signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID_SIGNQA" ;;
+              signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.0-signdebug'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG" ;;
             esac
             echo "$badge" | grep -Fq "package: name='$pkg'"
             echo "$badge" | grep -Fq "versionName='$ver'"
+            resources=$("$AAPT" dump --values resources "$apk")
+            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_SOCIAL_API_URL\""
+            printf '%s\n' "$resources" | grep -Fq "(string8) \"$firebase_app_id\""
+            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_FIREBASE_PROJECT_ID\""
+            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_FIREBASE_SENDER_ID\""
             cp "$apk" "candidates/trialum-$variant-UNSIGNED.apk"
           done
           aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)

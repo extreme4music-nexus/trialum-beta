@@ -218,6 +218,17 @@ function help(){
   ['Play offline and protect your save','Core play is local and works offline. Create and keep a JSON backup from Settings before changing devices or reinstalling. Google Cloud Save is separate, optional, and begins only after you opt in.'],
   ['Google Play Games','Google Play Games is optional. Google handles profile sign-in, achievements and leaderboards; Trialum never asks for your Google password. Cloud Save uses Google Play Games only after you enable it.'],
   ['Friends, messages and pet conversations','Friends, invitations, private phrases and shared-room activity use Trialum’s separate social service when you choose those features. Pet conversation context is a limited session memory; it is not kept as a transcript on the Trialum server. AI participation is optional per pet.'],
+  ['Tutorial',['The guided introduction explains the first steps. You can skip it without losing progress. To replay it, open Settings and choose “Replay tutorial.”']],
+  ['Frequently asked questions',[
+   ['Can I play offline?','Yes. Core progress is stored locally. Friends, messages, Google Play Games and optional cloud features need an internet connection.'],
+   ['Do I need a Google account?','No. Google Play Games is optional. Trialum never asks for your Google password.'],
+   ['How do Friends work?','Friends use the separate Trialum HTTPS service after you choose to connect. Invites require the other player’s approval.'],
+   ['What are push notifications?','Android push notifications are optional and require your consent. If you turn them off, you can still check messages in the game.'],
+   ['How do I protect my save?','Create a JSON backup in Settings before changing devices or reinstalling. Google Cloud Save is a separate opt-in feature.'],
+   ['Is the biology real?','No. Trialum’s chemistry, organisms and ecosystems are fictional game systems, not scientific or medical guidance.'],
+   ['Can I buy credits in Beta 1.0?','No. Purchases are disabled in Beta 1.0; credits are earned through play.']
+  ]],
+  ['About the developer','Developer: Trialum. Feedback and support: toniadrenalin@gmail.com.'],
   ['Beta and payments','This is a beta. Some systems may change after testing; report reproducible issues with the screen and steps. No purchases are enabled in Beta 1.0; credits are earned through play.']
  ]:[
   ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. Бета 1.0 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
@@ -226,9 +237,21 @@ function help(){
   ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. Од Поставки направи и зачувај JSON бекап пред промена на уред или повторна инсталација. Google Cloud Save е посебна опција и почнува само откако ќе ја вклучиш.'],
   ['Google Play Games','Google Play Games е опционален. Google ја обработува најавата на профилот, достигнувањата и рангирањата; Trialum никогаш не ја бара твојата Google лозинка. Cloud Save користи Google Play Games само откако ќе го вклучиш.'],
   ['Пријатели, пораки и разговори на милениците','Пријателствата, поканите, приватните фрази и активноста во заедничките простории го користат посебниот Trialum социјален сервис кога ќе ги избереш тие функции. Контекстот на разговорите меѓу милениците е ограничена меморија за тековната сесија и не се чува како транскрипт на Trialum серверот. Учество на AI се вклучува по миленик.'],
+  ['Туторијал',['Водениот вовед ги објаснува првите чекори. Можеш да го прескокнеш без да изгубиш напредок. За да го повториш, отвори Поставки и избери „Повтори туторијал“.']],
+  ['Често поставувани прашања',[
+   ['Можам ли да играм офлајн?','Да. Главниот напредок се чува локално. Пријателите, пораките, Google Play Games и опционалните облачни функции бараат интернет-врска.'],
+   ['Дали ми треба Google сметка?','Не. Google Play Games е опционален. Trialum никогаш не ја бара твојата Google лозинка.'],
+   ['Како функционираат Пријателите?','Пријателите го користат посебниот Trialum HTTPS сервис откако ќе избереш да се поврзеш. За поканата е потребно одобрување од другиот играч.'],
+   ['Што се push известувања?','Android push известувањата се опционални и бараат твоја согласност. Ако ги исклучиш, сè уште можеш да ги провериш пораките во играта.'],
+   ['Како да го заштитам зачуваниот напредок?','Направи JSON бекап во Поставки пред да смениш уред или повторно да ја инсталираш играта. Google Cloud Save е посебна опција што се вклучува доброволно.'],
+   ['Дали биологијата е вистинска?','Не. Хемијата, организмите и екосистемите во Trialum се измислени системи за игра, а не научни или медицински упатства.'],
+   ['Можам ли да купам кредити во Бета 1.0?','Не. Купувањата се исклучени во Бета 1.0; кредитите се заработуваат со играње.']
+  ]],
+  ['За развивачот','Развивач: Trialum. Повратни информации и поддршка: toniadrenalin@gmail.com.'],
   ['Бета и плаќања','Ова е бета-верзија. Дел од системите може да се менуваат по тестирањето; пријави проблем со чекорите за повторување и екранот. Во Бета 1.0 нема купувања; кредитите се заработуваат со играње.']
  ];
- const cards=sections.map(([title,body])=>'<section class="card"><h3>'+esc(title)+'</h3><p>'+esc(body)+'</p></section>').join('');
+ const cards=sections.map(([title,body])=>'<section class="card"><h3>'+esc(title)+'</h3>'+
+  (Array.isArray(body)?body.map(item=>Array.isArray(item)?'<p><b>'+esc(item[0])+'</b> '+esc(item[1])+'</p>':'<p>'+esc(item)+'</p>').join(''):'<p>'+esc(body)+'</p>')+'</section>').join('');
  const contact=en?'Feedback and support':'Повратни информации и поддршка';
  const note=en?'Tell us what you did and what happened.':'Напиши што направи и што се случи.';
  const link=en?'Email Trialum support':'Испрати е-пошта до поддршката';

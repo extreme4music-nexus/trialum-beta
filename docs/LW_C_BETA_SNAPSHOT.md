@@ -7,8 +7,10 @@
 - Packages: `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, `com.trialum.ziivaiskra.signdebug`
 - Android build and regression checks: public GitHub Actions, unsigned artifact only
 - Official signing: local, with the owner's original keystores
-- Play Games: existing optional integration; service IDs/OAuth configuration and device acceptance are required before completion
+- Play Games: owner reports sign-in, achievements and service interaction now work; the exact locally signed Beta 1.0 candidate still needs device revalidation
+- Friends/HTTPS/FCM: LW-C modules are included; public Actions now pass the configured HTTPS host and package-specific Firebase Android client IDs. Push remains consent-gated; CI cannot prove real-device delivery.
+- Feature, privacy, localization and owner QA ledger: [LW-C beta regression contract](LW_C_BETA_REGRESSION_CONTRACT.md)
 - Google Play upload or public release: not performed
 - Owner Android QA: pending
 
-This is a clean source snapshot commit in the beta repository. It does not import the Trialum repository's Git history, server/deployment files, release artifacts, signing credentials, or secrets.
+This is a clean source snapshot commit in the beta repository. It does not import the Trialum repository's Git history, server/deployment files, release artifacts, signing credentials, or secrets. The build receives only the HTTPS API hostname and Firebase client configuration through beta-repository Actions variables. Server-side FCM credentials, encryption keys, signing keys and passwords are excluded.

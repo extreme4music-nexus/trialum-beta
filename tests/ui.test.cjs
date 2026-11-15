@@ -303,7 +303,7 @@ async function run(){
 
  if(process.env.TRIALUM_LOCALE_AUDIT){
   await w.TrialumI18n.change('en');
-  for(const page of ['lab','habitats','pets','research','more','dna','food','plants','playground','shared','friends','messages','achievements','diary','notifications','settings']){
+  for(const page of ['lab','habitats','pets','research','more','about','dna','food','plants','playground','shared','friends','messages','achievements','diary','notifications','settings']){
    click(page);w.TrialumI18n.translateDOM(d.getElementById('tabContent'));
    const copy=d.getElementById('tabContent').cloneNode(true);
    copy.querySelectorAll('.log-entry,.chat-message,.pet-option,.user-authored,[data-no-translate],#languagePicker option').forEach(n=>n.remove());
@@ -312,6 +312,11 @@ async function run(){
    console.log('LOCALE_AUDIT',page,words.length,leftovers.slice(0,38).join(' | '));
    assert.equal(leftovers.length,0,'English UI still contains untranslated Cyrillic on '+page+': '+leftovers.join(', '));
   }
+  click('about');
+  const about=d.getElementById('tabContent').textContent;
+  assert(about.includes('Frequently asked questions'),'About & Help must include its FAQ in English');
+  assert(about.includes('About the developer'),'About & Help must identify the developer in English');
+  assert(about.includes('Tutorial'),'About & Help must explain the replayable tutorial in English');
  }
 
  assert.equal(errors.length,0,'Browser runtime errors: '+errors.join('\n'));
