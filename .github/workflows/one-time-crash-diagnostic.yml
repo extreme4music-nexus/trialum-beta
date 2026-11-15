@@ -13,12 +13,6 @@ jobs:
     timeout-minutes: 35
     env:
       TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
-      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
-      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
-      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
-      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
-      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
-      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
       PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
@@ -43,28 +37,39 @@ jobs:
 
       - name: Build unsigned diagnostic APK
         run: |
-          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
-          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
-          : "${TRIALUM_FIREBASE_APP_ID_SIGNDEBUG:?Missing TRIALUM_FIREBASE_APP_ID_SIGNDEBUG}"
-          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
-          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
-          args=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
-            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
-            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
-            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
-            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
-            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
-            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID")
+          args=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL")
           [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
-          gradle -p android-template :app:assembleSigndebug --no-daemon --stacktrace "${args[@]}"
-          apk=$(find android-template/app/build/outputs/apk/signdebug -name '*.apk' -print -quit)
+          gradle -p android-template :app:assembleCrashdiag --no-daemon --stacktrace "${args[@]}"
+          apk=$(find android-template/app/build/outputs/apk/crashdiag -name '*.apk' -print -quit)
           test -s "$apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+          "$AAPT" dump badging "$apk" | grep -Fq "package: name='com.trialum.ziivaiskra.crashdiag'"
+          "$AAPT" dump badging "$apk" | grep -Fq "versionCode='36'"
+          # Generate a throwaway signing key on this runner only. The package
+          # is unique; the existing Trialum signer and its keystores are unused.
+          set +x
+          SIGN_PASS=$(openssl rand -hex 24)
+          KS="$RUNNER_TEMP/trialum-crashdiag-once.p12"
+          ALIGNED="$RUNNER_TEMP/trialum-crashdiag-aligned.apk"
+          SIGNED="$RUNNER_TEMP/trialum-crashdiag-signed.apk"
+          keytool -genkeypair -storetype PKCS12 -keystore "$KS" \
+            -storepass "$SIGN_PASS" -keypass "$SIGN_PASS" \
+            -alias trialum-crashdiag-once -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=Trialum One-Time Diagnostic, O=Trialum, C=MK" -noprompt >/dev/null 2>&1
+          ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -n 1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          "$ZIPALIGN" -f 4 "$apk" "$ALIGNED"
+          "$APKSIGNER" sign --ks "$KS" --ks-key-alias trialum-crashdiag-once \
+            --ks-pass "pass:$SIGN_PASS" --key-pass "pass:$SIGN_PASS" --out "$SIGNED" "$ALIGNED"
+          "$APKSIGNER" verify --verbose "$SIGNED"
+          unset SIGN_PASS
           mkdir -p diagnostic-apk
-          cp "$apk" diagnostic-apk/trialum-one-time-crash-diagnostic-signdebug-UNSIGNED.apk
+          cp "$SIGNED" diagnostic-apk/Trialum-One-Time-Crash-Diagnostic-RANDOM-SIGNED.apk
+          rm -f "$KS" "$ALIGNED" "$SIGNED"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: trialum-one-time-crash-diagnostic-unsigned
+          name: trialum-one-time-crash-diagnostic-random-signed
           path: diagnostic-apk/*.apk
           if-no-files-found: error
           retention-days: 7
