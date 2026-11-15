@@ -82,9 +82,9 @@ jobs:
           test -s "$apk"
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
           badge=$("$AAPT" dump badging "$apk")
-          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='36' versionName='1.0'"
+          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='37' versionName='1.0'"
           mkdir -p release-candidate
-          cp "$apk" release-candidate/Trialum-LW-C-1.0-v36-CRASH-DIAGNOSTICS-UNSIGNED.apk
+          cp "$apk" release-candidate/Trialum-LW-C-1.0-v37-PGS-ACHIEVEMENT-FIX-UNSIGNED.apk
 
       - uses: actions/upload-artifact@v4
         with:

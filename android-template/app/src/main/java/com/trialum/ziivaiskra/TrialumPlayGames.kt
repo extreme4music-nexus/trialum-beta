@@ -467,7 +467,7 @@ class TrialumPlayGames(
         }
         withAuthRecovery(
             "Achievement unlock",
-            { PlayGames.getAchievementsClient(activity).unlock(id) },
+            { PlayGames.getAchievementsClient(activity).unlockImmediate(id) },
             {
                 event("achievementResult", "Achievement unlock accepted by Play Games.",
                     JSONObject().put("achievementKey", key).put("succeeded", true))
