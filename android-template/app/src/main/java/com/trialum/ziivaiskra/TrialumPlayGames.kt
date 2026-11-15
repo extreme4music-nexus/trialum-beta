@@ -79,13 +79,16 @@ class TrialumPlayGames(
     private fun <T> withAuthRecovery(
         label: String,
         operation: () -> Task<T>,
-        onSuccess: (T) -> Unit
+        onSuccess: (T) -> Unit,
+        onFailure: (Exception) -> Unit = {},
+        reportErrors: Boolean = true
     ) {
         fun run(retried: Boolean) {
             val task = try {
                 operation()
             } catch (e: Exception) {
-                event("error", "$label: " + reason(e))
+                onFailure(e)
+                if (reportErrors) event("error", "$label: " + reason(e))
                 return
             }
             task.addOnSuccessListener { result -> onSuccess(result) }
@@ -102,6 +105,7 @@ class TrialumPlayGames(
                                 } else {
                                     playerId = null
                                     playerName = null
+                                    onFailure(IllegalStateException("Play Games sign-in was not authenticated."))
                                     event("signedOut", "$label still requires a Play Games profile.")
                                 }
                             }
@@ -109,7 +113,8 @@ class TrialumPlayGames(
                                 authenticated = false
                                 playerId = null
                                 playerName = null
-                                event("error", "$label sign-in retry failed: " + reason(signInError))
+                                onFailure(signInError)
+                                if (reportErrors) event("error", "$label sign-in retry failed: " + reason(signInError))
                             }
                     } else {
                         if (apiError?.statusCode == GamesClientStatusCodes.SIGN_IN_REQUIRED) {
@@ -117,7 +122,8 @@ class TrialumPlayGames(
                             playerId = null
                             playerName = null
                         }
-                        event("error", "$label: " + reason(error))
+                        onFailure(error)
+                        if (reportErrors) event("error", "$label: " + reason(error))
                     }
                 }
         }
@@ -447,12 +453,31 @@ class TrialumPlayGames(
     }
 
     fun unlockAchievement(key: String) {
-        if (!authenticated || !configured) return
+        if (!configured || !authenticated) {
+            event("achievementResult", "Achievement request skipped because Play Games is not ready.",
+                JSONObject().put("achievementKey", key).put("succeeded", false))
+            return
+        }
         val resource = achievementResource(key) ?: return
         val id = activity.getString(resource).trim()
-        if (id.isEmpty()) return
-        try { PlayGames.getAchievementsClient(activity).unlock(id) }
-        catch (e: Exception) { Log.w("TrialumPGS", "Achievement update unavailable", e) }
+        if (id.isEmpty()) {
+            event("achievementResult", "Achievement ID is missing from this build.",
+                JSONObject().put("achievementKey", key).put("succeeded", false))
+            return
+        }
+        withAuthRecovery(
+            "Achievement unlock",
+            { PlayGames.getAchievementsClient(activity).unlock(id) },
+            {
+                event("achievementResult", "Achievement unlock accepted by Play Games.",
+                    JSONObject().put("achievementKey", key).put("succeeded", true))
+            },
+            { error ->
+                event("achievementResult", "Achievement unlock failed: " + reason(error),
+                    JSONObject().put("achievementKey", key).put("succeeded", false))
+            },
+            false
+        )
     }
 
     fun submitScore(key: String, value: Long) {

@@ -12,13 +12,14 @@ const state={
   status:'',lastAutosave:0,lastScoreSend:0,restoring:false
 };
 let getWorld=()=>null,restoreWorld=null,notify=()=>{},refreshUI=()=>{},checkedAt=0;
-let lastAchievements=new Set();
+let lastAchievements=new Set(),pendingAchievements=new Set(),achievementRetryAfter=new Map();
+let debugAchievementSkipLogged=false;
 function resetForAccount(playerId=''){
   if(state.playerId===playerId)return;
   state.playerId=playerId;
   state.cloud=null;state.blocked=false;state.conflict=false;
   state.lastAutosave=0;state.lastScoreSend=0;checkedAt=0;
-  lastAchievements.clear();
+ lastAchievements.clear();pendingAchievements.clear();achievementRetryAfter.clear();debugAchievementSkipLogged=false;
 }
 
 function readNative(){
@@ -103,8 +104,20 @@ function onNative(event){
      .finally(()=>{state.restoring=false;refreshUI();});
    break;
   case 'cloudRestored':
-   state.conflict=false;state.blocked=false;state.cloud=null;state.lastScoreSend=0;lastAchievements.clear();
+   state.conflict=false;state.blocked=false;state.cloud=null;state.lastScoreSend=0;
+   lastAchievements.clear();pendingAchievements.clear();achievementRetryAfter.clear();
    feedback(T('Локалниот свет е усогласен со облачниот бекап.','Local game is now linked to restored cloud save.'));break;
+  case 'achievementResult':{
+   const key=String(event.achievementKey||'');
+   if(!key)break;
+   pendingAchievements.delete(key);
+   if(event.succeeded){lastAchievements.add(key);achievementRetryAfter.delete(key);}
+   else {
+    achievementRetryAfter.set(key,Date.now()+60_000);
+    feedback(T('Google Play Games: ','Google Play Games: ')+String(event.message||'Achievement update failed.').slice(0,200),true);
+   }
+   break;
+  }
   case 'cloudDisabled':
    state.cloudConsent=false;
    feedback(T('Прво вклучи Cloud Save.','Enable Cloud Save first.'),true);break;
@@ -127,11 +140,26 @@ function unranked(world){
    !!world?.logs?.some(x=>x?.kind==='debug');
 }
 function submitAchievements(world){
- if(!state.configured||!state.authenticated||!world||unranked(world))return;
+ if(!state.configured||!state.authenticated||!world)return;
+ if(unranked(world)){
+  if(!debugAchievementSkipLogged&&(world.achievements||[]).length){
+   debugAchievementSkipLogged=true;
+   try{native()?.recordDiagnostic?.('play_games.achievementSkipped','Achievements were not submitted because this world has debug history.','');}catch(_){}
+   feedback(T('Google Play Games: достигнувањата се исклучени за свет изменет со Debug алатки.','Google Play Games achievements are disabled for a world modified with Debug tools.'),true);
+  }
+  return;
+ }
  const ids=(world.achievements||[]).map(a=>officialAchievementIds[a?.id]).filter(Boolean);
  if(world.research?.level>=6)ids.push('lab6');
- const toSend=[...new Set(ids)].filter(id=>!lastAchievements.has(id));
- for(const id of toSend){try{native()?.pgsAchievement?.(id);lastAchievements.add(id);}catch(_){}}
+ const bridge=native();
+ if(typeof bridge?.pgsAchievement!=='function')return;
+ const now=Date.now();
+ const toSend=[...new Set(ids)].filter(id=>!lastAchievements.has(id)&&!pendingAchievements.has(id)&&now>=(achievementRetryAfter.get(id)||0));
+ for(const id of toSend){
+  pendingAchievements.add(id);
+  try{bridge.pgsAchievement(id);}
+  catch(_){pendingAchievements.delete(id);achievementRetryAfter.set(id,now+60_000);}
+ }
 }
 function submitScores(world){
  if(!state.configured||!state.authenticated||!world||unranked(world))return;

@@ -7,7 +7,7 @@
 - Private source of truth: `extreme4music-nexus/Trialum`, LW-C branch `feature/lw-c-contextual-turntaking-session-20261113`.
 - Snapshot source commit recorded for this beta: `04457df48b9c012f8667504b935a7ca501d13f07`.
 - Public beta candidate: `extreme4music-nexus/trialum-beta`, Draft PR #2, branch `release/lw-c-1.6-LW-dev.12`.
-- Product identity: **Trialum - Living World**, Beta `1.0`, Android `versionCode 36`.
+- Product identity: **Trialum - Living World**, Beta `1.0`, current PGS fix candidate Android `versionCode 37`.
 - Android package IDs remain `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, and `com.trialum.ziivaiskra.signdebug`.
 - LW-D is a separate development track. No LW-D source or commits belong in this beta snapshot.
 - GitHub Actions builds and tests unsigned APK/AAB candidates. The owner's original signing keys remain local. Do not publish to Play or mark owner QA passed without the owner's approval and device testing.
@@ -21,7 +21,7 @@
 | Messages and push | Private, bounded message cards between confirmed friends; no public chat or message text in game backups; push off until player consent; opting out leaves the in-game inbox available. | `js/messages.js`, `TrialumPush.kt`, `TrialumFirebaseService.kt`, `tests/messages-client.test.cjs` |
 | Shared playground and presence | Existing friend-gated shared-room, visit, presence and reconnect logic stays present. Do not claim guaranteed message delivery or a single WSS responder without protocol evidence. | `js/shared-playground.js`, `js/presence.js`, `tests/presence.test.cjs`, `tests/playground.test.cjs` |
 | Pet conversations | Bounded 36-reply session memory, reply-to links, speaker selection for 2/3/4+ pets, retained unconfirmed statements, short contextual AI replies, no random topic jumps, isolated local memory and per-pet opt-in. | `js/playground-dialogue-session.js`, `js/playground-memory.js`, `tests/dialogue-session.test.cjs`, `tests/playground-memory.test.cjs`, `tests/dialogue-mix.test.cjs` |
-| Google Play Games | Optional profile, achievements, leaderboards and opt-in Saved Games. Owner reported sign-in and Play Games working on 2026-11-15. Keep the package/signing OAuth registrations and service IDs intact. | `js/play-games.js`, `TrialumPlayGames.kt`, `tests/play-games.test.cjs`, `tests/version155.test.cjs` |
+| Google Play Games | Optional profile, achievements, leaderboards and opt-in Saved Games. PGS project published 2026-11-15; owner confirms profile sign-in, but achievement recording is not yet confirmed. Keep package/signing OAuth registrations and service IDs intact. | `js/play-games.js`, `TrialumPlayGames.kt`, `tests/play-games.test.cjs`, `tests/version155.test.cjs` |
 | Player information | The in-game About & Help includes game/developer information, offline/save guidance, Friends/Google/FCM guidance, FAQ and replayable tutorial instructions. Purchases remain off in Beta 1.0. | `js/longplay-ui.js`, `js/onboarding.js`, English locale audit in `tests/ui.test.cjs` |
 | English interface | Every user-visible string shown in English must be idiomatic, complete, and punctuation-checked. Changes to Macedonian UI copy require a same-change English translation and baseline update. | `locales/en.json`, `tests/forward-only-baseline.json`, `tests/accepted-english-complete-baseline-20261111.json`, `tests/english-sync-guard.cjs` |
 
@@ -65,7 +65,7 @@ CI PASS proves the tested source and build contract only. It does not prove real
 | Friends opt-in, HTTPS account, invite/accept/remove/block between two separate package identities | Owner test required |
 | Private message inbox, mute/block and deletion behavior | Owner test required |
 | FCM opt-in, permission denial, foreground/background receipt, token rotation and opt-out | Owner test required; server health does not prove delivery |
-| Google Play Games profile, four achievements, leaderboard and optional Cloud Save | Owner reports PGS now works; retest on the exact signed candidate |
+| Google Play Games profile, achievement recording, leaderboard and optional Cloud Save | Profile sign-in confirmed; achievement API acknowledgement and owner retest required on the exact signed candidate |
 | About/FAQ/Tutorial on device in English and Macedonian | Owner review required |
 | Existing save remains intact across installation/update in Secure Folder | Owner test required |
 
