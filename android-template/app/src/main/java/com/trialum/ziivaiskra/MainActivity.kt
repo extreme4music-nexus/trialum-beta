@@ -72,6 +72,7 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("pendingBackupId", pendingBackupId)
         outState.putString("pendingBackupName", pendingBackupName)
+        outState.putString("pendingCrashReport", pendingCrashReport)
         super.onSaveInstanceState(outState)
     }
 
@@ -85,6 +86,8 @@ class MainActivity : Activity() {
     private val backupSaveRequest = 1304
     private val backupOpenRequest = 1305
     private val modelOpenRequest = 1306
+    private val crashReportSaveRequest = 1307
+    private var pendingCrashReport: String? = null
     private var pendingModelTier: String? = null
     private val backupVault by lazy { TrialumBackupVault(this) }
     private val backupWorker = Executors.newSingleThreadExecutor()
@@ -97,6 +100,15 @@ class MainActivity : Activity() {
         val payload = JSONObject().put("ok", ok).put("message", message).put("code", code)
         web.evaluateJavascript(
             "window.TrialumNativeBackupEvent && window.TrialumNativeBackupEvent(" + payload.toString() + ");",
+            null
+        )
+    }
+
+    private fun crashReportNotice(ok: Boolean, message: String) {
+        if (isFinishing || isDestroyed || !::web.isInitialized) return
+        val payload = JSONObject().put("ok", ok).put("message", message)
+        web.evaluateJavascript(
+            "window.TrialumCrashExportEvent && window.TrialumCrashExportEvent(" + payload.toString() + ");",
             null
         )
     }
@@ -133,6 +145,27 @@ class MainActivity : Activity() {
             if(requestCode == imageRequestCode) pendingImage=null
             if(requestCode == backupSaveRequest) pendingBackupId=null
             if(requestCode == modelOpenRequest) pendingModelTier=null
+            if(requestCode == crashReportSaveRequest) {
+                pendingCrashReport = null
+                crashReportNotice(false, "Извозот е откажан.")
+            }
+            return
+        }
+        if (requestCode == crashReportSaveRequest) {
+            val report = pendingCrashReport
+            pendingCrashReport = null
+            val uri = data?.data
+            if (report == null || uri == null) {
+                crashReportNotice(false, "Не можам да ја зачувам JSON-датотеката.")
+                return
+            }
+            try {
+                contentResolver.openOutputStream(uri)?.use { it.write(report.toByteArray(Charsets.UTF_8)) }
+                    ?: error("Не може да се отвори датотеката.")
+                crashReportNotice(true, "Краш-логот е извезен како JSON.")
+            } catch (e: Exception) {
+                crashReportNotice(false, "Извозот не успеа: " + (e.message ?: "грешка"))
+            }
             return
         }
         val uri = data?.data ?: return
@@ -188,6 +221,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         pendingBackupId = savedInstanceState?.getString("pendingBackupId")
         pendingBackupName = savedInstanceState?.getString("pendingBackupName") ?: "TRIALUM-world.json"
+        pendingCrashReport = savedInstanceState?.getString("pendingCrashReport")
         captureSocialInvite(intent)
         web = WebView(this)
         push = TrialumPush(this) { event ->
@@ -323,6 +357,27 @@ class MainActivity : Activity() {
         if (::push.isInitialized) push.permissionResult(requestCode, grantResults)
     }
     inner class Bridge {
+        @JavascriptInterface fun exportCrashLog() {
+            runOnUiThread {
+                try {
+                    pendingCrashReport = TrialumDiagnostics.report(this@MainActivity).toString(2)
+                    val picker = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_TITLE, "trialum-crash-report-${System.currentTimeMillis()}.json")
+                    }
+                    startActivityForResult(picker, crashReportSaveRequest)
+                } catch (e: Exception) {
+                    pendingCrashReport = null
+                    crashReportNotice(false, "Не можам да подготвам извештај: " + (e.message ?: "грешка"))
+                }
+            }
+        }
+        @JavascriptInterface fun recordDiagnostic(category: String, message: String, stack: String) {
+            val allowed = setOf("web.error", "web.unhandled_rejection")
+            if (category !in allowed) return
+            TrialumDiagnostics.record(this@MainActivity, category, message.take(1200), stack.take(1200))
+        }
         @JavascriptInterface fun pushStatus(): String = push.status()
         @JavascriptInterface fun pushEnable() { runOnUiThread { push.enable() } }
         @JavascriptInterface fun pushDisable() { runOnUiThread { push.disable() } }

@@ -5,6 +5,17 @@ let s=null,tab='lab',toastTimer,saveTimer,alertsSeen=new Set(),saving=false,rest
 // Scroll-intent state belongs to the home scene only, not other screens.
 let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
  let lastBackupFeedback=null,lastAutoRescueAt=0,rescueWarningShown=false;
+ if(!globalThis.__trialumCrashHooksInstalled){
+  globalThis.__trialumCrashHooksInstalled=true;
+  const record=(category,message,stack)=>{
+   try{globalThis.TrialumAndroid?.recordDiagnostic?.(category,String(message||'').slice(0,1200),String(stack||'').slice(0,1200));}catch(_){}
+  };
+  window.addEventListener('error',event=>record('web.error',event.message||event.error?.message||'JavaScript error',event.error?.stack||''));
+  window.addEventListener('unhandledrejection',event=>{
+   const reason=event.reason;
+   record('web.unhandled_rejection',reason?.message||String(reason||'Unhandled promise rejection'),reason?.stack||'');
+  });
+ }
  function rescueSnapshot(pinned=false){
   if(!s||!globalThis.TrialumAndroid?.saveSafetySnapshot)return true;
   const now=Date.now();

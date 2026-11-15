@@ -4,6 +4,12 @@
 const E=root.TrialumEngine,previous=root.TrialumExpansion;
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[a]));
 const b=(text,act,attr='',disabled=false)=>'<button data-do="'+act+'" '+attr+(disabled?' disabled':'')+'>'+text+'</button>';
+root.TrialumCrashExportEvent=event=>{
+ const target=document.getElementById('crashReportFeedback');if(!target)return;
+ const message=event?.message||'Краш-логот не е извезен.';
+ target.textContent=root.TrialumI18n?.t?.(message)||message;
+ target.classList.toggle('allgood',Boolean(event?.ok));
+};
 const fmt=x=>Math.floor(Number(x)||0).toLocaleString('mk-MK');
 const crit=(items)=>'<div class="unlock-checks">'+items.map(k=>'<div class="goal '+(k.ok?'done':'')+'"><span>'+(k.ok?'✓':'🔒')+' '+esc(k.label)+'</span><small>'+esc(k.value)+'</small></div>').join('')+'</div>';
 const lock=(conditions)=>'<div class="lock-hint">🔒 '+esc(conditions)+'</div>';
@@ -178,6 +184,9 @@ function settings(s){
  '<p class="small subtle">Нема наплата, реклами ниту активна продавница.</p></div>'+
  '<div class="settings-group debug-zone"><h3>🧪 Дебагирање и тестирање</h3>'+
  '<p class="small">Опционална програмерска алатка. Дебаг-деновите се симулираат во овој локален свет. Не се активираат во обична игра.</p>'+
+ '<p class="small subtle">Извештајот содржи грешки од самата апликација и Play Games; не може да чита Android системски logcat.</p>'+
+ '<div class="btn-line">'+b('🧾 Извези краш лог','exportCrashLog')+'</div>'+
+ '<p id="crashReportFeedback" class="small" role="status" aria-live="polite"></p>'+
  b(on?'🔓 Исклучи дебагирање':'🔒 Вклучи дебагирање','debugToggle','class="'+(on?'button-gold':'')+'"')+
  (on?'<div class="notice">⚠ Тестни измени во светот! Прво извези JSON ако сакаш да го зачуваш напредокот пред дебагирање.</div>'+
  '<div class="btn-line">'+b('⏭ +1 ден','debugDays','data-days="1"')+b('⏭ +7 дена','debugDays','data-days="7"')+b('⏭ +30 дена','debugDays','data-days="30"')+'</div>'+
@@ -280,7 +289,7 @@ function more(){
  '<span><b>'+name+'</b><small>'+note+'</small></span><span aria-hidden="true">›</span></button>').join('')+'</div></div>';
 }
 const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants,settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
-const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
+const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
 root.TrialumExpansion={
  render(page,s){if(!s)return '';E.ensureLongplay(s);if(views[page])return (['lab','habitats','pets','research','more'].includes(page)?'':'<button class="section-back" data-tab="more">‹ Повеќе</button>')+views[page](s);return previous.render(page,s);},
  can(action){return actions.has(action)||previous.can(action);},
@@ -289,6 +298,10 @@ root.TrialumExpansion={
  if(root.TrialumMind?.handle(action,b,s,ctx))return;
  let result=null;
  switch(action){
+ case 'exportCrashLog':{
+  if(!root.TrialumAndroid?.exportCrashLog){ctx.toast('Извозот е достапен само во Android апликацијата.');return;}
+  root.TrialumAndroid.exportCrashLog();return;
+ }
  case 'performTrick':{
   const p=E.currentPet(s);if(!p||!root.TrialumWorld?.playTrick(p.id,b.dataset.skill)){ctx.toast('Прво научи го овој трик.');return;}
   ctx.toast('✨ '+p.name+' го покажува научениот трик!');return;

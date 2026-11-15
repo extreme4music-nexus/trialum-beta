@@ -51,6 +51,8 @@ class TrialumPlayGames(
     private val maxEventChars = 12_000_000
 
     private fun event(kind: String, message: String = "", extras: JSONObject? = null) {
+        // Keep the one-time diagnostic trail free of player IDs and display names in extras.
+        TrialumDiagnostics.record(activity, "play_games.$kind", message)
         val data = JSONObject().put("kind", kind).put("message", message)
         if (extras != null) {
             val keys = extras.keys()

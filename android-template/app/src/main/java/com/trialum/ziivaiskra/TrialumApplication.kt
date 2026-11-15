@@ -10,6 +10,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 class TrialumApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        TrialumDiagnostics.installCrashHandler(this)
+        TrialumDiagnostics.record(this, "app.process_started", "Application process started")
         if(TrialumPush.opted(this) && TrialumPush.prepareFirebase(this)) {
             try {
                 FirebaseMessaging.getInstance().isAutoInitEnabled=true
