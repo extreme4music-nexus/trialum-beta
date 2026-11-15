@@ -156,8 +156,7 @@ android {
                 }
                 resValue("string", "trialum_firebase_app_id", pgsTestAppId)
                 }
-        }
-                }
+            }
         }
     }
     compileOptions {
