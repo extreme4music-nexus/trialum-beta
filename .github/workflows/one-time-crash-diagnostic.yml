@@ -1,0 +1,70 @@
+name: One-time crash diagnostic APK (unsigned)
+
+on:
+  push:
+    branches: [feature/lwc-debug-crash-json-once-20261115]
+
+permissions:
+  contents: read
+
+jobs:
+  build-unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
+      PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build unsigned diagnostic APK
+        run: |
+          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNDEBUG:?Missing TRIALUM_FIREBASE_APP_ID_SIGNDEBUG}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
+          args=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
+            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
+            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
+            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
+            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID")
+          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
+          gradle -p android-template :app:assembleSigndebug --no-daemon --stacktrace "${args[@]}"
+          apk=$(find android-template/app/build/outputs/apk/signdebug -name '*.apk' -print -quit)
+          test -s "$apk"
+          mkdir -p diagnostic-apk
+          cp "$apk" diagnostic-apk/trialum-one-time-crash-diagnostic-signdebug-UNSIGNED.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trialum-one-time-crash-diagnostic-unsigned
+          path: diagnostic-apk/*.apk
+          if-no-files-found: error
+          retention-days: 7
