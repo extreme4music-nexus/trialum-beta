@@ -25,6 +25,8 @@ test('beta Android builds cannot silently drop HTTPS Friends or FCM client confi
   'trialumFirebaseProjectId','trialumFirebaseSenderId'
  ]) assert(workflow.includes(`-P${property}=`),'Gradle property is not passed: '+property);
  assert(workflow.includes('dump --values resources'),'Built APK resources must be checked');
+ for(const resource of ['trialum_social_api_url','trialum_firebase_app_id','trialum_firebase_project_id','trialum_firebase_sender_id'])
+  assert(workflow.includes('require_resource_value '+resource),'APK verification must identify missing configured resource: '+resource);
  assert(gradle.includes('trialumFirebaseAppIdSigndebug')&&gradle.includes('trialumFirebaseAppIdSignqa'));
  assert(!/TRIALUM_FCM_SERVICE_ACCOUNT|GOOGLE_APPLICATION_CREDENTIALS|\.jks|\.p12/i.test(workflow),
   'The public build workflow must not receive server credentials or signing material');

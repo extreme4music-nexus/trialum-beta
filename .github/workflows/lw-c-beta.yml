@@ -130,10 +130,23 @@ jobs:
             echo "$badge" | grep -Fq "package: name='$pkg'"
             echo "$badge" | grep -Fq "versionName='$ver'"
             resources=$("$AAPT" dump --values resources "$apk")
-            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_SOCIAL_API_URL\""
-            printf '%s\n' "$resources" | grep -Fq "(string8) \"$firebase_app_id\""
-            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_FIREBASE_PROJECT_ID\""
-            printf '%s\n' "$resources" | grep -Fq "(string8) \"$TRIALUM_FIREBASE_SENDER_ID\""
+            require_resource_value() {
+              key="$1"
+              expected="$2"
+              if ! printf '%s\n' "$resources" | awk -v key="string/$key" -v expected="$expected" '
+                index($0, key) { in_resource = 1; found_key = 1; if (index($0, expected)) found_value = 1; next }
+                in_resource && /^resource 0x/ { in_resource = 0 }
+                in_resource && index($0, expected) { found_value = 1 }
+                END { exit !(found_key && found_value) }
+              '; then
+                echo "::error::APK $variant does not contain the configured Android resource: $key"
+                exit 1
+              fi
+            }
+            require_resource_value trialum_social_api_url "$TRIALUM_SOCIAL_API_URL"
+            require_resource_value trialum_firebase_app_id "$firebase_app_id"
+            require_resource_value trialum_firebase_project_id "$TRIALUM_FIREBASE_PROJECT_ID"
+            require_resource_value trialum_firebase_sender_id "$TRIALUM_FIREBASE_SENDER_ID"
             cp "$apk" "candidates/trialum-$variant-UNSIGNED.apk"
           done
           aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)
