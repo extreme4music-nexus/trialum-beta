@@ -134,19 +134,20 @@ android {
     // One-time isolated Play Games diagnosis install. Its package ID is distinct
     // so it cannot replace the owner's installed app or touch its WebView data.
     // It requires its own Firebase Android app ID and one-time PGS OAuth client.
-    buildTypes {
-        create("pgstest") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".pgstest"
-            versionNameSuffix = "-pgstest"
-            isDebuggable = true
-            manifestPlaceholders["trialumInviteScheme"] = "trialum-pgstest"
-            val pgsTestAppId = (project.findProperty("trialumFirebaseAppIdPgstest") as? String)?.trim().orEmpty()
-            val releaseAppId = (project.findProperty("trialumFirebaseAppId") as? String)?.trim().orEmpty()
-            val signqaAppId = (project.findProperty("trialumFirebaseAppIdSignqa") as? String)?.trim().orEmpty()
-            val signdebugAppId = (project.findProperty("trialumFirebaseAppIdSigndebug") as? String)?.trim().orEmpty()
-            val fcmSender = (project.findProperty("trialumFirebaseSenderId") as? String)?.trim().orEmpty()
-            if (releaseAppId.isNotEmpty()) {
+    if (!(project.findProperty("trialumFirebaseAppIdPgstest") as? String).isNullOrBlank()) {
+        buildTypes {
+            create("pgstest") {
+                initWith(getByName("release"))
+                applicationIdSuffix = ".pgstest"
+                versionNameSuffix = "-pgstest"
+                isDebuggable = true
+                manifestPlaceholders["trialumInviteScheme"] = "trialum-pgstest"
+                val pgsTestAppId = (project.findProperty("trialumFirebaseAppIdPgstest") as? String)?.trim().orEmpty()
+                val releaseAppId = (project.findProperty("trialumFirebaseAppId") as? String)?.trim().orEmpty()
+                val signqaAppId = (project.findProperty("trialumFirebaseAppIdSignqa") as? String)?.trim().orEmpty()
+                val signdebugAppId = (project.findProperty("trialumFirebaseAppIdSigndebug") as? String)?.trim().orEmpty()
+                val fcmSender = (project.findProperty("trialumFirebaseSenderId") as? String)?.trim().orEmpty()
+                if (releaseAppId.isNotEmpty()) {
                 require(pgsTestAppId.matches(Regex("^1:[0-9]+:android:[0-9a-fA-F]+$")) &&
                     pgsTestAppId != releaseAppId && pgsTestAppId != signqaAppId &&
                     pgsTestAppId != signdebugAppId && pgsTestAppId.startsWith("1:$fcmSender:android:")) {
@@ -154,7 +155,9 @@ android {
                         "in the same Firebase project and set TRIALUM_FIREBASE_APP_ID_PGSTEST"
                 }
                 resValue("string", "trialum_firebase_app_id", pgsTestAppId)
-            }
+                }
+        }
+                }
         }
     }
     compileOptions {
