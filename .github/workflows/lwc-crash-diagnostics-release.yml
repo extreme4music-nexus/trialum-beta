@@ -19,6 +19,7 @@ jobs:
       TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
       TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
       TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_APP_ID_PGSTEST: ${{ vars.TRIALUM_FIREBASE_APP_ID_PGSTEST }}
       TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
       TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
       PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
@@ -52,7 +53,7 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Build the real application package (no tests or signing)
+      - name: Build isolated PGS test package
         run: |
           : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
           [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
@@ -60,10 +61,12 @@ jobs:
           : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
           : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
           : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
+          : "${TRIALUM_FIREBASE_APP_ID_PGSTEST:?Register com.trialum.ziivaiskra.pgstest in Firebase and set TRIALUM_FIREBASE_APP_ID_PGSTEST}"
           args=("-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
             "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
             "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
             "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdPgstest=$TRIALUM_FIREBASE_APP_ID_PGSTEST"
             "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
             "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
             "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID")
@@ -77,18 +80,28 @@ jobs:
           [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleRelease --no-daemon --stacktrace "${args[@]}"
-          apk=$(find android-template/app/build/outputs/apk/release -name '*.apk' -print -quit)
+          gradle -p android-template :app:assemblePgstest --no-daemon --stacktrace "${args[@]}"
+          apk=$(find android-template/app/build/outputs/apk/pgstest -name '*.apk' -print -quit)
           test -s "$apk"
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
           badge=$("$AAPT" dump badging "$apk")
-          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='37' versionName='1.0'"
+          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.pgstest' versionCode='37' versionName='1.0-pgstest'"
           mkdir -p release-candidate
-          cp "$apk" release-candidate/Trialum-LW-C-1.0-v37-PGS-ACHIEVEMENT-FIX-UNSIGNED.apk
+          TEST_PASS=$(openssl rand -base64 36 | tr -d '\n')
+          echo "::add-mask::$TEST_PASS"
+          key="$RUNNER_TEMP/trialum-pgs-one-time.p12"
+          keytool -genkeypair -noprompt -keystore "$key" -storetype PKCS12 -storepass "$TEST_PASS" \
+            -keypass "$TEST_PASS" -alias trialum-pgs-one-time -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=Trialum One-Time PGS Test"
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          "$SIGNER" sign --ks "$key" --ks-key-alias trialum-pgs-one-time --ks-pass "pass:$TEST_PASS" \
+            --key-pass "pass:$TEST_PASS" --out release-candidate/Trialum-LW-C-1.0-v37-PGSTEST.apk "$apk"
+          "$SIGNER" verify --verbose --print-certs release-candidate/Trialum-LW-C-1.0-v37-PGSTEST.apk > release-candidate/PGS-OAUTH-SHA1.txt
+          rm -f "$key"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: trialum-lwc-crash-diagnostics-release-unsigned
-          path: release-candidate/*.apk
+          name: trialum-lwc-pgs-one-time-signed-test
+          path: release-candidate/*
           if-no-files-found: error
           retention-days: 7

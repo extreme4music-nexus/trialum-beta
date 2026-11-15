@@ -10,7 +10,7 @@
 - Product identity: **Trialum - Living World**, Beta `1.0`, current PGS fix candidate Android `versionCode 37`.
 - Android package IDs remain `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, and `com.trialum.ziivaiskra.signdebug`.
 - LW-D is a separate development track. No LW-D source or commits belong in this beta snapshot.
-- GitHub Actions builds and tests unsigned APK/AAB candidates. The owner's original signing keys remain local. Do not publish to Play or mark owner QA passed without the owner's approval and device testing.
+- GitHub Actions builds APK candidates. The official package remains unsigned in CI and uses the owner's local Release signer. The isolated one-time `.pgstest` diagnosis package may use a runner-ephemeral signer with its own PGS OAuth credential. The owner's persistent signing keys remain local. Do not publish an app release to Play or mark owner QA passed without device testing.
 
 ## Features that must not disappear
 

@@ -13,10 +13,12 @@
 - Native success/failure is returned to the WebView and recorded in the opt-in crash diagnostic journal, without player identifiers.
 - A submission is marked complete only after Play Games accepts it. Failed requests can retry after a 60-second cooldown.
 - Worlds with Debug history remain excluded from PGS achievements and ranked scores. The app now records and displays that suppression reason instead of silently ignoring it.
-- No package ID, OAuth client, signing identity, local save, Friends service or server integration was changed.
+- The official `com.trialum.ziivaiskra` package, its Release signer/OAuth, local saves, Friends service and server integration are unchanged.
+- A separate `com.trialum.ziivaiskra.pgstest` install was registered in Firebase to preserve the owner-installed app and its data. GitHub Actions creates a one-time signing key on its public runner, signs only this isolated package, exports the SHA-1 fingerprint, then deletes the key before the runner is discarded. No signing key or password is stored in the repository or Actions variables.
+- The one-time PGS Android OAuth credential for this package must match that exact candidate fingerprint before installing/testing it. A rebuild creates a new signer and needs a new OAuth credential.
 
 ## Owner device check still required
 
-Install the locally owner-signed v37 APK as an update, connect the Play Games profile, earn one achievement through normal gameplay, then inspect Achievements in Play Games. If it still does not appear, export the in-app JSON crash report; it will distinguish a Debug-world suppression from an accepted or rejected Play Games API request.
+Install the separately signed `.pgstest` v37 candidate alongside the existing app, connect the Play Games profile, earn one achievement through normal gameplay, then inspect Achievements in Play Games. The test package uses a separate Firebase app registration and must not replace or uninstall the official app. If the achievement still does not appear, export the in-app JSON crash report; it will distinguish a Debug-world suppression from an accepted or rejected Play Games API request.
 
 Do not claim achievement functionality as verified until that device check succeeds. Do not publish an app release to Play Store as part of this fix.

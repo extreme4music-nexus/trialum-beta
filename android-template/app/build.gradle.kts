@@ -79,10 +79,9 @@ android {
             manifestPlaceholders["trialumInviteScheme"] = "trialum-lw16"
         }
     }
-    // Owner-controlled GitHub Actions signing only. No keystores/passwords in Gradle.
-    // The APKs remain UNSIGNED at build time; apksigner signs only on the protected
-    // manual Actions job after independent checks. This QA package never replaces
-    // the installed .lwa, .lw16 or normal com.trialum.ziivaiskra installs.
+    // Owner-controlled signing for the persistent QA packages. No keystores or
+    // passwords are configured here. The official Release package remains locally
+    // signed; only the isolated one-time .pgstest candidate uses a runner-ephemeral key.
     buildTypes {
         create("signqa") {
             initWith(getByName("release"))
@@ -129,6 +128,32 @@ android {
                         "in the same Firebase project and set TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
                 }
                 resValue("string", "trialum_firebase_app_id", friendsDebugAppId)
+            }
+        }
+    }
+    // One-time isolated Play Games diagnosis install. Its package ID is distinct
+    // so it cannot replace the owner's installed app or touch its WebView data.
+    // It requires its own Firebase Android app ID and one-time PGS OAuth client.
+    buildTypes {
+        create("pgstest") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".pgstest"
+            versionNameSuffix = "-pgstest"
+            isDebuggable = true
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-pgstest"
+            val pgsTestAppId = (project.findProperty("trialumFirebaseAppIdPgstest") as? String)?.trim().orEmpty()
+            val releaseAppId = (project.findProperty("trialumFirebaseAppId") as? String)?.trim().orEmpty()
+            val signqaAppId = (project.findProperty("trialumFirebaseAppIdSignqa") as? String)?.trim().orEmpty()
+            val signdebugAppId = (project.findProperty("trialumFirebaseAppIdSigndebug") as? String)?.trim().orEmpty()
+            val fcmSender = (project.findProperty("trialumFirebaseSenderId") as? String)?.trim().orEmpty()
+            if (releaseAppId.isNotEmpty()) {
+                require(pgsTestAppId.matches(Regex("^1:[0-9]+:android:[0-9a-fA-F]+$")) &&
+                    pgsTestAppId != releaseAppId && pgsTestAppId != signqaAppId &&
+                    pgsTestAppId != signdebugAppId && pgsTestAppId.startsWith("1:$fcmSender:android:")) {
+                    "Firebase PGS test mismatch: register com.trialum.ziivaiskra.pgstest " +
+                        "in the same Firebase project and set TRIALUM_FIREBASE_APP_ID_PGSTEST"
+                }
+                resValue("string", "trialum_firebase_app_id", pgsTestAppId)
             }
         }
     }
