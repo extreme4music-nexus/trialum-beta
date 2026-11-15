@@ -1,4 +1,4 @@
-# Trialum - Living World 1.0 Beta
+# Trialum 1.0 Beta — Living World edition
 
 **Candidate:** Trialum - Living World 1.0 (Android versionCode 36)  
 **Source:** [Trialum commit 04457df48b9c012f8667504b935a7ca501d13f07](https://github.com/extreme4music-nexus/Trialum/commit/04457df48b9c012f8667504b935a7ca501d13f07)  

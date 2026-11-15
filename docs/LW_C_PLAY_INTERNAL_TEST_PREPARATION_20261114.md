@@ -1,12 +1,12 @@
 # LW-C: Google Play Internal Testing preparation
 
-**Status:** beta preparation is active; no Play Store track is released. The Play app entry and Play Games Services project exist. The beta PR is a draft and the latest unsigned candidates are built by GitHub Actions. Physical owner QA is still pending.
+**Status:** beta preparation is active; no Play Store track is released. The player-facing app title is **Trialum**; **Living World** names the first edition. The Play app entry and Play Games Services project exist. The latest unsigned candidates are built by GitHub Actions. Physical owner QA is still pending.
 
 ## Android candidate
 
 | Variant | Application ID | Version |
 |---|---|---|
-| Release candidate | `com.trialum.ziivaiskra` | `Trialum - Living World`, versionName `1.0`, versionCode `36` |
+| Release candidate | `com.trialum.ziivaiskra` | `Trialum`, versionName `1.0`, versionCode `37` |
 | Signing QA | `com.trialum.ziivaiskra.signqa` | QA-only variant |
 | Friends Debug | `com.trialum.ziivaiskra.signdebug` | QA-only, debuggable variant |
 
@@ -18,15 +18,15 @@ Official signing is local only. The intended key mapping is the existing Release
 
 Play Games project ID `330148794383` is linked to the app. Saved Games is **On** and saved. The required Google Play Games and Google Drive APIs are enabled. `toniadrenalin@gmail.com` is on the PGS tester list. Cloud Save remains a player opt-in.
 
-The Play Games project remains **Draft**. Its game icon, feature graphic, and all seven achievement icons are saved. The publishing page now shows Credentials, Achievements, and Leaderboards as **Ready to publish**. The project Publish action is intentionally not used: it activates the configured PGS changes for users. The profile sign-in alone does not prove that achievement, leaderboard, or Saved Games API calls succeed. Validate those on-device using each package with its matching signing certificate before claiming PGS functionality.
+The Play Games project is **Published**. Saved Games is enabled. The one-time `com.trialum.ziivaiskra.pgstest` credential is published and authorized by its exact test signing SHA-1; the main Release credential remains the default for the official package. The profile sign-in and Saved Games path were confirmed by the owner on-device for the isolated test package. Achievement and leaderboard posting are not yet owner-confirmed for the official package.
 
-Publishing the PGS project does **not** publish the Play Store app. Keep the project Draft until the owner explicitly approves activation.
+Publishing the PGS project does **not** publish the Play Store app. The Play Store app remains unpublished until its separate track release is submitted.
 
 ## Play Store Internal Testing
 
-The app exists in Play Console under the exact main package ID. A separate internal-QA tester list is prepared, but there is no uploaded signed Release AAB, active internal-testing release, or tester opt-in link yet. Only the locally signed main Release AAB belongs on the Internal testing track; never upload the QA or Friends Debug APKs.
+The app exists in Play Console under the exact main package ID. The `Trialum Internal QA` email list containing the owner is selected. The default English store listing draft uses the player-facing title **Trialum**. There is no uploaded signed Release AAB, active internal-testing release, or tester opt-in link yet. Only the locally signed main Release AAB belongs on the Internal testing track; never upload the QA or Friends Debug APKs.
 
-Before creating the track release, verify versionCode 36 is unused, confirm the registered upload certificate, upload the signed AAB, review Play's generated APKs and pre-launch report, and then create/share the opt-in link. Do not promote to closed/open testing or production without owner approval.
+Before creating the track release, confirm versionCode 37 is unused, confirm the registered upload certificate, upload the locally signed AAB, review Play's generated APKs and pre-launch report, and then create/share the opt-in link. Do not promote to closed/open testing or production without owner approval.
 
 ## Data Safety, content rating, and listing
 

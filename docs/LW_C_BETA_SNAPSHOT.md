@@ -1,4 +1,4 @@
-# Trialum - Living World 1.0 beta snapshot
+# Trialum 1.0 beta snapshot — Living World edition
 
 - Source repository: `extreme4music-nexus/Trialum`
 - Exact source commit: `04457df48b9c012f8667504b935a7ca501d13f07`

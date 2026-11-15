@@ -121,7 +121,7 @@ jobs:
             apk=$(find "android-template/app/build/outputs/apk/$variant" -name '*.apk' -print -quit)
             test -s "$apk"
             badge=$("$AAPT" dump badging "$apk")
-            echo "$badge" | grep -Fq "versionCode='36'"
+            echo "$badge" | grep -Fq "versionCode='37'"
             case "$variant" in
               release) pkg='com.trialum.ziivaiskra'; ver='1.0'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID" ;;
               signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID_SIGNQA" ;;
