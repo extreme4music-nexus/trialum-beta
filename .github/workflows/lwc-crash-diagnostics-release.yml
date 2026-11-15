@@ -1,4 +1,4 @@
-name: LW-C crash diagnostics release candidate (unsigned)
+name: LW-C one-time PGS achievement test (ephemeral signature)
 
 on:
   push:
@@ -96,7 +96,7 @@ jobs:
           SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
           "$SIGNER" sign --ks "$key" --ks-key-alias trialum-pgs-one-time --ks-pass "pass:$TEST_PASS" \
             --key-pass "pass:$TEST_PASS" --out release-candidate/Trialum-LW-C-1.0-v37-PGSTEST.apk "$apk"
-          "$SIGNER" verify --verbose --print-certs release-candidate/Trialum-LW-C-1.0-v37-PGSTEST.apk > release-candidate/PGS-OAUTH-SHA1.txt
+          "$SIGNER" verify --verbose --print-certs release-candidate/Trialum-LW-C-1.0-v37-PGSTEST.apk > release-candidate/PGS-OAUTH-SHA1.txt 2>&1
           rm -f "$key"
 
       - uses: actions/upload-artifact@v4
