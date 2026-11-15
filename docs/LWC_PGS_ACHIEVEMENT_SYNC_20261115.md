@@ -14,7 +14,7 @@
 - A submission is marked complete only after Play Games accepts it. Failed requests can retry after a 60-second cooldown.
 - Worlds with Debug history remain excluded from PGS achievements and ranked scores. The app now records and displays that suppression reason instead of silently ignoring it.
 - The official `com.trialum.ziivaiskra` package, its Release signer/OAuth, local saves, Friends service and server integration are unchanged.
-- A separate `com.trialum.ziivaiskra.pgstest` install was registered in Firebase to preserve the owner-installed app and its data. GitHub Actions creates a one-time signing key on its public runner, signs only this isolated package, exports the SHA-1 fingerprint, then deletes the key before the runner is discarded. No signing key or password is stored in the repository or Actions variables.
+- A separate `com.trialum.ziivaiskra.pgstest` install was registered in Firebase to preserve the owner-installed app and its data. GitHub Actions creates a one-time signing key on its public runner, signs only this isolated package, includes the certificate SHA-1 in the build artifact, then deletes the key before the runner is discarded. No signing key or password is stored in the repository or Actions variables.
 - The one-time PGS Android OAuth credential for this package must match that exact candidate fingerprint before installing/testing it. A rebuild creates a new signer and needs a new OAuth credential.
 
 ## Owner device check still required
