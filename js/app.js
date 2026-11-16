@@ -206,10 +206,10 @@ function exportBackup(){
  setTimeout(()=>URL.revokeObjectURL(url),3000);
  toast('Преземањето е побарано. Провери ја датотеката пред да го избришеш светот.');
 }
-function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId)));
+function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId||x.plantId)));
  for(const a of msgs){const id=a.type+'|'+(a.petId||a.habitatId);if(alertsSeen.has(id))continue;alertsSeen.add(id);if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){try{new Notification('ТРИАЛУМ · Потребна грижа',{body:a.text,tag:id,icon:'assets/icon.svg'})}catch(_){}}}
  alertsSeen=new Set([...alertsSeen].filter(x=>active.has(x)));}
-function doAction(button){if(restoring)return;const action=button.dataset.do,kind=button.dataset.kind;
+function doAction(button){if(restoring)return;const action=button.dataset.do,kind=button.dataset.kind;if(button.disabled)return;if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
  if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isAdultAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција е заклучена во оваа состојба.');return;}
@@ -375,6 +375,13 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'habCare':result=E.habitatCare(s,kind);sound='wash';break;
  case 'inventPlant':result=E.inventPlant(s,button.dataset.plant);sound='grow';break;
  case 'plant':result=E.plant(s,button.dataset.plant);sound='grow';break;
+ case 'agroSeed':result=E.produceSeedling(s,button.dataset.plant);sound='grow';break;
+ case 'agroPlant':result=E.plantInGarden(s,button.dataset.plant,button.dataset.bed);sound='grow';break;
+ case 'agroWater':result=E.waterPlant(s,button.dataset.id);sound='wash';break;
+ case 'agroTransplant':result=E.transplantPlant(s,button.dataset.id,button.dataset.hab);sound='build';break;
+ case 'agroCraft':result=E.craftAdditive(s,button.dataset.additive);sound='grow';break;
+ case 'agroTreat':result=E.applyAdditive(s,button.dataset.id,button.dataset.additive);sound='wash';break;
+ case 'agroRemove':result=E.removeDeadPlant(s,button.dataset.id);sound='select';break;
  case 'transfer':result=E.transfer(s,s.selectedPet,button.dataset.id);sound='select';break;
  case 'renamePet':{const p=E.currentPet(s);if(!p)return toast('Прво одбери миленик.');const name=prompt('Ново име на миленикот (до 32 знаци):',p.name);if(name===null)return;result=E.rename(s,'pet',p.id,name);break;}
  case 'inspect':{const current=E.currentHabitat(s);toast(current?`${current.name}: квалитет ${E.envScore(current)}%, простор ${E.occupancy(s,current.id)}/${current.capacity}`:`Фаза ${s.stage+1}: ${E.PHASES[s.stage]}`);return;}
@@ -406,7 +413,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  }
  default:return;
  }
- notice(result,sound);if(result?.ok&&action==='petCare'&&(kind==='talk'||kind==='play'||kind==='feed'))A.speak(E.currentPet(s));if(result?.ok)activeSignals();}
+ notice(result,sound);if(!result?.ok&&action?.startsWith('agro'))button.disabled=false;if(result?.ok&&action==='petCare'&&(kind==='talk'||kind==='play'||kind==='feed'))A.speak(E.currentPet(s));if(result?.ok)activeSignals();}
 async function importBackupState(backup){
  if(restoring)throw Error('Враќањето на бекап е веќе во тек.');
  if(!E.validate(backup))throw Error(en()?'This is not a compatible TRIALUM backup.':'Ова не е компатибилен ТРИАЛУМ бекап.');
