@@ -43,6 +43,7 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var modelRuntime: ModelRuntime
     private lateinit var playGames: TrialumPlayGames
+    private lateinit var ageSignals: TrialumAgeSignals
     private lateinit var nearby: TrialumNearby
     private lateinit var push: TrialumPush
     private val host = "appassets.androidplatform.net"
@@ -253,6 +254,15 @@ class MainActivity : Activity() {
                 }
             }
         }
+        ageSignals = TrialumAgeSignals(this) { event ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed)
+                    web.evaluateJavascript(
+                        "window.TrialumAgeSignalsEvent && window.TrialumAgeSignalsEvent(" +
+                            event.toString() + ");", null
+                    )
+            }
+        }
         modelRuntime = ModelRuntime(this) { kind, petId, text ->
             val event = JSONObject().put("kind", kind).put("petId", petId).put("text", text)
             runOnUiThread {
@@ -390,6 +400,13 @@ class MainActivity : Activity() {
         @JavascriptInterface fun nearbyScan() { runOnUiThread { nearby.startScanning() } }
         @JavascriptInterface fun nearbyStop() { runOnUiThread { nearby.stop() } }
         @JavascriptInterface fun socialApiUrl(): String = getString(R.string.trialum_social_api_url)
+        @JavascriptInterface fun requestAgeSignals() {
+            if (!BuildConfig.BETA_TESTER_TOOLS) return
+            runOnUiThread { ageSignals.request(this@MainActivity) }
+        }
+        @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
+            BuildConfig.BETA_TESTER_TOOLS && ageSignals.isAdultEligible()
+        @JavascriptInterface fun betaTesterToolsEnabled(): Boolean = BuildConfig.BETA_TESTER_TOOLS
         @JavascriptInterface fun socialCredential(): String = SocialCredentialVault.read(this@MainActivity)
         @JavascriptInterface fun socialStoreCredential(credential: String): Boolean =
             SocialCredentialVault.save(this@MainActivity, credential)

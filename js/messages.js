@@ -22,7 +22,8 @@ const randomId=()=>{
 };
 function config(){
  const api=server(),token=credential();
- state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(api)&&/^[A-Za-z0-9_-]{43}$/.test(token);
+ state.enabled=root.TrialumAndroid?.betaTesterToolsEnabled?.()===true&&root.TrialumSocial?.isAdultAllowed?.()===true&&
+  /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(api)&&/^[A-Za-z0-9_-]{43}$/.test(token);
  return state.enabled;
 }
 const errors={
@@ -69,6 +70,7 @@ async function refresh(){
 }
 function activate(){
  if(state.active)return;
+ if(!root.TrialumAndroid?.betaTesterToolsEnabled?.()||!root.TrialumSocial?.isAdultAllowed?.()){state.active=false;state.ready=false;emit();return;}
  state.active=true;
  if(config())refresh();
  timer=setInterval(()=>{if(state.active && !root.document?.hidden)refresh()},25000);

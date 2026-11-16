@@ -7,10 +7,11 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.trialum.ziivaiskra"
+        buildConfigField("Boolean", "BETA_TESTER_TOOLS", "false")
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 37
+        versionCode = 38
         versionName = "1.0"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
@@ -59,6 +60,16 @@ android {
     }
     // Isolated install for LW-A QA. It never replaces the existing debug APK.
     // It uses its own Android UID, WebView storage and Android Keystore scope.
+    buildTypes {
+        // Internal testing candidate only. Play's internal tester list controls
+        // distribution; the normal release build never includes this test panel.
+        create("internalBeta") {
+            initWith(getByName("release"))
+            isDebuggable = false
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum"
+        }
+    }
     buildTypes {
         create("lwa") {
             initWith(getByName("debug"))
@@ -173,6 +184,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("dev.ffmpegkit-maintained:llama-android:0.1.1")
     implementation("com.google.android.gms:play-services-games-v2:22.1.0")
+    implementation("com.google.android.play:age-signals:0.0.4")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     implementation("com.google.firebase:firebase-messaging:25.1.3")
 }

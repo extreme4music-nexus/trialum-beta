@@ -72,7 +72,7 @@ function sendNative(){if(!s)return;try{if(globalThis.TrialumAndroid&&typeof glob
   }
   W.setSceneVisible?.(home);
  }
-function chooseTab(which){globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
+function chooseTab(which){if(['messages','shared'].includes(which)&&!Social?.isAdultAllowed?.()){toast('🔒 Прво е потребна доброволна проверка на возраст во Пријатели.');which='friends';}globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
   const target=n.dataset.tab,active=target===which||(target==='more'&&!primary.includes(which));
   n.classList.toggle('active',active);
   if(n.closest('#tabs')){
@@ -134,6 +134,7 @@ function filterDiary(){
  if(el('diaryEmpty'))el('diaryEmpty').hidden=visible>0;
 }
 function friendsTab(){const guest=P?.remote(),connected=P?.connected(),ps=s.friends||[],p=E.currentPet(s);
+ if(!Social?.isAdultAllowed?.())return Social?.render()||'<div class="notice">Социјалните функции се заклучени.</div>';
  const oldP2P='<div class="tab-main"><h2>🤝 Стар директен P2P режим</h2>'+
  '<p class="desc">Без регистрација, без наши сервери, реклами или плаќање. Двата телефона мора да имаат отворена апликација. Понекогаш NAT/firewall спречува поврзување без TURN relay.</p>'+
  '<div class="notice"><b>Состојба: '+safe(P?.status()||'Неподдржано')+'</b><br>'+ (guest?'👋 '+safe(guest.name)+' · '+safe(guest.pet.name)+' (ниво '+guest.pet.level+')':'Нема активен гостин.')+'</div>'+
@@ -209,6 +210,12 @@ function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),ac
  for(const a of msgs){const id=a.type+'|'+(a.petId||a.habitatId);if(alertsSeen.has(id))continue;alertsSeen.add(id);if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){try{new Notification('ТРИАЛУМ · Потребна грижа',{body:a.text,tag:id,icon:'assets/icon.svg'})}catch(_){}}}
  alertsSeen=new Set([...alertsSeen].filter(x=>active.has(x)));}
 function doAction(button){if(restoring)return;const action=button.dataset.do,kind=button.dataset.kind;
+ if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
+ if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
+ if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isAdultAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција е заклучена во оваа состојба.');return;}
+ if(action==='betaNotify'){const result=globalThis.TrialumAndroid?.pushTestLocalNotification?.()||'unavailable';toast(result==='scheduled'?'Пробното известување е закажано.':('Известувањето: '+result));return;}
+ if(action==='betaPgsRefresh'){globalThis.TrialumAndroid?.pgsRefresh?.();toast('Барањето за освежување на Play Games е испратено.');return;}
+ if(action==='betaSocialRefresh'){Social?.refresh?.();return;}
  if(action==='onboardingIntro'){O?.open('intro');return;}
  if(action==='onboardingTutorial'){O?.open('tutorial');return;}
  if(action==='pgsOpen'){chooseTab('playgames');return;}if(G?.action(action,button))return;if(!s)return;
@@ -482,6 +489,13 @@ async function init(){globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);tr
  Shared?.onPresenceChange(()=>{if(s){render();scheduleSave();}});
  Messages?.onChange(()=>{if(s&&tab==='messages')renderTab();});
  globalThis.TrialumPushEvent=event=>{Messages?.pushEvent(event);};
+ globalThis.TrialumAgeSignalsEvent=event=>{
+  Promise.resolve(Social?.setAgeSignal?.(event)).then(()=>{
+   if(s&&Social?.isAdultAllowed?.())Shared?.reconcileAway?.().catch(()=>{});
+   if(s)renderTab();
+   toast(Social?.isAdultAllowed?.()?'Google Play сподели 18+ возрастен сигнал за ова интерно бета издание.':'Социјалните функции остануваат заклучени; основната игра работи офлајн.');
+  });
+ };
  globalThis.TrialumNearbyEvent=event=>{Social?.nearbyEvent(event);if(event?.kind==='invite' && s)chooseTab('friends');};
  globalThis.TrialumSocialInvite=function(code){
   if(Social?.receive(code)){if(s)chooseTab('friends');else toast('Примена е покана за пријателство. Прво започни го светот.');}

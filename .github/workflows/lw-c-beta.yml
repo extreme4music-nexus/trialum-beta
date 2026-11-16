@@ -110,22 +110,23 @@ jobs:
           [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:bundleRelease --no-daemon --stacktrace "${args[@]}"
+          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:assembleInternalBeta :app:bundleRelease :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
       - name: Verify candidate package identities and version
         run: |
           set -euo pipefail
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
           mkdir -p candidates
-          for variant in release signqa signdebug; do
+          for variant in release signqa signdebug internalBeta; do
             apk=$(find "android-template/app/build/outputs/apk/$variant" -name '*.apk' -print -quit)
             test -s "$apk"
             badge=$("$AAPT" dump badging "$apk")
-            echo "$badge" | grep -Fq "versionCode='37'"
+            echo "$badge" | grep -Fq "versionCode='38'"
             case "$variant" in
               release) pkg='com.trialum.ziivaiskra'; ver='1.0'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID" ;;
               signqa) pkg='com.trialum.ziivaiskra.signqa'; ver='1.0-signqa'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID_SIGNQA" ;;
               signdebug) pkg='com.trialum.ziivaiskra.signdebug'; ver='1.0-signdebug'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG" ;;
+              internalBeta) pkg='com.trialum.ziivaiskra'; ver='1.0'; firebase_app_id="$TRIALUM_FIREBASE_APP_ID" ;;
             esac
             echo "$badge" | grep -Fq "package: name='$pkg'"
             echo "$badge" | grep -Fq "versionName='$ver'"
@@ -153,6 +154,10 @@ jobs:
           test -s "$aab"
           unzip -t "$aab" >/dev/null
           cp "$aab" candidates/trialum-release-UNSIGNED.aab
+          beta_aab=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
+          test -s "$beta_aab"
+          unzip -t "$beta_aab" >/dev/null
+          cp "$beta_aab" candidates/trialum-internal-beta-UNSIGNED.aab
 
       - uses: actions/upload-artifact@v4
         with:

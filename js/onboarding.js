@@ -2,11 +2,12 @@
    No game rewards, progression mutations, or personal data in these dialogs. */
 (function(root){
 'use strict';
-const KEY_INTRO='trialum_intro_seen_v155',KEY_GUIDE='trialum_tutorial_seen_v155';
+const KEY_INTRO='trialum_intro_seen_v160',KEY_GUIDE='trialum_tutorial_seen_v155';
 const story=[
  ['✺','Добредојде во ТРИАЛУМ','Welcome to TRIALUM','Од неживи атоми ќе создаваш свој непознат жив свет. Нема брза победа — играта се развива со тебе.','Build a living universe from lifeless atoms. There is no rush to win: this world evolves with you.'],
  ['🌱','Една искра — многу генерации','One spark, many generations','Твоите организми ќе учат, растат и ќе се преобразуваат. Светот напредува низ денови, месеци и години.','Your creatures learn, grow and transform. The world advances through days, months and years.'],
- ['🛡️','Твојот свет, твоите правила','Your world, your choice','Играј офлајн. Сите AI модели и Google облачни функции се изборни. Извези JSON бекап за да го заштитиш напредокот.','Play offline. AI models and Google cloud features are optional. Export a JSON backup to protect your progress.']
+ ['🛡️','Твојот свет, твоите правила','Your world, your choice','Играј офлајн. Сите AI модели и Google облачни функции се изборни. Извези JSON бекап за да го заштитиш напредокот.','Play offline. AI models and Google cloud features are optional. Export a JSON backup to protect your progress.'],
+ ['🔒','Социјалните функции се изборни','Social features are optional','Во оваа интерна бета, Пријатели, пораки и заеднички простории се заклучени додека доброволно не споделиш возрастен сигнал 18+ преку Google Play. Детски управуван, помлад, одбиен или непознат профил останува офлајн. Google го обработува сигналот; Trialum не добива датум на раѓање или Google е-пошта. Не внесувај лични податоци.','In this internal beta, Friends, messages and shared rooms stay locked until you voluntarily share an 18+ age signal through Google Play. Child-managed, under-18, declined or unknown profiles stay offline. Google processes the signal; Trialum does not receive your date of birth or Google email. Do not enter personal information.']
 ];
 const guide=[
  ['🧪','Започни со Лабораторија','Start in the Laboratory','Создавај молекули, собирај сознание и следи ги условите за следната фаза. Првите промени се случуваат по неколку минути.','Make molecules, gather insight and follow the requirements for the next stage. Early evolution takes minutes.'],

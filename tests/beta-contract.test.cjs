@@ -64,3 +64,27 @@ test('in-game About, developer details, FAQ and tutorial are kept in English',()
  assert(read('tests/ui.test.cjs').includes("click('about')"),
   'The Android WebView locale audit must render the About & Help page');
 });
+
+test('age access is internal-beta-only, privacy-minimal and fails closed',()=>{
+ const gradle=read('android-template/app/build.gradle.kts');
+ const native=read('android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumAgeSignals.kt');
+ const activity=read('android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt');
+ const social=read('js/social.js'),messages=read('js/messages.js'),shared=read('js/shared-playground.js'),app=read('js/app.js');
+ assert.match(gradle,/versionCode\s*=\s*38/);
+ assert(gradle.includes('com.google.android.play:age-signals:0.0.4'));
+ assert(gradle.includes('create("internalBeta")')&&gradle.includes('BETA_TESTER_TOOLS", "true"'));
+ assert(native.includes('AgeSignalsStatus.SHARED')&&native.includes('ageLower >= 18')&&native.includes('ageUpper == null'));
+ assert(native.includes('AgeRangeSource.TIER_A')&&native.includes('AgeRangeSource.TIER_C')&&native.includes('AgeRangeSource.TIER_D'));
+ assert(!native.includes('AgeRangeSource.TIER_B'));
+ assert(native.includes('put("status", status).put("adultEligible", eligible)'));
+ assert(!/ageLower|ageUpper|ageRangeSource|installId/.test(native.slice(native.indexOf('private fun finish'))),
+  'Raw Play age data must not cross the native bridge');
+ assert(activity.includes('ageSignalsAdultEligible()')&&activity.includes('BuildConfig.BETA_TESTER_TOOLS'));
+ assert.match(activity,/fun requestAgeSignals\(\)\s*\{\s*if \(!BuildConfig\.BETA_TESTER_TOOLS\) return/);
+ assert(social.includes('if(!state.ageAllowed||!betaBuild())throw Error'));
+ assert(messages.includes('root.TrialumSocial?.isAdultAllowed?.()===true'));
+ assert(shared.includes('root.TrialumSocial?.isAdultAllowed?.()!==true'));
+ assert(app.includes("['messages','shared'].includes(which)&&!Social?.isAdultAllowed?.()"));
+ assert(app.includes("if(!Social?.isAdultAllowed?.())return Social?.render()"),
+  'Friends renderer must show the age gate while hiding legacy social controls');
+});

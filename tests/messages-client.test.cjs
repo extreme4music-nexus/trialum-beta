@@ -7,13 +7,14 @@ function client(credential='',calls=[]){
   crypto:crypto.webcrypto,AbortController,
   setInterval(){return 1},clearInterval(){},setTimeout(fn){return 1},clearTimeout(){},
   TrialumAndroid:{
+   betaTesterToolsEnabled:()=>true,
    socialApiUrl:()=> 'https://friends.example',
    socialCredential:()=>token,
    pushStatus:()=> 'unavailable',
    pushEnable(){throw Error('FCM must not auto-initialize')},
    pushDisable(){throw Error('FCM must not auto-initialize')}
   },
-  TrialumSocial:{getState:()=>({identity:token?{id:me}:null,friends:[{id:friend,nickname:'Ана'}]})},
+  TrialumSocial:{isAdultAllowed:()=>true,getState:()=>({identity:token?{id:me}:null,friends:[{id:friend,nickname:'Ана'}]})},
   document:{hidden:false},
   fetch:async(url,options)=>{
    calls.push({url,options});

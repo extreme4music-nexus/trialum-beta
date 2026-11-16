@@ -153,6 +153,7 @@ function chatPanel(s,p){
 }
 function settings(s){
  const on=!!s.settings.debugEnabled;
+ const beta=root.TrialumAndroid?.betaTesterToolsEnabled?.()===true,en=root.TrialumI18n?.language?.()==='en';
  return '<div class="tab-main"><h2>⚙️ Поставки</h2><p class="desc">Тука се звукот, резервните копии, известувањата и програмерските алатки. Дневникот е во сопственото мени.</p>'+
  '<div class="settings-group"><h3>🌐 Јазик / Language</h3><p class="small subtle">Избери автоматски системски јазик или еден од 17-те достапни јазици. Непреведените постари текстови се прикажуваат на англиски; личните имиња и дневникот не се менуваат.</p>'+
  '<label for="languagePicker">🌍 Избери јазик</label><select id="languagePicker" class="preference-select" aria-label="Избери јазик">'+
@@ -182,16 +183,18 @@ function settings(s){
  b('🏝️ Биосвет +1 акција · 8','longBoost','data-boost="habitat"',s.longplay.credits<8)+
  b('🧬 Скратување на ран период · 20','longBoost','data-boost="phase"',s.longplay.credits<20||s.stage>=7)+'</div>'+
  '<p class="small subtle">Нема наплата, реклами ниту активна продавница.</p></div>'+
- '<div class="settings-group debug-zone"><h3>🧪 Дебагирање и тестирање</h3>'+
- '<p class="small">Опционална програмерска алатка. Дебаг-деновите се симулираат во овој локален свет. Не се активираат во обична игра.</p>'+
- '<p class="small subtle">Извештајот содржи грешки од самата апликација и Play Games; не може да чита Android системски logcat.</p>'+
- '<div class="btn-line">'+b('🧾 Извези краш лог','exportCrashLog')+'</div>'+
+ (beta?'<div class="settings-group debug-zone"><h3>🧭 '+(en?'Beta Tester Center':'Бета-тестерски центар')+'</h3>'+
+ '<p class="small">'+(en?'These tools are included only in the Google Play internal-testing build. Google Play controls who can install it. Social features require a shared adult age signal; unknown, declined or managed-child profiles stay offline.':'Овие алатки се вклучени само во изданието за Google Play интерно тестирање. Google Play го контролира списокот кој може да го инсталира. Социјалните функции бараат споделен сигнал за полнолетност; непознат, одбиен или родителски управуван профил останува офлајн.')+'</p>'+
+ '<div class="btn-line">'+b(en?'Export diagnostic report':'Извези краш/дијагностички извештај','exportCrashLog')+b(en?'Test local notification':'Пробај локално известување','betaNotify')+'</div>'+
+ '<div class="btn-line">'+b(en?'Refresh Play Games status':'Освежи Play Games состојба','betaPgsRefresh')+b(en?'Check age signal':'Провери возрастен сигнал','socialAgeCheck')+'</div>'+
+ '<div class="btn-line">'+b(en?'Check Friends service':'Провери Friends сервис','betaSocialRefresh')+'</div>'+
+ '<p class="small subtle">'+(en?'The report contains app diagnostics and Play Games state; it does not read Android system logcat. No age, email or Google account identifier is sent to Trialum.':'Извештајот содржи дијагностика на апликацијата и состојба на Play Games; не чита Android системски logcat. Не се испраќаат возраст, е-пошта или Google идентификатор до Trialum.')+'</p>'+
  '<p id="crashReportFeedback" class="small" role="status" aria-live="polite"></p>'+
- b(on?'🔓 Исклучи дебагирање':'🔒 Вклучи дебагирање','debugToggle','class="'+(on?'button-gold':'')+'"')+
- (on?'<div class="notice">⚠ Тестни измени во светот! Прво извези JSON ако сакаш да го зачуваш напредокот пред дебагирање.</div>'+
- '<div class="btn-line">'+b('⏭ +1 ден','debugDays','data-days="1"')+b('⏭ +7 дена','debugDays','data-days="7"')+b('⏭ +30 дена','debugDays','data-days="30"')+'</div>'+
- '<div class="btn-line">'+b('⚗️ Тестни ресурси','debugResources')+b('🐾 Миленик +5 нивоа','debugPet','data-levels="5"')+
- b('🐾 Миленик +20 нивоа','debugPet','data-levels="20"')+'</div>':'')+'</div>'+
+ '<details><summary>'+(en?'Progression test tools':'Алатки за тест на напредокот')+'</summary><p class="small">'+(en?'These actions change the current local world and permanently mark it ineligible for Play Games ranking. Export a JSON backup first.':'Овие акции го менуваат тековниот локален свет и трајно го исклучуваат од Play Games рангирање. Прво извези JSON бекап.')+'</p>'+
+ b(on?(en?'🔓 Disable test mode':'🔓 Исклучи тест режим'):(en?'🔒 Enable test mode':'🔒 Вклучи тест режим'),'debugToggle','class="'+(on?'button-gold':'')+'"')+
+ (on?'<div class="notice">⚠ '+(en?'Test changes affect this local save. Export JSON first.':'Тестните измени влијаат врз ова локално зачувување. Прво извези JSON.')+'</div>'+
+ '<div class="btn-line">'+b('+1 day','debugDays','data-days="1"')+b('+7 days','debugDays','data-days="7"')+b('+30 days','debugDays','data-days="30"')+'</div>'+
+ '<div class="btn-line">'+b(en?'Test resources':'Тестни ресурси','debugResources')+b(en?'Pet +5 levels':'Миленик +5 нивоа','debugPet','data-levels="5"')+b(en?'Pet +20 levels':'Миленик +20 нивоа','debugPet','data-levels="20"')+'</div>':'')+'</details></div>':'')+
  '<div class="settings-group"><h3>⚠ Управување со светот</h3>'+b('↻ Нов свет — избриши напредок','newGame','class="danger"')+'</div></div>';
 }
 function notifications(s){

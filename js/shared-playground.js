@@ -32,7 +32,8 @@ function profile(p){
 function config(){
  const n=root.TrialumAndroid,url=String(n?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
  const pass=String(n?.socialCredential?.()||'');
- st.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(url)&&/^[A-Za-z0-9_-]{43}$/.test(pass);
+ st.enabled=n?.betaTesterToolsEnabled?.()===true&&root.TrialumSocial?.isAdultAllowed?.()===true&&
+  /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(url)&&/^[A-Za-z0-9_-]{43}$/.test(pass);
  base=st.enabled?url:'';token=st.enabled?pass:'';
  return st.enabled;
 }
@@ -53,7 +54,7 @@ const errors={
 };
 function problem(e){st.error=errors[e?.message]||'Проблем со врската или дозволата. Пробај повторно.';say();}
 async function req(path,method='GET',body=null){
- if(!base||!token)throw Error('shared_disabled');
+ if(root.TrialumAndroid?.betaTesterToolsEnabled?.()!==true||root.TrialumSocial?.isAdultAllowed?.()!==true||!base||!token)throw Error('shared_disabled');
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
  try{
   const r=await fetch(base+'/v1/shared/'+path,{method,

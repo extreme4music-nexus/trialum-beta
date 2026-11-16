@@ -18,6 +18,8 @@ function create(){
  w.requestAnimationFrame=()=>0;
  w.fetch=async url=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(path.join(ROOT,String(url)),'utf8'))});
  w.alert=noop;w.confirm=()=>true;w.prompt=()=>null;
+ w.TrialumAndroid={betaTesterToolsEnabled:()=>true,ageSignalsAdultEligible:()=>true,
+  socialApiUrl:()=>'',socialCredential:()=>'',pushStatus:()=> 'unavailable'};
  for(const file of scripts.slice(0,-1))w.eval(fs.readFileSync(path.join(ROOT,file),'utf8'));
  const E=w.TrialumEngine;
  const world=E.newGame('real');world.settings.language='mk'; // Existing MK assertions remain deterministic; locale auto mode is tested separately.
@@ -235,7 +237,9 @@ async function run(){
  const search=d.getElementById('diarySearch');
  search.value='постои нешто непознато';search.dispatchEvent(new w.Event('input',{bubbles:true}));
  assert.equal(d.querySelectorAll('#diaryList .log-entry:not([hidden])').length,0,'diary search failed');
- check('settings','Дебагирање');
+ check('settings','Бета-тестерски центар');
+ assert(d.querySelector('[data-do="betaNotify"]'),'beta tester notification probe missing');
+ assert(d.querySelector('[data-do="socialAgeCheck"]'),'beta tester age signal check missing');
  const toggle=d.querySelector('[data-do="debugToggle"]');assert(toggle);toggle.click();
  assert(world.settings.debugEnabled,'debug toggle did not enable testing');
  assert(d.querySelector('[data-do="debugDays"]'),'debug day buttons missing');
@@ -271,7 +275,7 @@ async function run(){
 
  // Regression: Android backup picker callback must apply a valid world, and
  // a canceled restore or malformed file must never replace the current world.
- check('settings','Дебагирање');
+ check('settings','Бета-тестерски центар');
  assert(d.getElementById('backupFeedback'),'Backup & Restore feedback slot missing');
  assert(d.getElementById('tabContent').textContent.includes('Бекап и враќање'),'Macedonian Backup & Restore label missing');
  const imported=JSON.parse(JSON.stringify(world));

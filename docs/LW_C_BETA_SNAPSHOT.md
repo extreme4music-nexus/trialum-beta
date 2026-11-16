@@ -3,7 +3,7 @@
 - Source repository: `extreme4music-nexus/Trialum`
 - Exact source commit: `04457df48b9c012f8667504b935a7ca501d13f07`
 - Source branch: `feature/lw-c-contextual-turntaking-session-20261113`
-- Beta name/version: `Trialum - Living World 1.0`, current PGS fix candidate versionCode `37` (candidate only; owner retest required)
+- Beta name/version: `Trialum - Living World 1.0`; versionCode `37` is the AAB already uploaded by the owner. This branch prepares the next internal-test candidate at versionCode `38`.
 - Packages: `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, `com.trialum.ziivaiskra.signdebug`
 - Android build and regression checks: public GitHub Actions, unsigned artifact only
 - Official app signing: local, with the owner's original keystores. The isolated one-time `.pgstest` diagnosis package is signed by an ephemeral GitHub runner key and has a separate PGS OAuth registration.

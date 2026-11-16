@@ -4,9 +4,10 @@
 (function(root){
 'use strict';
 const native=()=>root.TrialumAndroid||null;
+const betaBuild=()=>native()?.betaTesterToolsEnabled?.()===true;
 const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const CODE=/^[A-Za-z0-9_-]{43}$/;
-const state={enabled:false,online:false,ready:false,busy:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:''};
+const state={enabled:false,online:false,ready:false,busy:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked'};
 let credential='',changed=()=>{};
 const emit=()=>changed();
 function parseCode(text, base=state.server){
@@ -37,6 +38,7 @@ function setError(e){
   emit();
 }
 async function request(path,method='GET',body=null,key=credential){
+  if(!state.ageAllowed||!betaBuild())throw Error('age_gate_required');
   if(!state.server)throw Error('social_service_disabled');
   const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),7000);
   try{
@@ -51,6 +53,7 @@ async function request(path,method='GET',body=null,key=credential){
 }
 async function run(fn){
   if(state.busy)return null;
+  if(!state.ageAllowed||!betaBuild()){state.error='Социјалните функции се заклучени за оваа верзија.';emit();return null;}
   state.busy=true;state.error='';emit();
   try{return await fn();}catch(e){setError(e);return null;}
   finally{state.busy=false;emit();}
@@ -58,6 +61,8 @@ async function run(fn){
 async function init(){
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
+  state.ageAllowed=betaBuild()&&native()?.ageSignalsAdultEligible?.()===true;
+  if(!state.ageAllowed){state.online=false;emit();return;}
   credential=String(native()?.socialCredential?.()||'');
   if(!CODE.test(credential))credential='';
   const deep=native()?.socialPendingInvite?.();
@@ -79,6 +84,7 @@ async function refresh(){
 }
 async function register(name){
   return run(async()=>{
+    if(!state.ageAllowed)throw Error('age_gate_required');
     if(!state.enabled||!native()?.socialStoreCredential)throw Error('social_service_disabled');
     const response=await request('register','POST',{nickname:String(name||'').trim()});
     const secret=response.credential;
@@ -91,6 +97,19 @@ async function register(name){
     const list=await request('friends');state.friends=list.friends||[];
     return state.identity;
   });
+}
+function requestAgeCheck(){
+  if(!betaBuild()){state.ageStatus='unavailable';state.error='Социјалните функции се достапни само во одобреното интерно тестирање.';emit();return false;}
+  if(!native()?.requestAgeSignals){state.ageStatus='unavailable';state.error='За безбедна потврда е потребна официјалната Android апликација од Google Play.';emit();return false;}
+  state.ageAllowed=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];
+  root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
+  state.error='';state.ageStatus='checking';emit();native().requestAgeSignals();return true;
+}
+function setAgeSignal(result){
+  const eligible=betaBuild()&&result?.status==='adult_signal'&&result?.adultEligible===true;
+  state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
+  if(!eligible){state.online=false;state.ready=false;state.identity=null;state.friends=[];root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.';emit();return;}
+  state.error='';emit();return init();
 }
 async function invite(){
   return run(async()=>{
@@ -173,6 +192,14 @@ function render(){
   const label=state.online?'Поврзано со серверот за пријатели':(state.enabled?(state.identity?'Серверот моментално е недостапен':'Поврзи се доброволно со серверот за пријатели'):'Онлајн серверот не е конфигуриран за оваа верзија');
   let html='<section class="social-hub"><div class="social-header"><span class="social-icon">🤝</span><div><h2>Пријатели</h2><p class="small subtle">'+safe(label)+'</p></div></div>';
   html+='<p class="desc">Покани пријател со еден линк. Нема задолжителен Google профил, реклами или споделување лични податоци. Сопствениот свет работи и офлајн.</p>';
+  if(!state.ageAllowed){
+    html+='<div class="card"><h3>🔒 Социјалните функции се заклучени</h3><p class="desc">Во ова интерно тестирање, Google Play мора да сподели возрастен сигнал 18+. Не бараме датум на раѓање, Google е-пошта или документ. Детски управуван, помлад, одбиен или непознат профил останува офлајн. Ако сигналот не е достапен, основната игра продолжува офлајн.</p>'+
+      '<button class="primary" data-do="socialAgeCheck"'+(state.ageStatus==='checking'?' disabled':'')+'>🛡️ Провери возраст со Google Play</button>'+
+      '<p class="small subtle">Статус: '+safe(state.ageStatus==='checking'?'Се проверува…':state.ageStatus==='adult_signal'?'Google Play пријавува возраст 18+':'Возрастниот сигнал не е достапен')+'</p>'+
+      (credential?'<p class="small">Постоен социјален профил е сочуван, но не се поврзува додека проверката не дозволи пристап.</p>':'')+'</div>';
+    if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
+    return html+'</section>';
+  }
   if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
   if(!state.enabled){html+='<div class="notice">🔒 Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса. Дотогаш твоите миленици остануваат локално зачувани.</div>';}
   else if(!state.identity){
@@ -204,7 +231,7 @@ function render(){
   }
   return html+'</section>';
 }
-root.TrialumSocial={init,refresh,register,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,
+root.TrialumSocial={init,refresh,register,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,isAdultAllowed:()=>state.ageAllowed,
  setPending(value){state.pending=parseCode(value);state.preview=null;emit();},clearPreview(){state.preview=null;state.pending='';emit();},
  onChange(fn){changed=fn},getState(){return {...state,friends:state.friends.slice()}}};
 if(typeof module==='object'&&module.exports)module.exports={parseCode,inviteMessage};

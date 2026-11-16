@@ -34,3 +34,16 @@ test('privacy: unregistered player causes no social network request on startup',
  try{await globalThis.TrialumSocial.init();assert.equal(calls,0);}
  finally{globalThis.TrialumAndroid=oldNative;globalThis.fetch=oldFetch;}
 });
+
+test('age signal is required even when an existing social credential is stored',async()=>{
+ const oldNative=globalThis.TrialumAndroid,oldFetch=globalThis.fetch;
+ let calls=0;
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,ageSignalsAdultEligible:()=>false,
+   socialApiUrl:()=> 'https://friends.example',socialCredential:()=> 'X'.repeat(43)};
+ globalThis.fetch=()=>{calls++;throw Error('age-locked account made a request')};
+ try{
+  await globalThis.TrialumSocial.init();
+  assert.equal(calls,0,'saved social credentials must not bypass the age gate');
+  assert.equal(globalThis.TrialumSocial.isAdultAllowed(),false);
+ }finally{globalThis.TrialumAndroid=oldNative;globalThis.fetch=oldFetch;}
+});

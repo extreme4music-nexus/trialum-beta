@@ -1,8 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 let calls=0;
 globalThis.fetch=()=>{calls++;throw Error('unconsented outbound fetch')};
-globalThis.TrialumAndroid={socialApiUrl:()=> 'https://test.ts.net',socialCredential:()=>''};
-globalThis.TrialumSocial={getState:()=>({identity:null,friends:[]})};
+globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=> 'https://test.ts.net',socialCredential:()=>''};
+globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:null,friends:[]})};
 globalThis.TrialumEngine={SPECIES:[{shape:'jelly'}]};
 require('../js/shared-playground.js');
 const sh=globalThis.TrialumShared;
@@ -48,9 +48,9 @@ test('accepting a friend room invitation selects that exact shared room',async()
  const ownRoom='30a07321-6c48-4c2b-9584-c5d447a50a01';
  const invitation='26eeb675-7a25-4329-8f0c-9950e4f6f27b';
  globalThis.WebSocket=undefined;
- globalThis.TrialumAndroid={socialApiUrl:()=>'https://test.ts.net',
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={getState:()=>({identity:{id:'member-1',nickname:'Member'},friends:[]})};
+ globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'member-1',nickname:'Member'},friends:[]})};
  let accepted=false;
  const world={pets:[],selectedPet:null};
  globalThis.fetch=async(url)=>{
@@ -107,9 +107,9 @@ test('LW-A all confirmed shared pets renew independently, while visits do not',a
  const renewed=[];
  globalThis.TrialumPresence=Presence;
  globalThis.WebSocket=undefined;
- globalThis.TrialumAndroid={socialApiUrl:()=>'https://test.ts.net',
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={getState:()=>({identity:{id:'tester',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'tester',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async(url,options={})=>{
   const path=new URL(url).pathname;let value;
   if(path.endsWith('/status'))value={ready:true,presenceEnabled:true};
@@ -151,9 +151,9 @@ test('LW-A Home-screen reconnect does not return remote pet until authenticated'
    ref:room,startedAt:1000}}]};
  let offline=true,requests=0;
  globalThis.TrialumPresence=Presence;
- globalThis.TrialumAndroid={socialApiUrl:()=>'https://test.ts.net',
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async url=>{
   requests++;
   if(offline)throw Error('offline');
@@ -193,9 +193,9 @@ test('LW-A offline shared snapshot stays visible and queued return reconciles on
  let offline=false,breakSnapshot=false,occupantVisible=true,serverRows=[entry],returned=0;
  globalThis.TrialumPresence=Presence;
  globalThis.WebSocket=undefined;
- globalThis.TrialumAndroid={socialApiUrl:()=>'https://test.ts.net',
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async(url,options={})=>{
   if(offline)throw Error('simulated radio disconnect');
   const path=new URL(url).pathname;
