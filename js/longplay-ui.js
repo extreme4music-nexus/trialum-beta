@@ -291,7 +291,7 @@ function more(){
  '<div class="more-grid">'+items.map(([ico,name,id,note])=>'<button class="more-item" data-tab="'+id+'"><span class="more-icon">'+ico+'</span>'+
  '<span><b>'+name+'</b><small>'+note+'</small></span><span aria-hidden="true">›</span></button>').join('')+'</div></div>';
 }
-const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants,settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
+const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants:s=>root.TrialumPlantUI?.render(s)||plants(s),settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
 const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
 root.TrialumExpansion={
  render(page,s){if(!s)return '';E.ensureLongplay(s);if(views[page])return (['lab','habitats','pets','research','more'].includes(page)?'':'<button class="section-back" data-tab="more">‹ Повеќе</button>')+views[page](s);return previous.render(page,s);},
