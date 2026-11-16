@@ -65,6 +65,7 @@ jobs:
           node tests/shared-client.test.cjs
           node tests/playground.test.cjs
           node --test tests/dialogue-session.test.cjs
+          node --test tests/lw-d-l3-9-original-plant-engine.test.cjs
           node --test tests/playground-ai.test.cjs
           node --test tests/dialogue-mix.test.cjs
           node --test tests/playground-memory.test.cjs
