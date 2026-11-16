@@ -54,14 +54,22 @@ function daily(s,day){
  if(s.stage>=2){s.cells=Math.max(1,Math.round(s.cells*1.09)+1);s.cells=Math.min(100000,s.cells)}
  for(const h of s.habitats){
  h.dayActions=HAB_ACTIONS;const n=s.pets.filter(p=>p.habitatId===h.id).length;
- h.chem.oxygen=clamp(h.chem.oxygen+ h.flora.length*2.3-n*2.1-1,0,100);
- h.minerals.macro=clamp(h.minerals.macro-.8-h.flora.length*.8,0,100);
- h.minerals.micro=clamp(h.minerals.micro-.6-h.flora.length*.5,0,100);
+ // L3.9 canonical plant lifecycle: dead flora cannot photosynthesize or consume
+ // living nutrient uptake. Old saved worlds without s.agro retain old growth.
+ const livingFlora=h.flora.filter(f=>f.dead!==true&&f.health!==0);
+ h.chem.oxygen=clamp(h.chem.oxygen+livingFlora.length*2.3-n*2.1-1,0,100);
+ h.minerals.macro=clamp(h.minerals.macro-.8-livingFlora.length*.8,0,100);
+ h.minerals.micro=clamp(h.minerals.micro-.6-livingFlora.length*.5,0,100);
  h.chem.ph=round(clamp(h.chem.ph+ (rng(s)-.52)*.12+ (n>2?.035:0),5,9));
  h.chem.temp=round(clamp(h.chem.temp+(rng(s)-.5)*.55,12,35));
  h.chem.toxins=clamp(h.chem.toxins+n*1.3-h.flora.length*.8,0,100);
  h.cleanliness=clamp(h.cleanliness-2.5-n*.9,0,100);
- for(const f of h.flora){f.growth=clamp(f.growth+4.7,0,100);if(f.growth>=30)h.chem.oxygen=clamp(h.chem.oxygen+PLANTS.find(x=>x.id===f.species).oxygen,0,100)}
+ for(const f of livingFlora){
+  // Canonical L3.9 plant engine advances growth once in E.advance's lifecycle
+  // tick after original daily. Do not add the old +4.7 simultaneously.
+  if(s.agro?.schemaVersion!==1)f.growth=clamp(f.growth+4.7,0,100);
+  if(f.growth>=30)h.chem.oxygen=clamp(h.chem.oxygen+(PLANTS.find(x=>x.id===f.species)?.oxygen||0),0,100);
+ }
  }
  for(const p of s.pets){
  const h=s.habitats.find(x=>x.id===p.habitatId);const quality=h?envScore(h):50;
@@ -106,7 +114,7 @@ function buildStep(s){const b=s.construction;if(!b)return fail('Нема акт�
  const task=BUILD_TASKS[b.step];if(!task)return fail('Погрешна градежна фаза.');
  if(!pay(s.elements,task.cost))return fail('Недостигаат елементи за: '+task.label);
  b.step++;b.lastStepDay=s.lastDay;log(s,`🔧 ${task.name} (${b.step}/${BUILD_TASKS.length}).`);
- if(b.step===BUILD_TASKS.length){const biome=BIOMES.find(x=>x.id===b.biome);const h=makeHabitat(s,biome);s.construction=null;h.flora.push({id:id(s,'flora'),species:'lumemoss',growth:24});return ok('Новото живеалиште е завршено!')}
+ if(b.step===BUILD_TASKS.length){const biome=BIOMES.find(x=>x.id===b.biome);const h=makeHabitat(s,biome);s.construction=null;if(s.agro?.schemaVersion!==1)h.flora.push({id:id(s,'flora'),species:'lumemoss',growth:24});return ok('Новото живеалиште е завршено!')}
  return ok(task.name+' е завршено. Продолжи следниот ден.');}
 function createPet(s,speciesIndex){if(s.stage<6)return fail('Прво отклучи животински форми.');const h=currentHabitat(s);if(!h)return fail('Прво изгради живеалиште.');
  const sp=SPECIES[speciesIndex];if(!sp)return fail('Непознат вид.');if(s.biomass<22||s.compounds<8)return fail('Потребни се 22 биомаса и 8 органски единици.');
