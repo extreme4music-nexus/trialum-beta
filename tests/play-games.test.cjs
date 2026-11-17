@@ -5,7 +5,8 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const source=fs.readFileSync(path.join(__dirname,'../js/play-games.js'),'utf8');
 const delay=()=>new Promise(resolve=>setTimeout(resolve,0));
 const world=()=>({version:'1.5.4',createdAt:1234,seed:987,lastDay:40,
- pets:[{species:0,evolution:{earned:180}}],habitats:[{}],achievements:[{id:'first-pet'}],logs:[],settings:{debugEnabled:false}});
+ pets:[{species:0,evolution:{earned:180},chatHistory:['private chat']}],friendConversations:{friend:['private message']},
+ habitats:[{}],achievements:[{id:'first-pet'}],logs:[],settings:{debugEnabled:false}});
 let passed=0;
 function test(name,cb){return Promise.resolve().then(cb).then(()=>{console.log('✓ '+name);passed++;});}
 function create(configured=true,authenticated=true,consent=false){
@@ -24,7 +25,14 @@ function create(configured=true,authenticated=true,consent=false){
   pgsShowAchievements:()=>calls.push(['showAchievements']),
   pgsShowLeaderboards:()=>calls.push(['showLeaderboards'])
  };
- const context={TrialumAndroid:native,TrialumI18n:{language:()=> 'mk'},confirm:()=>true,console};
+ const context={TrialumAndroid:native,TrialumI18n:{language:()=> 'mk'},confirm:()=>true,console,
+  TrialumStorage:{portableSnapshot:state=>{
+   const snapshot=JSON.parse(JSON.stringify(state));
+   for(const pet of snapshot.pets||[])delete pet.chatHistory;
+   delete snapshot.friendConversations;
+   return snapshot;
+  }}
+ };
  context.globalThis=context;
  vm.createContext(context);vm.runInContext(source,context);
  return{api:context.TrialumPlayGames,calls,context,nativeState};
@@ -51,6 +59,8 @@ function create(configured=true,authenticated=true,consent=false){
   x.api.afterLocalSave(world());
   const save=x.calls.find(a=>a[0]==='cloudSave');
   assert(save);
+  assert(!save[1].pets[0].chatHistory&&!save[1].friendConversations,
+   'Google Cloud Save must exclude private pet chats and friend conversation history');
   assert.equal(save[2],false,'Automated saves must never force overwrite');
  });
  await test('Divergent cloud blocks autosave until user resolves',()=>{
