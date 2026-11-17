@@ -63,6 +63,7 @@ jobs:
           node tests/social-ui.test.cjs
           node tests/beta-contract.test.cjs
           node tests/shared-client.test.cjs
+          node --test tests/messages-client.test.cjs
           node tests/playground.test.cjs
           node --test tests/dialogue-session.test.cjs
           node --test tests/lw-d-l3-9-original-plant-engine.test.cjs
@@ -111,7 +112,7 @@ jobs:
           [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:assembleInternalBeta :app:bundleRelease :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:assembleInternalBeta :app:assembleGp01test :app:bundleRelease :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
       - name: Verify candidate package identities and version
         run: |
@@ -151,6 +152,17 @@ jobs:
             require_resource_value trialum_firebase_sender_id "$TRIALUM_FIREBASE_SENDER_ID"
             cp "$apk" "candidates/trialum-$variant-UNSIGNED.apk"
           done
+          gp01_apk=$(find android-template/app/build/outputs/apk/gp01test -name '*.apk' -print -quit)
+          test -s "$gp01_apk"
+          gp01_badge=$("$AAPT" dump badging "$gp01_apk")
+          printf '%s\n' "$gp01_badge" | grep -Fq "package: name='com.trialum.ziivaiskra.gp01test'"
+          printf '%s\n' "$gp01_badge" | grep -Fq "versionCode='38'"
+          printf '%s\n' "$gp01_badge" | grep -Fq "versionName='1.0-gp01test'"
+          gp01_resources=$("$AAPT" dump --values resources "$gp01_apk")
+          printf '%s\n' "$gp01_resources" | grep -Fq 'string/game_services_project_id' || { echo "::error::GP-01 test APK PGS resource missing"; exit 1; }
+          printf '%s\n' "$gp01_resources" | grep -Fq 'string/trialum_firebase_app_id' || { echo "::error::GP-01 test APK Firebase resource missing"; exit 1; }
+          cp "$gp01_apk" candidates/trialum-gp01test-UNSIGNED.apk
+
           aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)
           test -s "$aab"
           unzip -t "$aab" >/dev/null
@@ -159,6 +171,52 @@ jobs:
           test -s "$beta_aab"
           unzip -t "$beta_aab" >/dev/null
           cp "$beta_aab" candidates/trialum-internal-beta-UNSIGNED.aab
+
+      - name: Sign isolated GP-01 test APK with a one-time runner key
+        shell: bash
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        run: |
+          set -euo pipefail
+          unsigned=candidates/trialum-gp01test-UNSIGNED.apk
+          signed=candidates/trialum-gp01test-random-signed.apk
+          signer_dir=$(mktemp -d)
+          signer_file="$signer_dir/gp01-one-time.p12"
+          signer_password=$(openssl rand -hex 24)
+          echo "::add-mask::$signer_password"
+          keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$signer_file" \
+            -storepass "$signer_password" -keypass "$signer_password" \
+            -alias gp01-one-time -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=Trialum GP-01 One-Time Test"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -x "$APKSIGNER"
+          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias gp01-one-time \
+            --ks-pass "pass:$signer_password" --key-pass "pass:$signer_password" \
+            --out "$signed" "$unsigned"
+          "$APKSIGNER" verify --verbose --print-certs "$signed" | tee candidates/gp01test-signature.txt
+          sha256sum "$signed" > candidates/gp01test-SHA256SUMS
+          {
+            echo "source_commit=$GITHUB_SHA"
+            echo "package=com.trialum.ziivaiskra.gp01test"
+            echo "version_code=38"
+            echo "signing=ephemeral-runner-generated-test-key"
+            echo "key_material=not-uploaded-and-removed"
+            echo "google_play_games=disabled-in-this-isolated-random-signed-build"
+          } > candidates/gp01test-build-info.txt
+          rm -f "$signer_file"
+          rmdir "$signer_dir"
+          rm -f "$unsigned"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-GP01-random-signed-test-apk
+          path: |
+            candidates/trialum-gp01test-random-signed.apk
+            candidates/gp01test-signature.txt
+            candidates/gp01test-SHA256SUMS
+            candidates/gp01test-build-info.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
