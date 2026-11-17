@@ -177,6 +177,8 @@ jobs:
 
       - name: Sign isolated GP-01 test APK with a one-time runner key
         shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           set +x
@@ -200,8 +202,9 @@ jobs:
           {
             source_sha="$GITHUB_SHA"
             if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-              source_sha="$(git rev-parse HEAD^2)"
+              source_sha="$PR_HEAD_SHA"
             fi
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Could not identify immutable source commit"; exit 1; }
             echo "source_commit=$source_sha"
             echo "workflow_commit=$GITHUB_SHA"
             echo "package=com.trialum.ziivaiskra.gp01test"
