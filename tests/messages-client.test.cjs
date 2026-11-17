@@ -3,6 +3,7 @@ const vm=require('node:vm'),fs=require('node:fs'),crypto=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../js/messages.js'),'utf8');
 function client(credential='',calls=[]){
  const token=credential,friend='123e4567-e89b-42d3-a456-426614174000',me='223e4567-e89b-42d3-a456-426614174000';
+ calls.socketMessages=[];
  const w={
   crypto:crypto.webcrypto,AbortController,
   setInterval(){return 1},clearInterval(){},setTimeout(fn){return 1},clearTimeout(){},
@@ -15,7 +16,14 @@ function client(credential='',calls=[]){
    pushDisable(){throw Error('FCM must not auto-initialize')}
   },
   TrialumSocial:{isAdultAllowed:()=>true,getState:()=>({identity:token?{id:me}:null,friends:[{id:friend,nickname:'Ана'}]})},
+  TrialumLocalConversations:{append:async(peer,item)=>item,get:async()=>[],update:async()=>true,remove:async()=>true,clear:async()=>true},
   document:{hidden:false},
+  WebSocket:class{
+   constructor(url){this.url=url;this.readyState=0;this.listeners={};calls.socket=this;}
+   addEventListener(name,fn){this.listeners[name]=fn;if(name==='open')queueMicrotask(()=>{this.readyState=1;fn({});this.listeners.message?.({data:JSON.stringify({type:'ready'})});});}
+   send(value){calls.socketMessages.push(JSON.parse(value));}
+   close(){this.readyState=3;}
+  },
   fetch:async(url,options)=>{
    calls.push({url,options});
    const status=url.endsWith('/status'),send=url.endsWith('/send');
@@ -52,15 +60,16 @@ test('reflected server nicknames and preset text are escaped in UI',async()=>{
  assert(html.includes('&lt;img'));
  c.api.deactivate();
 });
-test('preset send includes only whitelisted phrase key, idempotency UUID, and no push registration',async()=>{
+test('preset send stores locally and uses only the live relay, without FCM registration',async()=>{
  const c=client('Z'.repeat(43));c.api.activate();await new Promise(resolve=>setTimeout(resolve,20));
  const result=await c.api.send(c.friend,'hello');
- assert.equal(result.duplicate,false);
- const send=c.calls.find(v=>v.url.endsWith('/send'));
- assert(send,'expected send route');
- const body=JSON.parse(send.options.body);
- assert.equal(body.kind,'preset');assert.equal(body.presetId,'hello');
- assert.match(body.eventKey,/^[0-9a-f-]{36}$/);
+ assert.equal(result.kind,'preset');assert.equal(result.presetId,'hello');
+ assert.match(result.id,/^[0-9a-f-]{36}$/);
+ const send=c.calls.socketMessages.find(v=>v.type==='friend_message');
+ assert(send,'expected live WebSocket relay');
+ assert.equal(send.kind,'preset');assert.equal(send.presetId,'hello');
+ assert.equal(send.messageId,result.id);assert.equal(send.recipientRef,c.friend);
+ assert(!c.calls.some(v=>v.url.endsWith('/send')),'messages must not use the retaining HTTP send route');
  assert(!JSON.stringify(c.calls).includes('/push'),'no FCM without consent');
  c.api.deactivate();
 });
