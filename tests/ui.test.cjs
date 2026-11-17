@@ -301,7 +301,8 @@ async function run(){
  assert(d.getElementById('backupFeedback').textContent.includes('Тест: грешка'),'Native picker errors must be surfaced');
  await w.TrialumI18n.change('en');w.TrialumI18n.translateDOM(d.getElementById('tabContent'));
  assert(d.getElementById('tabContent').textContent.includes('Backup & Restore'),'English Backup & Restore heading missing');
- assert(d.querySelector('[data-do="export"]').textContent.includes('Create Backup'),'English create backup button missing');
+ assert(d.querySelector('[data-do="encryptedExport"]').textContent.includes('Encrypted migration archive'),'English encrypted migration archive button missing');
+ assert(d.querySelector('[data-do="export"]').textContent.includes('Plain JSON'),'English plain JSON export button missing');
  assert(d.querySelector('[data-do="import"]').textContent.includes('Restore Backup'),'English restore backup button missing');
  console.log('✓ Native JSON restore, cancel, invalid file feedback and MK/EN Backup & Restore');
 
