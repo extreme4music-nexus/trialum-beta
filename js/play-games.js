@@ -14,6 +14,11 @@ const state={
 let getWorld=()=>null,restoreWorld=null,notify=()=>{},refreshUI=()=>{},checkedAt=0;
 let lastAchievements=new Set(),pendingAchievements=new Set(),achievementRetryAfter=new Map();
 let debugAchievementSkipLogged=false;
+function portableSave(world){
+ const snapshot=root.TrialumStorage?.portableSnapshot?.(world);
+ if(!snapshot)throw Error('portable_snapshot_unavailable');
+ return JSON.stringify(snapshot);
+}
 function resetForAccount(playerId=''){
   if(state.playerId===playerId)return;
   state.playerId=playerId;
@@ -179,7 +184,7 @@ function afterLocalSave(world){
  const now=Date.now();
  if(now-state.lastAutosave<90_000)return;
  state.lastAutosave=now;
- try { native()?.pgsCloudSave?.(JSON.stringify(world),false); }
+ try { native()?.pgsCloudSave?.(portableSave(world),false); }
  catch(e){ feedback(T('Автоматскиот облачен бекап не успеа.','Cloud autosave was not available.'),true); }
 }
 function action(kind,element){
@@ -191,10 +196,22 @@ function action(kind,element){
   case 'pgsLeaderboards':n?.pgsShowLeaderboards?.();return true;
   case 'pgsCloudEnable':
    if(!state.configured||!state.authenticated){feedback(T('Прво поврзи Google Play Games.','Connect Google Play Games first.'),true);return true;}
-   if(root.confirm?.(T('Да го овозможам автоматскиот Google Cloud Save за овој профил? Локалниот JSON бекап останува достапен.','Enable automatic Google Cloud Save for this profile? Local JSON backup remains available.'))){
+   if(root.confirm?.(T('Да го овозможам автоматскиот Google Cloud Save за овој профил? Приватните разговори и AI-меморијата не се вклучуваат; за нив користи ја шифрираната архива во Поставки.','Enable automatic Google Cloud Save for this profile? Private conversations and AI memories are excluded; use the encrypted archive in Settings for those.'))){
     n?.pgsSetCloudConsent?.(true);
    }return true;
   case 'pgsCloudDisable':n?.pgsSetCloudConsent?.(false);return true;
+  case 'pgsMemoryEnable':{
+   feedback(T('Приватните AI-мемории не се испраќаат преку Google Play Games. Користи ја шифрираната архива во Поставки за пренос на меморија.','Private AI memories are not sent through Google Play Games. Use the encrypted archive in Settings to transfer memories.'),true);return true;
+  }
+  case 'pgsMemoryDisable':{
+   if(!root.confirm?.(T('Да се осигурам дека приватната AI-меморија е исклучена од Cloud Save? Новите снимки ја изоставуваат. Стара снимка може да ја содржи до успешно заменување.','Keep private AI memories excluded from Cloud Save? New snapshots omit them. An older snapshot may retain them until successfully replaced.')))return true;
+   const world=getWorld();
+   if(state.authenticated&&state.cloudConsent&&world&&!state.conflict&&(!state.cloud?.exists||state.cloud?.matchesBaseline)){
+    try{n?.pgsCloudSave?.(portableSave(world,false),true);feedback(T('Се испраќа облачна снимка без AI мемории.','Uploading a cloud snapshot without AI memories.'));}
+    catch(_){feedback(T('Синхронизацијата е исклучена, но не успеав да ја заменам старата облачна копија. Зачувај облак по разрешување на конфликтот.','Sync is off, but the old cloud copy could not be replaced. Save to cloud after resolving any conflict.'),true);}
+   }else feedback(T('Синхронизацијата е исклучена. Постојната облачна копија може да задржи спомени додека не ја замениш.','Sync is off. The existing cloud copy may retain memories until you replace it.'),true);
+   return true;
+  }
   case 'pgsCloudCheck':checkedAt=Date.now();n?.pgsCloudCheck?.();return true;
   case 'pgsCloudRestore':
    if(root.confirm?.(T('Да ја прочитам облачната снимка? Пред враќање ќе има посебна потврда за замена на локалниот свет.','Read cloud save? Restoring it will require another confirmation before replacing local progress.'))){
@@ -203,14 +220,14 @@ function action(kind,element){
   case 'pgsCloudSave':{
    const world=getWorld();
    if(!world){feedback(T('Прво започни свет.','Start a world first.'),true);return true;}
-   n?.pgsCloudSave?.(JSON.stringify(world),false);return true;
+   n?.pgsCloudSave?.(portableSave(world),false);return true;
   }
   case 'pgsCloudReplace':{
    if(state.conflict){feedback(T('Google откри конфликт на снимки што бара посебно разрешување. Не може безбедно да се презапише од ова мени.','Google reported a snapshot conflict that requires separate resolution; this menu cannot safely overwrite it.'),true);return true;}
     const world=getWorld();if(!world)return true;
    const msg=T('ВНИМАНИЕ: Ова ќе го замени постојниот Google облачен свет со локалниот свет! Направи JSON бекап и потврди уште еднаш.','WARNING: This will replace the existing Google cloud world with your local world. Export JSON first, then confirm again.');
    if(root.confirm?.(msg)&&root.confirm?.(T('Последна потврда: сигурно сакаш да го замениш облачниот свет?','Final confirmation: overwrite the existing cloud save?'))){
-    n?.pgsCloudSave?.(JSON.stringify(world),true);
+    n?.pgsCloudSave?.(portableSave(world),true);
    }return true;
   }
   default:return false;
@@ -255,7 +272,7 @@ function render(){
   html+='<p class="small">'+T('Заштита од конфликт: автоматско презапишување е запрено. Можеш да го вратиш облачниот свет или изречно да го замениш по JSON бекап.','Conflict protection: automatic overwrites are paused. Restore the cloud save or explicitly replace it after exporting JSON.')+'</p>'+
   (a.conflict?'<p class="small">'+T('Google има нерешен конфликт на облачни снимки. Запиши JSON бекап; презапишувањето е забрането додека не се разреши конфликтот.','Google has an unresolved cloud snapshot conflict. Export JSON; overwriting is disabled until it is resolved.')+'</p>':button('⚠ '+T('Замени облачен свет','Replace cloud save'),'pgsCloudReplace',!a.authenticated||!a.cloudConsent));
  }
- html+='<p class="small subtle">'+T('Cloud Save не е синхронизиран додека немаш Google профил/мрежа. Враќањето секогаш бара потврда. JSON Бекап и враќање останува во Поставки.','Cloud Save requires a Play Games profile and connectivity. Restoring always requires confirmation. JSON Backup & Restore remains in Settings.')+'</p></div>';
+ html+='<p class="small subtle">'+T('Google Cloud Save и обичниот JSON не ги содржат приватните AI-мемории или разговорите. За нив користи ја шифрираната архива во Поставки.','Google Cloud Save and plain JSON exclude private AI memories and conversations. Use the encrypted archive in Settings for those.')+'</p></div>';
  if(a.status)html+='<p role="status" class="notice" id="pgsFeedback">'+escape(a.status)+'</p>';
  return html+'</div>';
 }

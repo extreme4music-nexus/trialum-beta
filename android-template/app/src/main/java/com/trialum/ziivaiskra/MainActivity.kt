@@ -73,6 +73,8 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("pendingBackupId", pendingBackupId)
         outState.putString("pendingBackupName", pendingBackupName)
+        outState.putBoolean("pendingBackupEncrypted", pendingBackupEncrypted)
+        outState.putString("pendingSecureArchiveId", pendingSecureArchiveId)
         outState.putString("pendingCrashReport", pendingCrashReport)
         super.onSaveInstanceState(outState)
     }
@@ -88,12 +90,15 @@ class MainActivity : Activity() {
     private val backupOpenRequest = 1305
     private val modelOpenRequest = 1306
     private val crashReportSaveRequest = 1307
+    private val secureArchiveRequest = 1308
     private var pendingCrashReport: String? = null
     private var pendingModelTier: String? = null
     private val backupVault by lazy { TrialumBackupVault(this) }
     private val backupWorker = Executors.newSingleThreadExecutor()
     private var pendingBackupId: String? = null
     private var pendingBackupName: String = "TRIALUM-world.json"
+    private var pendingBackupEncrypted: Boolean = false
+    private var pendingSecureArchiveId: String? = null
     private val maxBackupBytes = 20 * 1024 * 1024
 
     private fun backupNotice(ok: Boolean, message: String, code: String = if (ok) "saved" else "error") {
@@ -144,7 +149,8 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_OK) {
             if(requestCode == imageRequestCode) pendingImage=null
-            if(requestCode == backupSaveRequest) pendingBackupId=null
+            if(requestCode == backupSaveRequest) { pendingBackupId=null; pendingBackupEncrypted=false }
+            if(requestCode == secureArchiveRequest) pendingSecureArchiveId=null
             if(requestCode == modelOpenRequest) pendingModelTier=null
             if(requestCode == crashReportSaveRequest) {
                 pendingCrashReport = null
@@ -169,6 +175,25 @@ class MainActivity : Activity() {
             }
             return
         }
+        if (requestCode == secureArchiveRequest) {
+            val id = pendingSecureArchiveId
+            val target = data?.data
+            pendingSecureArchiveId = null
+            if (id == null || target == null) {
+                backupNotice(false, "Не е избрана дестинација за шифрираната архива.", "pickerRestore")
+                return
+            }
+            backupWorker.execute {
+                try {
+                    val bytes = backupVault.loadEncrypted(id)
+                    backupVault.exportEncryptedToDocument(target, bytes)
+                    runOnUiThread { backupNotice(true, "Шифрираната архива е зачувана и проверена во избраната локација.", "saved") }
+                } catch (e: Exception) {
+                    runOnUiThread { backupNotice(false, "Извозот на шифрираната архива не успеа: " + (e.message ?: "грешка"), "write") }
+                }
+            }
+            return
+        }
         val uri = data?.data ?: return
         when (requestCode) {
             imageRequestCode -> {
@@ -179,13 +204,15 @@ class MainActivity : Activity() {
             backupSaveRequest -> {
                 val archiveId = pendingBackupId
                 val name = pendingBackupName
+                val encrypted = pendingBackupEncrypted
                 pendingBackupId = null
+                pendingBackupEncrypted = false
                 if (archiveId == null) {
                     backupNotice(false,"Нема проверена внатрешна копија за извоз.","write")
                 } else {
                     backupWorker.execute {
                         try {
-                            val bytes = backupVault.load(archiveId)
+                            val bytes = if (encrypted) backupVault.loadEncrypted(archiveId) else backupVault.load(archiveId)
                             val title = backupVault.exportToFolder(uri, bytes, name)
                             runOnUiThread { backupNotice(true,
                                 "Проверен JSON бекап: " + title + " (нова датотека).","saved") }
@@ -222,6 +249,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         pendingBackupId = savedInstanceState?.getString("pendingBackupId")
         pendingBackupName = savedInstanceState?.getString("pendingBackupName") ?: "TRIALUM-world.json"
+        pendingBackupEncrypted = savedInstanceState?.getBoolean("pendingBackupEncrypted") ?: false
+        pendingSecureArchiveId = savedInstanceState?.getString("pendingSecureArchiveId")
         pendingCrashReport = savedInstanceState?.getString("pendingCrashReport")
         captureSocialInvite(intent)
         web = WebView(this)
@@ -600,6 +629,74 @@ class MainActivity : Activity() {
                         backupNotice(false, "Бекапот НЕ е направен: " +
                             (e.message ?: "нема простор или е невалиден свет"), "write")
                     }
+                }
+            }
+        }
+
+        /** Exports ciphertext without copying plaintext private history into rescue files. */
+        @JavascriptInterface fun saveEncryptedBackup(json: String, fileName: String) {
+            val bytes = json.toByteArray(Charsets.UTF_8)
+            if (bytes.size > maxBackupBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+                return
+            }
+            backupWorker.execute {
+                try {
+                    val archiveId = backupVault.snapshotEncrypted(bytes)
+                    if (Build.VERSION.SDK_INT >= 29) {
+                        try {
+                            val savedAt = backupVault.exportToDownloads(bytes, fileName)
+                            runOnUiThread { backupNotice(true, "Шифрираната архива е проверена и зачувана: " + savedAt, "saved") }
+                        } catch (e: Exception) {
+                            runOnUiThread { backupNotice(false, "Извозот не успеа; шифрираната копија останува во приватниот простор на апликацијата. " + (e.message ?: "грешка"), "write") }
+                        }
+                    } else {
+                        runOnUiThread {
+                            pendingBackupId = archiveId
+                            pendingBackupName = fileName
+                            pendingBackupEncrypted = true
+                            val picker = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            }
+                            try { startActivityForResult(picker, backupSaveRequest) }
+                            catch (e: Exception) {
+                                pendingBackupId = null; pendingBackupEncrypted = false
+                                backupNotice(false, "Не може да се отвори изборот на папка. " + (e.message ?: "грешка"), "pickerSave")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread { backupNotice(false, "Шифрираната архива не е извезена: " + (e.message ?: "грешка"), "write") }
+                }
+            }
+        }
+
+        /** Opens Android's document picker; the player can select Google Drive or another provider. */
+        @JavascriptInterface fun saveEncryptedBackupToProvider(json: String, fileName: String) {
+            val bytes = json.toByteArray(Charsets.UTF_8)
+            if (bytes.size > maxBackupBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+                return
+            }
+            backupWorker.execute {
+                try {
+                    val id = backupVault.snapshotEncrypted(bytes)
+                    runOnUiThread {
+                        pendingSecureArchiveId = id
+                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_TITLE, fileName)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        }
+                        try { startActivityForResult(intent, secureArchiveRequest) }
+                        catch (e: Exception) {
+                            pendingSecureArchiveId = null
+                            backupNotice(false, "Не може да се отвори изборот на локација. " + (e.message ?: "грешка"), "pickerSave")
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread { backupNotice(false, "Шифрираната архива не е подготвена: " + (e.message ?: "грешка"), "write") }
                 }
             }
         }

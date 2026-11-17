@@ -68,7 +68,7 @@ async function req(path,method='GET',body=null){
 }
 function homeGuest(){
  const me=self()?.id;
- const visiting=st.visits.find(v=>v.receiver_id===me&&v.destination==='habitat'&&
+ const visiting=st.visits.find(v=>v.receiver_is_me===true&&v.destination==='habitat'&&
   v.status==='accepted'&&v.presence_active!==false&&Date.parse(v.expires_at)>Date.now());
  root.TrialumWorld?.setGuest?.(visiting?{...visiting.pet_public,level:1}:null);
 }
@@ -190,7 +190,7 @@ function reconcilePresence(rows){
  let changed=false;
  const byPet=new Map(rows.map(x=>[x.petId,x]));
  for(const pet of world.pets||[]){
-  const pending=st.visits.find(v=>v.sender_id===me&&v.pet_public?.id===pet.id&&
+  const pending=st.visits.find(v=>v.sender_is_me===true&&v.pet_public?.id===pet.id&&
     v.status==='pending'&&Date.parse(v.expires_at)>Date.now());
   if(pending&&pet.pendingVisitId!==pending.id){pet.pendingVisitId=pending.id;changed=true;}
   if(!pending&&pet.pendingVisitId){delete pet.pendingVisitId;changed=true;}
@@ -255,6 +255,8 @@ function sendPetSpeech(world,pet,text,language='mk',replyToTurnId=''){
  if(!st.presences.some(x=>x.petId===pet.id&&x.sessionId===loc.sessionId&&x.kind==='shared'&&x.roomId===st.selected))return false;
  const phrase=String(text||'').trim().slice(0,160);
  if(!phrase||/[\u0000-\u001f\u007f]/.test(phrase))return false;
+ const privacy=root.TrialumPrivacyGuard?.inspect?.(phrase)||{};
+ if(privacy.blocked||privacy.requiresConfirmation){st.error='За безбедност, разговорот не беше испратен бидејќи може да открива лични податоци.';say();return false;}
  const message={type:'pet_speech',roomId:st.selected,petId:pet.id,
     sessionId:loc.sessionId,turnId:uuid(),text:phrase};
  if(st.speechTranslationEnabled){
@@ -353,7 +355,7 @@ const decision=(id,accept)=>run(async()=>{
  }
  return result;
 });
-const remove=id=>run(()=>req('rooms/'+st.selected+'/members/'+id,'DELETE'));
+const remove=id=>run(()=>req('rooms/'+st.selected+'/members/'+(id==='me'?'me':id),'DELETE'));
 const drop=()=>run(async()=>{const v=await req('rooms/'+st.selected,'DELETE');st.selected='';return v;});
 const upgrade=(kind,toyId)=>run(()=>req('rooms/'+st.selected+'/upgrade','POST',{eventKey:uuid(),kind,toyId}));
 function enterRoom(world){
@@ -440,8 +442,8 @@ function visitsView(world){
    '</select><button data-do="shVisit">Испрати покана за посета</button></div>';
  }
  for(const v of st.visits.slice(0,20)){
-  if(v.sender_id!==me&&v.receiver_id!==me)continue;
-  const receive=v.receiver_id===me;
+  if(v.sender_is_me!==true&&v.receiver_is_me!==true)continue;
+  const receive=v.receiver_is_me===true;
   out+='<div class="friend-item social-friend"><span>🐾 '+escape(v.pet_public?.name||'Миленик')+
    ' · '+(v.destination==='habitat'?'🏠':'🌳')+' · '+escape(v.status)+
    (receive?' · од '+escape(v.sender_name||'пријател'):'')+'</span><div class="btn-line">'+
@@ -526,7 +528,7 @@ function render(world){
    '</div><p class="small subtle">Само сопственикот ги одобрува трошоците; сите членови придонесуваат.</p><button data-do="shDelete">Избриши простор</button></div>';
   }
   out+='<div class="card"><h3>👥 Членови</h3>'+snap.members.map(m=>'<div class="friend-item social-friend"><b>'+escape(m.nickname)+(m.role==='owner'?' 👑':'')+'</b>'+
-   (((room.role==='owner'&&m.id!==room.ownerId)||(m.id===me.id&&room.role!=='owner'))?'<button data-do="shRemove" data-id="'+escape(m.id)+'">'+(m.id===me.id?'Напушти':'Отстрани')+'</button>':'')+'</div>').join('')+'</div>';
+   (((room.role==='owner'&&m.role!=='owner'&&m.id)||(m.is_me===true&&room.role!=='owner'))?'<button data-do="shRemove" data-id="'+(m.is_me===true?'me':escape(m.id))+'">'+(m.is_me===true?'Напушти':'Отстрани')+'</button>':'')+'</div>').join('')+'</div>';
   out+='<div class="card"><h3>✨ Настани</h3>'+snap.events.slice(-8).reverse().map(e=>
    '<div class="shared-event"><b>'+escape(e.actor)+'</b> · '+escape(e.kind==='played'?'игра со '+(toy[e.payload.toyId]?.[1]||'справа'):e.kind==='upgraded'?'надградба':e.kind==='joined'?'се придружи':'настан')+'</div>').join('')+'</div>';
  }

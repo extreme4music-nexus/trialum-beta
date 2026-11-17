@@ -33,6 +33,17 @@ let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
  }
  const en=()=>globalThis.TrialumI18n?.language?.()==='en';
  function restoreError(error){
+  const code=error?.message||'';
+  const archiveErrors={
+   secure_crypto_unavailable:en()?'Secure encryption is unavailable on this device.':'На овој уред не е достапно безбедно шифрирање.',
+   invalid_recovery_code:en()?'The recovery code must contain 64 hexadecimal characters.':'Recovery-кодот мора да содржи 64 хексадецимални знаци.',
+   wrong_key_or_damaged_archive:en()?'The recovery code is wrong or the archive is damaged.':'Recovery-кодот е погрешен или архивата е оштетена.',
+   unsupported_archive:en()?'This encrypted archive version is not supported.':'Оваа верзија на шифрираната архива не е поддржана.',
+   invalid_archive:en()?'The encrypted archive is invalid or incomplete.':'Шифрираната архива е невалидна или нецелосна.',
+   invalid_conversation_archive:en()?'The friend conversation history is invalid or incomplete.':'Историјата со пријателите е невалидна или нецелосна.',
+   archive_too_large:en()?'The encrypted archive exceeds the 20 MB limit.':'Шифрираната архива го надминува лимитот од 20 MB.'
+  };
+  if(archiveErrors[code])return archiveErrors[code];
   if(en()){
    if(error?.code==='INVALID_JSON'||error instanceof SyntaxError)return 'The selected file does not contain valid JSON.';
    if(error?.code==='BACKUP_TOO_LARGE')return 'The backup contains too many entries.';
@@ -192,7 +203,9 @@ function render(){if(!s)return;Presence?.ensure(s);E.ensureResearch(s);W.setStat
  renderTab();globalThis.TrialumI18n?.translateDOM?.(document.querySelector('.shell'));}
 function selectHabitat(id){const h=s.habitats.find(x=>x.id===id);if(!h)return;s.activeHabitat=h.id;if(!s.pets.some(p=>p.id===s.selectedPet&&p.habitatId===h.id))s.selectedPet=s.pets.find(p=>p.habitatId===h.id)?.id||null;A.sfx('select');render();scheduleSave();}
 function exportBackup(){
- const contents=JSON.stringify({backupFormat:'trialum',exportedAt:new Date().toISOString(),...s},null,2);
+ const portable=S.portableSnapshot(s);
+ if(!portable){toast('Не можам да подготвам пренослив бекап.');return;}
+ const contents=JSON.stringify({backupFormat:'trialum',exportedAt:new Date().toISOString(),...portable},null,2);
  const base='TRIALUM_v'+(E.VERSION||'1.5.1')+'_day_'+s.lastDay;
  if(globalThis.TrialumAndroid?.saveBackup){
   globalThis.TrialumAndroid.saveBackup(contents,base+'.json');
@@ -206,13 +219,66 @@ function exportBackup(){
  setTimeout(()=>URL.revokeObjectURL(url),3000);
  toast('Преземањето е побарано. Провери ја датотеката пред да го избришеш светот.');
 }
-function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId||x.plantId)));
+ function vaultModal(title,body,buttons){
+  document.getElementById('trialumVaultModal')?.remove();
+  const box=document.createElement('div');box.id='trialumVaultModal';
+  box.style.cssText='position:fixed;inset:0;z-index:10000;background:#061321dd;display:grid;place-items:center;padding:18px;';
+  box.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="trialumVaultTitle" style="max-width:520px;width:100%;max-height:90vh;overflow:auto;background:#102a40;color:#eaf8ff;border:1px solid #5b8798;border-radius:18px;padding:22px;box-shadow:0 16px 60px #0009"><h2 id="trialumVaultTitle">'+safe(title)+'</h2><div>'+body+'</div><div class="btn-line" style="margin-top:18px">'+buttons+'</div></section>';
+  document.body.appendChild(box);return box;
+ }
+ function downloadArchive(contents,name){
+  if(globalThis.TrialumAndroid?.saveEncryptedBackupToProvider){globalThis.TrialumAndroid.saveEncryptedBackupToProvider(contents,name);return 'pending';}
+  if(globalThis.TrialumAndroid?.saveEncryptedBackup){globalThis.TrialumAndroid.saveEncryptedBackup(contents,name);return true;}
+  try{const blob=new Blob([contents],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);return true;}catch(_){return false;}
+ }
+ async function createEncryptedArchive(){
+  try{
+   if(!s)throw Error(en()?'Start a world before creating an archive.':'Прво започни го светот.');
+   await S.save(s);
+   const payload={archiveType:'trialum-private-migration',version:1,createdAt:new Date().toISOString(),
+    world:JSON.parse(JSON.stringify(s)),friendConversations:await globalThis.TrialumLocalConversations?.exportAll?.()||[]};
+   const recovery=globalThis.TrialumEncryptedArchive.randomRecoveryCode();
+   const contents=await globalThis.TrialumEncryptedArchive.encrypt(payload,recovery);
+   const body='<p>'+safe(en()?'This archive contains your complete world, private AI memories and this device’s locally saved friend-message history. Encryption happens on this device. Trialum’s server does not receive the archive.':'Оваа архива ги содржи целиот свет, приватната AI-меморија и локално зачуваната историја со пријателите. Шифрирањето се врши на овој уред. Серверот на Trialum не ја прима архивата.')+'</p><p><b>'+safe(en()?'Save this recovery code separately from the archive. It is shown only now. If it is lost, nobody can decrypt the archive.':'Зачувај го recovery-кодот одделно од архивата. Се прикажува само сега. Ако се изгуби, никој нема да може да ја дешифрира архивата.')+'</b></p><pre style="white-space:normal;overflow-wrap:anywhere;background:#071725;padding:14px;border-radius:10px;font-size:1.05rem;user-select:all">'+recovery+'</pre><label style="display:flex;gap:10px;align-items:flex-start"><input id="vaultKeySaved" type="checkbox" style="margin-top:5px">'+safe(en()?'I have saved the recovery code outside this phone.':'Го зачував recovery-кодот надвор од овој телефон.')+'</label>';
+   const box=vaultModal(en()?'Encrypted migration archive':'Шифрирана архива за пренос',body,'<button id="vaultCancel">'+safe(en()?'Cancel':'Откажи')+'</button><button id="vaultSave" disabled class="primary">'+safe(en()?'Save encrypted archive':'Зачувај шифрирана архива')+'</button>');
+   const check=box.querySelector('#vaultKeySaved'),save=box.querySelector('#vaultSave');
+   check.addEventListener('change',()=>save.disabled=!check.checked);box.querySelector('#vaultCancel').addEventListener('click',()=>box.remove());
+   save.addEventListener('click',()=>{if(!check.checked)return;const filename='TRIALUM_secure_migration_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';const result=downloadArchive(contents,filename);box.remove();if(result==='pending'){backupFeedback(en()?'Choose a destination in the system picker. The archive is not confirmed saved until Android reports success.':'Избери локација во системскиот прозорец. Архивата не е потврдена како зачувана додека Android не пријави успех.',true);return;}const ok=Boolean(result);backupFeedback(ok?(en()?'Encrypted archive saved. Keep the recovery code separate and store a copy off-device.':'Шифрираната архива е зачувана. Чувај го recovery-кодот одделно и направи копија надвор од телефонот.'):(en()?'Could not save the encrypted archive.':'Не успеав да ја зачувам шифрираната архива.'),ok);});
+  }catch(error){backupFeedback((en()?'Encrypted archive failed: ':'Не успеа шифрираната архива: ')+restoreError(error));}
+ }
+ async function openEncryptedArchive(text){
+  const body='<p>'+safe(en()?'Enter the recovery code saved when this archive was created. Decryption happens locally. The archive will replace this device’s world and saved friend conversations after confirmation.':'Внеси го recovery-кодот зачуван при создавањето на архивата. Дешифрирањето се врши локално. По потврда, архивата ќе ги замени светот и историјата со пријателите на овој уред.')+'</p><label for="vaultRecoveryInput">'+safe(en()?'Recovery code':'Recovery-код')+'</label><input id="vaultRecoveryInput" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%;padding:12px;margin-top:8px"><p class="small">'+safe(en()?'The code is used only in memory and is not saved or sent.':'Кодот се користи само во меморија и не се зачувува или испраќа.')+'</p>';
+  const box=vaultModal(en()?'Unlock archive':'Отклучи архива',body,'<button id="vaultCancel">'+safe(en()?'Cancel':'Откажи')+'</button><button id="vaultUnlock" class="primary">'+safe(en()?'Decrypt and restore':'Дешифрирај и врати')+'</button>');
+  const input=box.querySelector('#vaultRecoveryInput');box.querySelector('#vaultCancel').addEventListener('click',()=>box.remove());input.focus();
+  box.querySelector('#vaultUnlock').addEventListener('click',async()=>{
+   const key=input.value;input.value='';
+   try{const payload=await globalThis.TrialumEncryptedArchive.decrypt(text,key);if(payload?.archiveType!=='trialum-private-migration'||payload.version!==1||!E.validate(payload.world))throw Error('invalid_archive');const archive=globalThis.TrialumLocalConversations.validateArchive(payload.friendConversations||[]);box.remove();await restoreEncryptedArchive(payload.world,archive);}
+   catch(error){backupFeedback((en()?'Archive could not be opened: ':'Архивата не може да се отвори: ')+restoreError(error));input.value='';if(document.body.contains(box))input.focus();}
+  });
+ }
+ async function processBackupFile(text){
+  if(globalThis.TrialumEncryptedArchive?.isArchive(text)){await openEncryptedArchive(text);return;}
+  const backup=S.parseImport(String(text).replace(/^\uFEFF/,''));await importBackupState(backup);
+ }
+ async function restoreEncryptedArchive(world,archive){
+  if(restoring)return;
+  const approve=confirm(en()?'Restore the encrypted archive? It will replace the world, AI memories and local friend conversation history on this device. Save an encrypted backup of the current device first if needed.':'Да ја вратам шифрираната архива? Таа ќе ги замени светот, AI-меморијата и локалната историја со пријателите на овој уред. Ако ти требаат тековните податоци, прво зачувај шифрирана архива.');
+  if(!approve)return;
+  const oldWorld=s?JSON.parse(JSON.stringify(s)):null,oldConversations=await globalThis.TrialumLocalConversations.exportAll();
+  await importBackupState(world,{confirmed:true,preservePrivate:false});
+  if(!await globalThis.TrialumLocalConversations.replaceAll(archive)){
+   if(oldWorld){try{await S.save(oldWorld);s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();await globalThis.TrialumLocalConversations.replaceAll(oldConversations);}catch(_){}}
+   throw Error(en()?'Could not restore friend history; previous data was restored where possible.':'Не можев да ја вратам историјата со пријателите; претходните податоци се вратени каде што беше можно.');
+  }
+  backupFeedback(en()?'Encrypted archive restored, including local friend history and AI memories.':'Шифрираната архива е вратена, вклучувајќи ја локалната историја со пријателите и AI-меморијата.',true);
+ }
+ function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId||x.plantId)));
  for(const a of msgs){const id=a.type+'|'+(a.petId||a.habitatId||a.plantId);if(alertsSeen.has(id))continue;alertsSeen.add(id);if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){try{new Notification('ТРИАЛУМ · Потребна грижа',{body:a.text,tag:id,icon:'assets/icon.svg'})}catch(_){}}}
  alertsSeen=new Set([...alertsSeen].filter(x=>active.has(x)));}
 function doAction(button){if(restoring)return;const action=button.dataset.do,kind=button.dataset.kind;if(button.disabled)return;if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
- if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isAdultAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција е заклучена во оваа состојба.');return;}
+ if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isAdultAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција е заклучена во оваа состојба.');return;}
  if(action==='betaNotify'){const result=globalThis.TrialumAndroid?.pushTestLocalNotification?.()||'unavailable';toast(result==='scheduled'?'Пробното известување е закажано.':('Известувањето: '+result));return;}
  if(action==='betaPgsRefresh'){globalThis.TrialumAndroid?.pgsRefresh?.();toast('Барањето за освежување на Play Games е испратено.');return;}
  if(action==='betaSocialRefresh'){Social?.refresh?.();return;}
@@ -284,6 +350,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  }
  case 'msgRead':Messages?.mark(button.dataset.id).then(v=>{if(v)toast('Прочитано.');});return;
  case 'msgDelete':Messages?.remove(button.dataset.id).then(v=>{if(v)toast('Пораката е избришана за тебе.');});return;
+ case 'msgClearConversation':if(confirm('Да ја избришам локалната историја со овој пријател од овој уред? Неговиот уред не се менува.'))Messages?.clearConversation().then(v=>{if(v)toast('Локалната историја е избришана.');});return;
  case 'msgReport':{
   if(confirm('Пријави ја пораката како спам?'))Messages?.report(button.dataset.id,'spam').then(v=>{if(v)toast('Пријавата е примена.');});
   return;
@@ -307,7 +374,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  }
  case 'socialRegister':{
   const nickname=el('socialNick')?.value.trim()||s.profileName||'Чувар на искра';
-  Social?.register(nickname).then(v=>{if(v)toast('Профилот за пријатели е создаден.');});
+  Social?.register(nickname).then(v=>{if(v)toast('Профилот е создаден. Зачувај го единственото ID од страницата Пријатели.');});
   return;
  }
  case 'socialInvite':{
@@ -315,6 +382,16 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
   return;
  }
  case 'socialShare':Social?.share();return;
+ case 'socialCopyId':{
+  const id=String(Social?.getState?.()?.identity?.id||'');
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return toast('ID-то не е достапно. Освежи го профилот.');
+  const native=globalThis.TrialumAndroid;
+  if(native?.copyText){native.copyText(id);toast('ID-то е копирано. Зачувај го на безбедно место.');return;}
+  const copy=navigator.clipboard?.writeText(id);
+  if(copy)copy.then(()=>toast('ID-то е копирано. Зачувај го на безбедно место.')).catch(()=>toast('Копирај го ID-то од прикажаното поле.'));
+  else toast('Копирај го ID-то од прикажаното поле.');
+  return;
+ }
  case 'socialNearbyHost':{
   if(!globalThis.TrialumAndroid?.nearbyHost)return toast('Nearby поврзувањето работи само во Android апликацијата.');
   Social?.invite().then(code=>{if(code){globalThis.TrialumAndroid.nearbyHost(code);toast('Потврди го истиот код на двата уреди.');}});
@@ -351,7 +428,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
   return;
  }
  case 'socialDelete':{
-  if(confirm('Трајно да го избришеме социјалниот профил и пријателствата? Локалната игра останува зачувана.'))Social?.deleteAccount().then(v=>{if(v)toast('Социјалниот профил е избришан.');});
+  if(confirm('Трајно ќе се избришат серверскиот Friends профил, пријателствата, поканите, пораките, push-регистрацијата и поврзаните заеднички простори/посети. Локалниот свет и зачувувањата остануваат на уредот. Ова не може да се врати. Продолжи?'))Social?.deleteAccount().then(v=>{if(v)toast('Серверскиот Friends профил и поврзаните податоци се избришани.');});
   return;
  }
  case 'p2pOffer':{if(!P)return toast('WebRTC модулот не е достапен.');P.offer(peerMode==='local').then(code=>{peerOutgoing=code;renderTab();toast('Поканата е подготвена за копирање.');}).catch(e=>toast(e.message));return;}
@@ -386,6 +463,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'renamePet':{const p=E.currentPet(s);if(!p)return toast('Прво одбери миленик.');const name=prompt('Ново име на миленикот (до 32 знаци):',p.name);if(name===null)return;result=E.rename(s,'pet',p.id,name);break;}
  case 'inspect':{const current=E.currentHabitat(s);toast(current?`${current.name}: квалитет ${E.envScore(current)}%, простор ${E.occupancy(s,current.id)}/${current.capacity}`:`Фаза ${s.stage+1}: ${E.PHASES[s.stage]}`);return;}
  case 'export':exportBackup();return;
+ case 'encryptedExport':createEncryptedArchive();return;
  case 'rescueList':{
   if(globalThis.TrialumAndroid?.listRescueBackups)globalThis.TrialumAndroid.listRescueBackups();
   else toast('Спасувачката архива е достапна само во Android.');
@@ -414,18 +492,33 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  default:return;
  }
  notice(result,sound);if(!result?.ok&&action?.startsWith('agro'))button.disabled=false;if(result?.ok&&action==='petCare'&&(kind==='talk'||kind==='play'||kind==='feed'))A.speak(E.currentPet(s));if(result?.ok)activeSignals();}
-async function importBackupState(backup){
+async function importBackupState(backup,{confirmed=false,preservePrivate=true}={}){
  if(restoring)throw Error('Враќањето на бекап е веќе во тек.');
  if(!E.validate(backup))throw Error(en()?'This is not a compatible TRIALUM backup.':'Ова не е компатибилен ТРИАЛУМ бекап.');
  const message=en()?
   'Restore this backup? Your current local world will be replaced. Export a backup of your current progress first.':
   'Да го вратам овој бекап? Тековниот свет ќе биде заменет. Прво направи бекап на сегашниот напредок.';
- if(!confirm(message)){backupFeedback(en()?'Restore canceled. Your world was not changed.':'Враќањето е откажано. Тековниот свет не е изменет.',true);return false;}
+ if(!confirmed&&!confirm(message)){backupFeedback(en()?'Restore canceled. Your world was not changed.':'Враќањето е откажано. Тековниот свет не е изменет.',true);return false;}
  if(!rescueSnapshot(true))throw Error(en()?'Cannot protect the current world. Restore blocked.':'Не успеа заштитната копија од тековниот свет. Враќањето е блокирано.');
  restoring=true;
  clearTimeout(saveTimer);
  try {
-  const candidate=backup;
+  const candidate=JSON.parse(JSON.stringify(backup));
+  if(preservePrivate&&s){
+   const localPets=new Map((s.pets||[]).map(p=>[p.id,p]));
+   for(const pet of candidate.pets||[]){
+    const prior=localPets.get(pet.id);if(!prior)continue;
+    if(!Array.isArray(pet.chatHistory)&&Array.isArray(prior.chatHistory))pet.chatHistory=JSON.parse(JSON.stringify(prior.chatHistory));
+    if(prior.mind&&typeof prior.mind==='object'){
+     pet.mind=pet.mind&&typeof pet.mind==='object'?pet.mind:{};
+     if(!Array.isArray(pet.mind.memories)&&Array.isArray(prior.mind.memories))pet.mind.memories=JSON.parse(JSON.stringify(prior.mind.memories));
+     if(!Number.isFinite(Number(pet.mind.turns))&&Number.isFinite(Number(prior.mind.turns)))pet.mind.turns=prior.mind.turns;
+    }
+    for(const key of ['playgroundAiMemories','playgroundAiBackgroundSeen','playgroundAiBackgroundStreamId','playgroundAiBackgroundRevision']){
+     if(pet[key]===undefined&&prior[key]!==undefined)pet[key]=JSON.parse(JSON.stringify(prior[key]));
+    }
+   }
+  }
   E.ensureLongplay(candidate);
   Presence?.ensure(candidate);
   // Settle only explicitly recorded LW-C sessions BEFORE LW-A local expiry.
@@ -534,12 +627,11 @@ async function init(){globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);tr
   const file=event.target.files[0];event.target.value='';if(!file)return;
   try{
    if(file.size>20*1024*1024)throw Error(en()?'Backup exceeds 20 MB.':'Бекапот е поголем од 20 MB.');
-   const backup=S.parseImport((await file.text()).replace(/^\uFEFF/,''));
-   await importBackupState(backup);
+   await processBackupFile(await file.text());
   }catch(error){backupFeedback((en()?'Restore failed: ':'Враќањето не успеа: ')+restoreError(error));}
  });
  globalThis.TrialumNativeBackupReceived=async function(json){
-  try{const b=S.parseImport(String(json).replace(/^\uFEFF/,''));await importBackupState(b);}
+  try{await processBackupFile(String(json));}
   catch(error){backupFeedback((en()?'Restore failed: ':'Враќањето не успеа: ')+restoreError(error));}
  };
  globalThis.TrialumNativeBackupVaultList=function(entries){

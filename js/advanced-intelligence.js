@@ -82,7 +82,7 @@ function render(s,p){
  '<span>✨ '+tr('Љубопитност','Curiosity')+' '+traits.curiosity+'</span>'+
  '<span>💞 '+tr('Топлина','Warmth')+' '+traits.warmth+'</span>'+
  '<span>🦁 '+tr('Храброст','Bravery')+' '+traits.bravery+'</span></div>';
- html+='<p class="privacy-note">'+tr('Разговорите, меморијата и личноста остануваат во локалниот свет и во неговиот JSON бекап. Никогаш не се праќаат на наш сервер.','Chats, memories and personality stay in the local world and its JSON backup. No game server receives them.')+'</p>';
+ html+='<p class="privacy-note">'+tr('Разговорите и меморијата на Мнемос се чуваат локално. Не се испраќаат на Trialum серверот, не се вклучуваат во обичен JSON или Google Cloud Save. За пренос меѓу уреди користи ја шифрираната архива во Поставки; recovery-кодот чувај го одделно.','Mnemos chats and memory are stored locally. They are not sent to the Trialum server or included in plain JSON or Google Cloud Save. To move them between devices, use the encrypted archive in Settings and keep its recovery code separate.')+'</p>';
  html+=button(m.enabled?'🔐 '+tr('Исклучи AI меморија','Disable AI memory'):'✅ '+tr('Се согласувам за локален AI','Allow local AI'),'mindToggle');
  if(!m.enabled)return html+'<p class="small">'+tr('Модел не се презема пред согласност. Не е потребен за играње.','No model is downloaded without consent. It is never required for gameplay.')+'</p></section>';
  html+='<div class="llm-choices">'+Object.values(MODELS).map(model=>
@@ -120,7 +120,7 @@ function handle(action,button,s,ctx){
  const m=mind(p);
  if(action==='mindToggle'){
   if(!m.enabled){
-   const accepted=root.confirm?.(tr('Да овозможам локална AI меморија за овој Мнемос? Пораките ќе се зачуваат во светот и JSON бекапот. Моделот е изборен и се презема одделно.','Enable on-device AI memory for Mnemos? Messages are saved in the world and JSON backup. Model download is separate and optional.'));
+   const accepted=root.confirm?.(tr('Да овозможам локална AI меморија за овој Мнемос? Разговорите се зачувуваат во приватниот простор на апликацијата и не одат на Trialum серверот. За пренос на друг уред создај шифрирана архива во Поставки. Моделот е изборен и се презема одделно.','Enable local AI memory for this Mnemos? Chats stay in the app’s private storage and are not sent to the Trialum server. Create an encrypted archive in Settings to move them to another device. The model is optional and downloaded separately.'));
    if(!accepted)return true;
   }
   m.enabled=!m.enabled;ctx.scheduleSave();ctx.render();return true;

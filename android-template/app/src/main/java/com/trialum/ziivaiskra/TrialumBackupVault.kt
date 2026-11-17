@@ -31,6 +31,7 @@ internal class TrialumBackupVault(private val context: Context) {
     private val limit = 20 * 1024 * 1024
     private val keep = 16
     private val keepPinned = 4
+    private val secureIdRule = Regex("^secure_[0-9_]+_[a-f0-9]{8}_[a-f0-9]{16}\\.json$")
     private val idRule = Regex("^rescue_(keep_)?[0-9_]+_[0-9a-f]{8}_[0-9a-f]{16}\\.json$")
     private val formatter = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -49,6 +50,17 @@ internal class TrialumBackupVault(private val context: Context) {
             "World backup is missing pets or history."
         }
         require(json.optInt("lastDay", -1) >= 0) { "World backup has no valid day." }
+        return json
+    }
+
+    private fun inspectEncrypted(bytes: ByteArray): JSONObject {
+        require(bytes.size in 100..limit) { "Encrypted archive is empty or exceeds 20 MB." }
+        val json = JSONObject(String(bytes, Charsets.UTF_8))
+        require(json.optString("format") == "trialum-encrypted-archive" &&
+            json.optInt("version", -1) == 1 && json.optString("cipher") == "AES-256-GCM" &&
+            json.optString("kdf") == "PBKDF2-SHA256" && json.optInt("iterations") == 600000 &&
+            json.optString("salt").isNotBlank() && json.optString("iv").isNotBlank() &&
+            json.optString("ciphertext").isNotBlank()) { "Invalid encrypted Trialum archive." }
         return json
     }
 
@@ -113,6 +125,40 @@ internal class TrialumBackupVault(private val context: Context) {
         }
     }
 
+    /** Keeps ciphertext only while the Android 8–9 folder picker is open. */
+    @Synchronized
+    fun snapshotEncrypted(bytes: ByteArray): String {
+        inspectEncrypted(bytes)
+        check(root.isDirectory || root.mkdirs()) { "Cannot create private archive folder." }
+        val name = "secure_" + stamp() + "_" + UUID.randomUUID().toString().take(8) +
+            "_" + hex(digest(bytes)).take(16) + ".json"
+        val pending = File(root, "." + name + ".part")
+        val target = File(root, name)
+        try {
+            FileOutputStream(pending, false).use { output -> output.write(bytes); output.fd.sync() }
+            require(MessageDigest.isEqual(digest(pending.readBytes()), digest(bytes))) { "Encrypted archive checksum mismatch." }
+            inspectEncrypted(pending.readBytes())
+            check(!target.exists() && pending.renameTo(target)) { "Could not commit encrypted archive." }
+            loadEncrypted(name)
+            root.listFiles()?.filter { secureIdRule.matches(it.name) && it.isFile }
+                ?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
+            return name
+        } finally { pending.delete() }
+    }
+
+    @Synchronized
+    fun loadEncrypted(id: String): ByteArray {
+        require(secureIdRule.matches(id)) { "Invalid encrypted archive identifier." }
+        val file = File(root, id)
+        require(file.isFile && file.length() in 100..limit.toLong()) { "Invalid encrypted archive size." }
+        val bytes = file.readBytes()
+        require(hex(digest(bytes)).startsWith(id.removeSuffix(".json").substringAfterLast("_"))) {
+            "Encrypted archive SHA-256 mismatch."
+        }
+        inspectEncrypted(bytes)
+        return bytes
+    }
+
     @Synchronized
     fun entries(): JSONArray {
         val out = JSONArray()
@@ -171,10 +217,16 @@ internal class TrialumBackupVault(private val context: Context) {
         }
     }
 
+    /** Writes only a validated ciphertext archive to a user-selected document provider. */
+    fun exportEncryptedToDocument(uri: Uri, bytes: ByteArray) {
+        inspectEncrypted(bytes)
+        writeAndVerify(uri, bytes)
+    }
+
     /** API 29+: no picker and no overwrite; the new row is invisible until verified. */
     fun exportToDownloads(bytes: ByteArray, hint: String): String {
         require(Build.VERSION.SDK_INT >= 29)
-        inspect(bytes)
+        try { inspect(bytes) } catch (_: Exception) { inspectEncrypted(bytes) }
         val name = uniqueName(hint)
         val resolver = context.contentResolver
         val values = ContentValues().apply {
@@ -201,7 +253,7 @@ internal class TrialumBackupVault(private val context: Context) {
 
     /** API 26–28 fallback: CREATE a fresh document inside a chosen folder. */
     fun exportToFolder(tree: Uri, bytes: ByteArray, hint: String): String {
-        inspect(bytes)
+        try { inspect(bytes) } catch (_: Exception) { inspectEncrypted(bytes) }
         val resolver = context.contentResolver
         val parent = DocumentsContract.buildDocumentUriUsingTree(
             tree, DocumentsContract.getTreeDocumentId(tree))

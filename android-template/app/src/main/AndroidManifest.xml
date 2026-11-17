@@ -17,7 +17,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" android:minSdkVersion="31" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:minSdkVersion="31" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:minSdkVersion="33" android:usesPermissionFlags="neverForLocation" />
-    <application android:name=".TrialumApplication" android:label="@string/trialum_app_label" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:allowBackup="true" android:fullBackupContent="@xml/trialum_backup_rules" android:dataExtractionRules="@xml/trialum_data_extraction_rules" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:supportsRtl="true">
+    <application android:name=".TrialumApplication" android:label="@string/trialum_app_label" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:allowBackup="false" android:fullBackupContent="@xml/trialum_backup_rules" android:dataExtractionRules="@xml/trialum_data_extraction_rules" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:supportsRtl="true">
         <!-- PGS requires Play Console game project and matching OAuth/SHA-1.
              With project ID "0" the native integration stays disabled. -->
         <meta-data android:name="com.google.android.gms.games.APP_ID"

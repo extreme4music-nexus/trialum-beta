@@ -168,11 +168,11 @@ function settings(s){
  b(s.settings.music?'♫ Музика: вклучена':'♫ Музика: исклучена','toggleMusic','id="musicBtn"')+'</div>'+
  '<div class="settingrow"><label for="volume">Јачина на звук</label><input id="volume" type="range" min="0" max="100" value="'+Math.round(s.settings.volume*100)+'"></div></div>'+
  '<div class="settings-group"><h3>🎮 Google Play Games</h3><p class="small subtle">Опционално поврзување и Cloud Save. Без Google профил играта работи локално.</p><div class="btn-line">'+b('🎮 Отвори Google Play Games','pgsOpen')+'</div></div>'+
- '<div class="settings-group"><h3>💾 Бекап и враќање</h3><div class="btn-line">'+b('⬇ Направи бекап','export','class="primary"')+
- b('⬆ Врати од бекап','import')+b('🛟 Спасувачки копии','rescueList')+'</div>'+
+ '<div class="settings-group"><h3>💾 '+(en?'Backup & restore':'Бекап и враќање')+'</h3><div class="btn-line">'+b(en?'🔐 Encrypted migration archive':'🔐 Шифрирана архива за пренос','encryptedExport','class="primary"')+
+ b(en?'🔓 Restore encrypted archive':'🔓 Врати шифрирана архива','import')+b(en?'⬇ Plain JSON (no private chats)':'⬇ JSON без приватни разговори','export')+b(en?'🛟 Rescue copies':'🛟 Спасувачки копии','rescueList')+'</div>'+
  '<div id="backupVaultList" class="backup-vault-list" role="status" aria-live="polite"></div>'+
- '<p class="small subtle">Бекапот го зачувува целиот свет како JSON датотека. Враќањето го заменува сегашниот свет само по потврда. Пред враќање направи бекап на тековниот напредок.</p>'+
- '<p class="small subtle">Android ги зачувува новите JSON датотеки во Downloads/Trialum со уникатно име и SHA-256 проверка. Внатрешните спасувачки копии се бришат при деинсталација — зачувај и надворешен JSON.</p>'+
+ '<p class="small subtle">'+(en?'The encrypted archive includes the complete world, AI memory and locally saved friend conversations. It is encrypted on-device with a recovery code shown only once. Without that code, nobody can decrypt it. Trialum’s server does not receive it.':'Шифрираната архива го содржи целиот свет, AI-меморијата и локалната историја со пријателите. Се шифрира на уредот со recovery-код што се прикажува само еднаш. Без тој код никој не може да ја дешифрира. Серверот на Trialum не ја прима.')+'</p>'+
+ '<p class="small subtle">'+(en?'Plain JSON includes the world and development history but excludes private AI memories and conversations. Restore replaces local data after confirmation. Store the encrypted archive off-device before uninstalling.':'Обичниот JSON содржи свет и развојна историја, но ги изоставува приватните AI-мемории и разговорите. Враќањето заменува локални податоци по потврда. Зачувај ја шифрираната архива надвор од телефонот пред деинсталација.')+'</p>'+
  '<p id="backupFeedback" class="small" role="status" aria-live="polite"></p>'+
  '<p class="small">Состојба: <span id="saveStatus">Локално автоматско зачувување</span></p></div>'+
  '<div class="settings-group"><h3>🔔 Android известувања</h3>'+
@@ -227,7 +227,7 @@ function help(){
   ['About Trialum','Trialum — Living World is an offline-first, long-form creature and ecosystem game. Beta 1.0 tests the LW-C feature set. Later Living World phases are still in development.'],
   ['How to play','Explore the Lab, discover materials and research, create life, grow plants, build habitats, and care for your pets. Actions and resources recover over time. Use the journal and menus to follow discoveries and pet needs.'],
   ['A fictional world','The chemistry, organisms, evolution and ecosystems in Trialum are fictional game systems. They are not a scientific model, medical advice, or instructions for creating real life.'],
-  ['Play offline and protect your save','Core play is local and works offline. Create and keep a JSON backup from Settings before changing devices or reinstalling. Google Cloud Save is separate, optional, and begins only after you opt in.'],
+  ['Play offline and protect your save','Core play is local and works offline. Use the encrypted migration archive in Settings to move the full world, private AI memories and local friend-message history. Keep its recovery code separately. Plain JSON and Google Play Games Cloud Save exclude private conversations and AI memories.'],
   ['Google Play Games','Google Play Games is optional. Google handles profile sign-in, achievements and leaderboards; Trialum never asks for your Google password. Cloud Save uses Google Play Games only after you enable it.'],
   ['Friends, messages and pet conversations','Friends, invitations, private phrases and shared-room activity use Trialum’s separate social service when you choose those features. Pet conversation context is a limited session memory; it is not kept as a transcript on the Trialum server. AI participation is optional per pet.'],
   ['Tutorial',['The guided introduction explains the first steps. You can skip it without losing progress. To replay it, open Settings and choose “Replay tutorial.”']],
@@ -236,7 +236,7 @@ function help(){
    ['Do I need a Google account?','No. Google Play Games is optional. Trialum never asks for your Google password.'],
    ['How do Friends work?','Friends use the separate Trialum HTTPS service after you choose to connect. Invites require the other player’s approval.'],
    ['What are push notifications?','Android push notifications are optional and require your consent. If you turn them off, you can still check messages in the game.'],
-   ['How do I protect my save?','Create a JSON backup in Settings before changing devices or reinstalling. Google Cloud Save is a separate opt-in feature.'],
+   ['How do I protect my save?','Create an encrypted migration archive in Settings before changing devices or reinstalling. Store the archive in a location you control and keep its one-time recovery code separately. Google Play Games Cloud Save is separate and does not contain private AI memories or friend conversations.'],
    ['Is the biology real?','No. Trialum’s chemistry, organisms and ecosystems are fictional game systems, not scientific or medical guidance.'],
    ['Can I buy credits in Beta 1.0?','No. Purchases are disabled in Beta 1.0; credits are earned through play.']
   ]],
@@ -246,7 +246,7 @@ function help(){
   ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. Бета 1.0 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
   ['Како се игра','Истражувај ја Лабораторијата, откривај материјали и сознанија, создавај живот, одгледувај растенија, гради биосветови и грижи се за милениците. Акциите и ресурсите се обновуваат со време. Дневникот и менијата ги следат откритијата и потребите на милениците.'],
   ['Измислен свет','Хемијата, организмите, еволуцијата и екосистемите во Trialum се измислени системи за игра. Тие не се научен модел, медицински совет или упатство за создавање вистински живот.'],
-  ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. Од Поставки направи и зачувај JSON бекап пред промена на уред или повторна инсталација. Google Cloud Save е посебна опција и почнува само откако ќе ја вклучиш.'],
+  ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. За пренос на целиот свет, приватните AI-мемории и локалната историја со пријателите користи шифрирана архива од Поставки. Recovery-кодот чувај го одделно. Обичниот JSON и Google Play Games Cloud Save ги изоставуваат приватните разговори и AI-мемориите.'],
   ['Google Play Games','Google Play Games е опционален. Google ја обработува најавата на профилот, достигнувањата и рангирањата; Trialum никогаш не ја бара твојата Google лозинка. Cloud Save користи Google Play Games само откако ќе го вклучиш.'],
   ['Пријатели, пораки и разговори на милениците','Пријателствата, поканите, приватните фрази и активноста во заедничките простории го користат посебниот Trialum социјален сервис кога ќе ги избереш тие функции. Контекстот на разговорите меѓу милениците е ограничена меморија за тековната сесија и не се чува како транскрипт на Trialum серверот. Учество на AI се вклучува по миленик.'],
   ['Туторијал',['Водениот вовед ги објаснува првите чекори. Можеш да го прескокнеш без да изгубиш напредок. За да го повториш, отвори Поставки и избери „Повтори туторијал“.']],
@@ -255,7 +255,7 @@ function help(){
    ['Дали ми треба Google сметка?','Не. Google Play Games е опционален. Trialum никогаш не ја бара твојата Google лозинка.'],
    ['Како функционираат Пријателите?','Пријателите го користат посебниот Trialum HTTPS сервис откако ќе избереш да се поврзеш. За поканата е потребно одобрување од другиот играч.'],
    ['Што се push известувања?','Android push известувањата се опционални и бараат твоја согласност. Ако ги исклучиш, сè уште можеш да ги провериш пораките во играта.'],
-   ['Како да го заштитам зачуваниот напредок?','Направи JSON бекап во Поставки пред да смениш уред или повторно да ја инсталираш играта. Google Cloud Save е посебна опција што се вклучува доброволно.'],
+   ['Како да го заштитам зачуваниот напредок?','Пред промена на телефон или деинсталација, направи шифрирана архива од Поставки. Зачувај ја на локација што ја контролираш, а recovery-кодот чувај го одделно. Google Play Games Cloud Save не ги содржи приватните AI-мемории или разговорите со пријателите.'],
    ['Дали биологијата е вистинска?','Не. Хемијата, организмите и екосистемите во Trialum се измислени системи за игра, а не научни или медицински упатства.'],
    ['Можам ли да купам кредити во Бета 1.0?','Не. Купувањата се исклучени во Бета 1.0; кредитите се заработуваат со играње.']
   ]],

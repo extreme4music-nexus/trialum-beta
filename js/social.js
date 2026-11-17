@@ -32,7 +32,8 @@ function setError(e){
     self_invitation:'Ова е твојата сопствена покана.',
     authentication_required:'Профилот не е активен. Потребно е повторно поврзување.',
     rate_limited:'Премногу обиди. Пробај подоцна.',
-    social_service_disabled:'Серверот за пријатели сè уште не е активиран.'
+    social_service_disabled:'Серверот за пријатели сè уште не е активиран.',
+    personal_data_blocked:'Не користи вистинско име или контактни податоци. Избери измислен прекар.'
   };
   state.error=map[e?.message]||'Не успеа поврзувањето. Провери интернет и сервер.';
   emit();
@@ -86,7 +87,13 @@ async function register(name){
   return run(async()=>{
     if(!state.ageAllowed)throw Error('age_gate_required');
     if(!state.enabled||!native()?.socialStoreCredential)throw Error('social_service_disabled');
-    const response=await request('register','POST',{nickname:String(name||'').trim()});
+    const nickname=String(name||'').trim();
+    const privacy=root.TrialumPrivacyGuard?.inspect?.(nickname)||{};
+    if(privacy.blocked)throw Error('personal_data_blocked');
+    const source='Користи само измислен прекар. Прекарот и имињата на милениците може да се испратат до социјалниот сервер на Trialum и да им се прикажат на прифатените пријатели. Не внесувај вистинско име, контактни податоци, училиште или локација. Автоматската проверка не може да го препознае секое вистинско име. Продолжи?';
+    const warning=root.TrialumI18n?.t?.(source)||source;
+    if(!root.confirm?.(warning))return null;
+    const response=await request('register','POST',{nickname,nicknamePrivacyConfirmed:true});
     const secret=response.credential;
     if(!CODE.test(secret))throw Error('invalid_credential');
     if(!native().socialStoreCredential(secret)){
@@ -204,11 +211,12 @@ function render(){
   if(!state.enabled){html+='<div class="notice">🔒 Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса. Дотогаш твоите миленици остануваат локално зачувани.</div>';}
   else if(!state.identity){
     html+='<div class="card social-hero"><h3>✨ Создај приватен профил за дружба</h3>'+
-      '<p class="desc">Потребно е само име во играта. Таен клуч се чува во Android Keystore, не во светот или JSON бекап.</p>'+
+      '<p class="desc">Користи измислен прекар, не вистинско име, контакт, училиште или локација. Пријателството се воспоставува само со двострана потврда. Таен клуч се чува во Android Keystore, не во светот или JSON бекап.</p>'+ 
       '<label for="socialNick">Име во играта</label><input id="socialNick" maxlength="32" autocomplete="off" placeholder="Чувар на искра">'+
       '<div class="btn-line"><button class="primary" data-do="socialRegister"'+(state.busy?' disabled':'')+'>Создај профил</button></div></div>';
   }else{
     html+='<div class="social-identity"><span>👤 '+safe(state.identity.nickname)+'</span><span class="tag">Приватен профил</span></div>'+
+      '<div class="card social-account-id"><h3>🔐 Твојот единствен ID</h3><p class="desc">Зачувај го ова ID на безбедно место за да можеш да го наведеш при барање за бришење на профилот.</p><code>'+safe(state.identity.id)+'</code><p class="small subtle">Не го објавувај и не го споделувај. Ова ID не е лозинка и само по себе не е доволно за бришење на профилот.</p><button data-do="socialCopyId">Копирај ID</button></div>'+
       '<div class="cards"><div class="card social-hero"><h3>📤 Покани пријател</h3><p class="desc">Прати покана преку Android споделување. Важи 15 минути.</p>'+
       '<button class="primary" data-do="socialInvite"'+(state.busy?' disabled':'')+'>Создај покана</button>'+
       (state.code?'<div class="social-code"><span>'+safe(state.code.slice(0,7))+'…</span><button data-do="socialShare">Сподели</button><button data-do="socialCopy">Копирај</button><button data-do="socialRevoke">Поништи</button></div>':'')+'</div>'+
@@ -227,7 +235,8 @@ function render(){
       (state.friends.length?state.friends.map(f=>'<div class="friend-item social-friend"><b>👋 '+safe(f.nickname)+'</b><div class="btn-line">'+
        '<button data-do="socialRemove" data-id="'+safe(f.id)+'">Отстрани</button><button data-do="socialBlock" data-id="'+safe(f.id)+'">Блокирај</button></div></div>').join(''):'<p class="subtle">Сè уште немаш пријатели. Испрати ја првата покана!</p>')+'</div>'+
       '<p class="small subtle">Посетите во домот, заедничката игротека и пораките се дел од 1.6-LW. Известувањата за пораки ќе се проверат по LW.</p>'+
-      '<div class="btn-line"><button data-do="socialDelete">Избриши социјален профил</button></div>';
+      '<p class="small subtle">Ова ги брише серверскиот профил за Пријатели и неговите поврзани социјални податоци; локалниот свет и зачувувањата остануваат на уредот. Бришењето на апликацијата само по себе не го брише онлајн профилот. Избриши го профилот тука пред деинсталација. Надворешниот веб-тек за бришење се подготвува одделно.</p>'+ 
+      '<div class="btn-line"><button data-do="socialDelete">Избриши профил и серверски податоци</button></div>';
   }
   return html+'</section>';
 }

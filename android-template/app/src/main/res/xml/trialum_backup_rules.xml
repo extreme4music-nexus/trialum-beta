@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Offline world (WebView IndexedDB/localStorage) remains backed up by Android
-         when supported; social and Firebase opt-in cannot silently transfer. -->
-    <exclude domain="sharedpref" path="trialum_push_v1.xml" />
-    <exclude domain="sharedpref" path="trialum_social_v1.xml" />
-    <exclude domain="sharedpref" path="trialum_background_ai_memory_v1.xml" />
-        <exclude domain="file" path="models/" />
+    <!-- Keep the world and its private conversation memory on this device only.
+         Google Play Games remains a separate, opt-in path with filtered snapshots. -->
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
 </full-backup-content>

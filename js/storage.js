@@ -10,6 +10,29 @@ function legacyConvert(old){if(!old||old.version!==1||!old.atoms||!Array.isArray
  if(s.stage>=6){const h={id:'hab-legacy',name:'Луминозен залив · наследство',biome:'lagoon',capacity:14,minerals:{macro:65,micro:60},chem:{ph:7.1,temp:24,oxygen:83,toxins:6},cleanliness:85,flora:[],dayActions:4,bornDay:s.lastDay};s.habitats.push(h);s.activeHabitat=h.id;for(let i=0;i<old.pets.length;i++){const p=old.pets[i],species=Math.min(3,Math.max(0,Number(p.shape)||0));s.pets.push({id:'pet-legacy-'+i,species,name:String(p.name||'Лумира'),habitatId:h.id,hue:Number(p.hue)||E().SPECIES[species].hue,seed:i*133+42,eyes:Number(p.eyes)||2,shape:E().SPECIES[species].shape,birthDay:Number(p.birthday)||s.lastDay,ageDays:0,growth:Math.min(100,Number(p.growth)||5),satiety:Number(p.hunger)||65,joy:Number(p.joy)||65,energy:Number(p.stamina)||70,clean:Number(p.clean)||75,bond:Number(p.bond)||30,actionsLeft:4,mood:'Мирно',language:'лу-ми'});}s.selectedPet=s.pets[0]?.id||null;}
  // retain full earlier event history in chronological order
  s.logs=[];s.sequence=9999;for(const entry of [...(old.logs||[])].reverse()){s.logs.push({id:'legacy-log-'+(++s.sequence),day:entry.day||1,at:typeof entry.at==='number'?new Date(entry.at).toISOString():new Date().toISOString(),kind:entry.type||'legacy',text:String(entry.text||'')});}E().log(s,'🔄 Светот е пренесен од ТРИАЛУМ 1.0.');return s;}
+// Plain JSON and Google Play Games snapshots intentionally exclude private AI
+// memories and transcripts. Full private migration uses encrypted-archive.js.
+function portableSnapshot(state){
+ let copy;try{copy=JSON.parse(JSON.stringify(state));}catch(_){return null;}
+ for(const pet of Array.isArray(copy?.pets)?copy.pets:[]){
+  if(!pet||typeof pet!=='object')continue;
+  delete pet.chatHistory;
+  delete pet.playgroundAiMemories;
+  delete pet.playgroundAiBackgroundSeen;
+  delete pet.playgroundAiBackgroundStreamId;
+  delete pet.playgroundAiBackgroundRevision;
+  if(pet.mind&&typeof pet.mind==='object'){
+   delete pet.mind.memories;
+   delete pet.mind.turns;
+  }
+ }
+ delete copy.friendConversations;
+ delete copy.conversationHistory;
+ delete copy.privateMessages;
+ delete copy.privateAiMemories;
+ delete copy.cloudMemoryVersion;
+ return copy;
+}
 async function load(){let state=null;try{state=await dbRead()}catch(_){}if(E().validate(state))return state;
  try{state=JSON.parse(localStorage.getItem(KEY)||'null');if(E().validate(state))return state;}catch(_){}
  try{const old=JSON.parse(localStorage.getItem(LEGACY)||'null');const s=legacyConvert(old);if(s){await save(s);return s;}}catch(_){}
@@ -59,12 +82,17 @@ function parseImport(text){
   if(raw.pets.length>1000||raw.habitats.length>100||raw.logs.length>500000){
    const error=Error('Неподдржана големина на светот.');error.code='BACKUP_TOO_LARGE';throw error;
   }
-  return raw;
+  return portableSnapshot(raw);
  }
  const migrated=legacyConvert(raw);
- if(migrated)return migrated;
+ if(migrated)return portableSnapshot(migrated);
  const error=Error('Ова не е валиден ТРИАЛУМ бекап (1.0 – 1.5.1).');
  error.code='UNSUPPORTED_BACKUP';throw error;
 }
-root.TrialumStorage={load,save,clear,parseImport,legacyConvert};
+function parseCloudSnapshot(text){
+ let raw;try{raw=JSON.parse(String(text).replace(/^\uFEFF/,''));}catch(_){throw Error('Невалидна облачна снимка.');}
+ if(!E().validate(raw))throw Error('Невалидна облачна снимка.');
+ return portableSnapshot(raw);
+}
+root.TrialumStorage={load,save,clear,parseImport,parseCloudSnapshot,legacyConvert,portableSnapshot};
 })(globalThis);
