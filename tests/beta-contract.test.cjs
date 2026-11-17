@@ -28,8 +28,13 @@ test('beta Android builds cannot silently drop HTTPS Friends or FCM client confi
  for(const resource of ['trialum_social_api_url','trialum_firebase_app_id','trialum_firebase_project_id','trialum_firebase_sender_id'])
   assert(workflow.includes('require_resource_value '+resource),'APK verification must identify missing configured resource: '+resource);
  assert(gradle.includes('trialumFirebaseAppIdSigndebug')&&gradle.includes('trialumFirebaseAppIdSignqa'));
- assert(!/TRIALUM_FCM_SERVICE_ACCOUNT|GOOGLE_APPLICATION_CREDENTIALS|\.jks|\.p12/i.test(workflow),
-  'The public build workflow must not receive server credentials or signing material');
+ assert(!/TRIALUM_FCM_SERVICE_ACCOUNT|GOOGLE_APPLICATION_CREDENTIALS|TRIALUM_(?:RELEASE|QA)_KEYSTORE|TRIALUM_(?:RELEASE|QA)_KEYSTORE_B64|TRIALUM_(?:RELEASE|QA)_STORE_PASSWORD|TRIALUM_(?:RELEASE|QA)_KEY_PASSWORD/i.test(workflow),
+  'The public build workflow must not receive server credentials or official signing material');
+ const isolatedSigning=workflow.slice(workflow.indexOf('Sign isolated GP-01 test APK with a one-time runner key'));
+ assert(isolatedSigning.includes('mktemp -d')&&isolatedSigning.includes('openssl rand -hex'));
+ assert(isolatedSigning.includes('com.trialum.ziivaiskra.gp01test'));
+ assert(isolatedSigning.includes('rm -f "$signer_file"')&&isolatedSigning.includes('rmdir "$signer_dir"'),
+  'The disposable signing key must be runner-only and deleted after signing');
 });
 
 test('Friends and messaging stay opt-in, isolated and present in the beta export',()=>{
