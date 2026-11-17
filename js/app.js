@@ -51,11 +51,12 @@ let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
 const safe=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const nf=n=>Math.floor(Number(n)||0).toLocaleString('mk-MK');
 const short=(v)=>Math.round(Number(v)||0);
-function toast(msg){const box=el('toast');box.textContent=globalThis.TrialumI18n?.t(msg)||msg;box.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('show'),3300);}
+function uiText(msg){return globalThis.TrialumI18n?.t?.(msg)||msg;}
+function toast(msg){const box=el('toast');box.textContent=uiText(msg);box.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('show'),3300);}
 function notice(result,sound='tap'){if(!result)return;if(result.ok){A.sfx(sound);scheduleSave();render();}else A.sfx('error');toast(result.message);}
 function scheduleSave(){if(!s||restoring)return;if(el('saveStatus'))el('saveStatus').textContent='● Зачувување…';clearTimeout(saveTimer);saveTimer=setTimeout(forceSave,150);}
 async function forceSave(){if(!s||restoring)return;saving=true;const result=await S.save(s);saving=false;if(el('saveStatus'))el('saveStatus').textContent=result.ok?'● Зачувано · '+result.backend:'⚠ Извези JSON бекап';if(el('saveStatus'))el('saveStatus').style.color=result.ok?'#79efcf':'#ff9eae';sendNative();if(result.ok){rescueSnapshot(false);G?.afterLocalSave(s);}}
-function sendNative(){if(!s)return;try{if(globalThis.TrialumAndroid&&typeof globalThis.TrialumAndroid.updateState==='function'){globalThis.TrialumAndroid.updateState(JSON.stringify({version:E.VERSION,day:s.lastDay,updatedAt:Date.now(),alerts:E.alerts(s),pets:s.pets.map(p=>({id:p.id,name:p.name,satiety:p.satiety,joy:p.joy,clean:p.clean,habitatId:p.habitatId})),habitats:s.habitats.map(h=>({id:h.id,name:h.name,quality:E.envScore(h)}))}));}}catch(_){}}
+function sendNative(){if(!s)return;try{if(globalThis.TrialumAndroid&&typeof globalThis.TrialumAndroid.updateState==='function'){globalThis.TrialumAndroid.updateState(JSON.stringify({version:E.VERSION,language:globalThis.TrialumI18n?.language?.()||'en',day:s.lastDay,updatedAt:Date.now(),alerts:E.alerts(s),pets:s.pets.map(p=>({id:p.id,name:p.name,satiety:p.satiety,joy:p.joy,clean:p.clean,habitatId:p.habitatId})),habitats:s.habitats.map(h=>({id:h.id,name:h.name,quality:E.envScore(h)}))}));}}catch(_){}}
 // LW-B: show the full home biome only in Lab (initial home) and Habitats.
  // All other tabs own their screens; the home animation must not run behind them.
  function syncHomeScene(){
@@ -247,11 +248,11 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  }
  case 'shDecision':Shared?.decision(button.dataset.id,button.dataset.accept==='yes').then(v=>{if(v)toast('Поканата е обработена.');});return;
  case 'shRemove':{
-  if(confirm('Да го отстраниме членот или да ја напуштиме игротеката?'))Shared?.remove(button.dataset.id);
+  if(confirm(uiText('Да го отстраниме членот или да ја напуштиме игротеката?')))Shared?.remove(button.dataset.id);
   return;
  }
  case 'shDelete':{
-  if(confirm('Трајно да го избришеме овој заеднички простор и групните податоци?'))Shared?.drop();
+  if(confirm(uiText('Трајно да го избришеме овој заеднички простор и групните податоци?')))Shared?.drop();
   return;
  }
  case 'shUpgrade':Shared?.upgrade(button.dataset.kind,button.dataset.toy).then(v=>{if(v)toast('🌳 Надградбата е потврдена од серверот.');});return;
@@ -285,7 +286,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'msgRead':Messages?.mark(button.dataset.id).then(v=>{if(v)toast('Прочитано.');});return;
  case 'msgDelete':Messages?.remove(button.dataset.id).then(v=>{if(v)toast('Пораката е избришана за тебе.');});return;
  case 'msgReport':{
-  if(confirm('Пријави ја пораката како спам?'))Messages?.report(button.dataset.id,'spam').then(v=>{if(v)toast('Пријавата е примена.');});
+  if(confirm(uiText('Пријави ја пораката како спам?')))Messages?.report(button.dataset.id,'spam').then(v=>{if(v)toast('Пријавата е примена.');});
   return;
  }
  case 'msgEventRead':Messages?.mark(button.dataset.id,'event');return;
@@ -343,15 +344,15 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'socialDecline':Social?.clearPreview();return;
  case 'socialRefresh':Social?.refresh();return;
  case 'socialRemove':{
-  if(confirm('Да го отстраниме овој пријател?'))Social?.remove(button.dataset.id).then(v=>{if(v)toast('Пријателот е отстранет.');});
+  if(confirm(uiText('Да го отстраниме овој пријател?')))Social?.remove(button.dataset.id).then(v=>{if(v)toast('Пријателот е отстранет.');});
   return;
  }
  case 'socialBlock':{
-  if(confirm('Да го блокираме овој пријател? Нема да може да ти испрати покана.'))Social?.remove(button.dataset.id,true).then(v=>{if(v)toast('Пријателот е блокиран.');});
+  if(confirm(uiText('Да го блокираме овој пријател? Нема да може да ти испрати покана.')))Social?.remove(button.dataset.id,true).then(v=>{if(v)toast('Пријателот е блокиран.');});
   return;
  }
  case 'socialDelete':{
-  if(confirm('Трајно да го избришеме социјалниот профил и пријателствата? Локалната игра останува зачувана.'))Social?.deleteAccount().then(v=>{if(v)toast('Социјалниот профил е избришан.');});
+  if(confirm(uiText('Трајно да го избришеме социјалниот профил и пријателствата? Локалната игра останува зачувана.')))Social?.deleteAccount().then(v=>{if(v)toast('Социјалниот профил е избришан.');});
   return;
  }
  case 'p2pOffer':{if(!P)return toast('WebRTC модулот не е достапен.');P.offer(peerMode==='local').then(code=>{peerOutgoing=code;renderTab();toast('Поканата е подготвена за копирање.');}).catch(e=>toast(e.message));return;}
@@ -360,7 +361,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'p2pCopy':{const t=el('peerCodeOut');if(!t||!peerOutgoing)return;if(globalThis.TrialumAndroid?.copyText){globalThis.TrialumAndroid.copyText(peerOutgoing);toast('Кодот е копиран.');return;}t.select();const promise=navigator.clipboard?.writeText(peerOutgoing);if(promise)promise.then(()=>toast('Кодот е копиран.')).catch(()=>toast('Означи и копирај го кодот рачно.'));else toast('Копирај го означениот код.');return;}
  case 'p2pDisconnect':P?.clear();peerIncoming='';peerOutgoing='';renderTab();return;
  case 'p2pShare':{if(!peerOutgoing)return toast('Прво создај покана или одговор.');if(globalThis.TrialumAndroid?.shareText){globalThis.TrialumAndroid.shareText(peerOutgoing);return;}if(navigator.share){navigator.share({title:'ТРИАЛУМ P2P',text:peerOutgoing}).catch(()=>{});return;}toast('Користи Копирај код.');return;}
- case 'p2pRename':{const value=prompt('Твоето P2P име (до 32 знаци):',s.profileName||'Чувар на искра');if(value===null)return;s.profileName=String(value).trim().slice(0,32)||'Чувар на искра';render();scheduleSave();return;}
+ case 'p2pRename':{const keeper=uiText('Чувар на искра'),value=prompt(uiText('Твоето P2P име (до 32 знаци):'),s.profileName||keeper);if(value===null)return;s.profileName=String(value).trim().slice(0,32)||keeper;render();scheduleSave();return;}
  case 'p2pAddFriend':{const guest=P?.remote();if(!guest)return toast('Прво поврзи се со пријател.');if(E.addFriend(s,guest.id,guest.name)){render();scheduleSave();toast('Пријателот е зачуван на овој уред.');}return;}
  case 'p2pVisit':{const guest=P?.remote(),pet=E.currentPet(s);if(!P?.connected()||!pet||!guest)return toast('Избери миленик и поврзи се.');if(P.visit(pet.id)){result=E.socialize(s,pet.id,guest.id);sound='play';}else toast('Нема активна P2P врска.');break;}
  case 'nextDay':result=E.demoNext(s);sound='day';break;
@@ -376,7 +377,7 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'inventPlant':result=E.inventPlant(s,button.dataset.plant);sound='grow';break;
  case 'plant':result=E.plant(s,button.dataset.plant);sound='grow';break;
  case 'transfer':result=E.transfer(s,s.selectedPet,button.dataset.id);sound='select';break;
- case 'renamePet':{const p=E.currentPet(s);if(!p)return toast('Прво одбери миленик.');const name=prompt('Ново име на миленикот (до 32 знаци):',p.name);if(name===null)return;result=E.rename(s,'pet',p.id,name);break;}
+ case 'renamePet':{const p=E.currentPet(s);if(!p)return toast('Прво одбери миленик.');const name=prompt(uiText('Ново име на миленикот (до 32 знаци):'),p.name);if(name===null)return;result=E.rename(s,'pet',p.id,name);break;}
  case 'inspect':{const current=E.currentHabitat(s);toast(current?`${current.name}: квалитет ${E.envScore(current)}%, простор ${E.occupancy(s,current.id)}/${current.capacity}`:`Фаза ${s.stage+1}: ${E.PHASES[s.stage]}`);return;}
  case 'export':exportBackup();return;
  case 'rescueList':{
@@ -392,8 +393,8 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'import':if(globalThis.TrialumAndroid?.chooseBackup){globalThis.TrialumAndroid.chooseBackup();toast(en()?'Choose the backup file to restore.':'Избери ја датотеката за враќање.');return;}el('importFile').click();return;
  case 'notification':{if(globalThis.TrialumAndroid?.requestNotifications){globalThis.TrialumAndroid.requestNotifications();toast('Провери ја Android дозволата за известувања.');return;}if(!('Notification' in window)){toast('Прелистувачот не поддржува известувања во HTML. Android верзијата ќе има системски сигнали.');return}if(!isSecureContext){toast('За системски нотификации отвори ја играта преку HTTPS или како Android апликација.');return}Notification.requestPermission().then(res=>toast(res==='granted'?'Дозволени се известувања додека играта е активна.':'Известувањата не се дозволени.'));return;}
  case 'newGame':{
-  if(!confirm('Со нов свет го губиш тековниот напредок на уредот. Дали направи JSON бекап?'))return;
-  if(!confirm('Последна потврда: навистина да започнеме од нула?'))return;
+  if(!confirm(uiText('Со нов свет го губиш тековниот напредок на уредот. Дали направи JSON бекап?')))return;
+  if(!confirm(uiText('Последна потврда: навистина да започнеме од нула?')))return;
    if(!rescueSnapshot(true)){toast('Новиот свет е блокиран: не успеа спасувачката копија.');return;}
   clearTimeout(saveTimer);
   const prior=s;
