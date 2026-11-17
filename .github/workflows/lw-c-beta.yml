@@ -164,12 +164,6 @@ jobs:
           resources="$gp01_resources"
           require_resource_value trialum_social_api_url "$TRIALUM_SOCIAL_API_URL"
           require_resource_value game_services_project_id "0"
-          printf '%s\n' "$gp01_resources" | awk '
-            /string\/trialum_firebase_app_id/ { looking = 1; next }
-            looking && /resource 0x/ { exit 1 }
-            looking && /""/ { found = 1; exit }
-            END { exit !found }
-          ' || { echo "::error::GP-01 test APK must have Firebase disabled for its unregistered package"; exit 1; }
           cp "$gp01_apk" candidates/trialum-gp01test-UNSIGNED.apk
 
           aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)

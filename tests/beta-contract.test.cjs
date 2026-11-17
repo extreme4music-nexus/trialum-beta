@@ -28,6 +28,11 @@ test('beta Android builds cannot silently drop HTTPS Friends or FCM client confi
  for(const resource of ['trialum_social_api_url','trialum_firebase_app_id','trialum_firebase_project_id','trialum_firebase_sender_id'])
   assert(workflow.includes('require_resource_value '+resource),'APK verification must identify missing configured resource: '+resource);
  assert(gradle.includes('trialumFirebaseAppIdSigndebug')&&gradle.includes('trialumFirebaseAppIdSignqa'));
+ const gp01Variant=gradle.slice(gradle.indexOf('create("gp01test")'));
+ assert(gp01Variant.includes('resValue("string", "game_services_project_id", "0")'),
+  'The one-time random-signed GP-01 package must not claim the official Play Games identity');
+ assert(gp01Variant.includes('resValue("string", "trialum_firebase_app_id", "")'),
+  'The unregistered test package must not claim the production Firebase identity');
  assert(!/TRIALUM_FCM_SERVICE_ACCOUNT|GOOGLE_APPLICATION_CREDENTIALS|TRIALUM_(?:RELEASE|QA)_KEYSTORE|TRIALUM_(?:RELEASE|QA)_KEYSTORE_B64|TRIALUM_(?:RELEASE|QA)_STORE_PASSWORD|TRIALUM_(?:RELEASE|QA)_KEY_PASSWORD/i.test(workflow),
   'The public build workflow must not receive server credentials or official signing material');
  const isolatedSigning=workflow.slice(workflow.indexOf('Sign isolated GP-01 test APK with a one-time runner key'));
