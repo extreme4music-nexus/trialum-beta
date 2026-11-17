@@ -1,8 +1,8 @@
 # GP-01 Play Store update pack — Trialum 1.1 (versionCode 39)
 
-**Status: prepared draft only.** This document prepares the Play Store materials for the GP-01 Living Flora update. It has not been entered in Play Console. No AAB/release has been uploaded, submitted for review, or rolled out.
+**Status: v39 candidate preparation.** GP-01 is present in the Beta source snapshot. This change prepares a versionCode 39 / versionName 1.1 build for owner phone QA. It is not approved for Play upload; the owner must test the signed APK first. No AAB/release has been uploaded, submitted for review, or rolled out.
 
-The immediate next step is to begin testing the existing v38 internal candidate. Prepare v39 only after that test cycle has started and the owner approves moving GP-01 forward. The owner will provide fresh in-game screenshots; the media section below remains pending those files.
+The owner requested preparation of the v39 candidate. GitHub Actions must build the candidate, then the owner signs and tests the APK on a phone. Only after the owner confirms that test may the AAB be signed and uploaded to Play Console. The owner will provide fresh in-game screenshots; the media section below remains pending those files.
 
 ## Release identity
 
@@ -17,7 +17,7 @@ The immediate next step is to begin testing the existing v38 internal candidate.
 | Listing language prepared here | English (United States), `en-US` |
 | Current state | Draft documentation; not a Play release |
 
-VersionCode 39 is the owner-requested next code. Do not put it into a build until the v38 test outcome and the GP-01 source are accepted. The one-time `.gp01test` APK and its random certificate are testing-only and must never be uploaded as the Play update.
+VersionCode 39 / versionName 1.1 is the requested candidate identity. Keep the Play package ID `com.trialum.ziivaiskra`. The `.gp01test` APK is isolated and random-signed for side-by-side feature testing only; never upload it to Play.
 
 ## Google Play “What’s new” — draft
 
@@ -57,12 +57,12 @@ Use genuine captures from the approved v39 candidate. The screenshots should sho
 
 Google Play currently accepts up to 8 screenshots per supported device type; phone screenshots must be JPEG or 24-bit PNG, at least 320 px and no more than 3840 px on either dimension, with the longest dimension no more than twice the shortest. The current store listing already has preview assets; do not remove or replace them when adding the GP-01 captures.
 
-## Release preparation checklist — after v38 testing
+## Release preparation checklist — owner phone QA before Play
 
-- [ ] Start the v38 internal test and collect tester feedback before preparing a v39 upload.
-- [ ] Review and accept the GP-01 source and regression results; record any required fixes before assigning the Play version.
-- [ ] Set the production candidate to `versionName 1.1` and `versionCode 39`; keep package ID `com.trialum.ziivaiskra`.
-- [ ] Build the AAB from the accepted Beta source. Do not use the disposable random-signed test APK.
+- [ ] Build v39 in GitHub Actions. Use the `internalBeta` APK for owner phone QA; it has the same package ID and beta-only tester controls.
+- [ ] Owner locally signs the same-package APK with the existing official release key and tests install/update, saved-world preservation, GP-01 lifecycle, Friends/messaging, PGS, and encrypted backup/restore.
+- [ ] Record the owner phone test outcome and fix any reported issue before Play upload.
+- [ ] After owner phone QA, use the `internalBeta` AAB for the Play internal-testing track. Never upload the disposable random-signed `.gp01test` APK.
 - [ ] Apply the owner’s official signing process; verify the package, version, certificate and AAB integrity before upload.
 - [ ] Add the approved screenshots and retain existing icon, feature graphic and video unless the owner requests a change.
 - [ ] Add the English release notes above and review the listing preview.
