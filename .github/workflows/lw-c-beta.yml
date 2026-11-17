@@ -115,7 +115,7 @@ jobs:
           [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:assembleInternalBeta :app:assembleGp01test :app:bundleRelease :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+          gradle -p android-template :app:assembleRelease :app:assembleSignqa :app:assembleSigndebug :app:assembleInternalBeta :app:assembleGp01test :app:assembleQa39 :app:bundleRelease :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
       - name: Verify candidate package identities and version
         run: |
@@ -166,6 +166,19 @@ jobs:
           require_resource_value trialum_social_api_url "$TRIALUM_SOCIAL_API_URL"
           require_resource_value game_services_project_id "0"
           cp "$gp01_apk" candidates/trialum-gp01test-UNSIGNED.apk
+
+          qa39_apk=$(find android-template/app/build/outputs/apk/qa39 -name '*.apk' -print -quit)
+          test -s "$qa39_apk"
+          qa39_badge=$("$AAPT" dump badging "$qa39_apk")
+          printf '%s\n' "$qa39_badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa39'"
+          printf '%s\n' "$qa39_badge" | grep -Fq "versionCode='39'"
+          printf '%s\n' "$qa39_badge" | grep -Fq "versionName='1.1-qa39'"
+          qa39_resources=$("$AAPT" dump --values resources "$qa39_apk")
+          resources="$qa39_resources"
+          require_resource_value trialum_social_api_url "$TRIALUM_SOCIAL_API_URL"
+          require_resource_value game_services_project_id "0"
+          require_resource_value trialum_firebase_app_id ""
+          cp "$qa39_apk" candidates/trialum-qa39-UNSIGNED.apk
 
           aab=$(find android-template/app/build/outputs/bundle/release -name '*.aab' -print -quit)
           test -s "$aab"
@@ -226,6 +239,60 @@ jobs:
             candidates/gp01test-signature.txt
             candidates/gp01test-SHA256SUMS
             candidates/gp01test-build-info.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Sign isolated v39 owner QA APK with a one-time runner key
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          set +x
+          unsigned=candidates/trialum-qa39-UNSIGNED.apk
+          signed=candidates/trialum-v39-qa39-random-signed.apk
+          signer_dir=$(mktemp -d)
+          signer_file="$signer_dir/qa39-one-time.p12"
+          signer_password=$(openssl rand -hex 24)
+          echo "::add-mask::$signer_password"
+          keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$signer_file" \
+            -storepass "$signer_password" -keypass "$signer_password" \
+            -alias qa39-one-time -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=Trialum v39 One-Time Owner QA"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -x "$APKSIGNER"
+          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias qa39-one-time \
+            --ks-pass "pass:$signer_password" --key-pass "pass:$signer_password" \
+            --out "$signed" "$unsigned"
+          "$APKSIGNER" verify --verbose --print-certs "$signed" | tee candidates/qa39-signature.txt
+          sha256sum "$signed" > candidates/qa39-SHA256SUMS
+          {
+            source_sha="$GITHUB_SHA"
+            if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then source_sha="$PR_HEAD_SHA"; fi
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Could not identify immutable source commit"; exit 1; }
+            echo "source_commit=$source_sha"
+            echo "workflow_commit=$GITHUB_SHA"
+            echo "package=com.trialum.ziivaiskra.qa39"
+            echo "version_code=39"
+            echo "version_name=1.1-qa39"
+            echo "signing=ephemeral-runner-generated-test-key"
+            echo "key_material=not-uploaded-and-removed"
+            echo "google_play_games=disabled-in-this-isolated-random-signed-build"
+            echo "firebase_push=disabled-in-this-isolated-package"
+            echo "beta_tester_tools=enabled"
+          } > candidates/qa39-build-info.txt
+          rm -f "$signer_file"
+          rmdir "$signer_dir"
+          rm -f "$unsigned"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-v39-one-time-owner-QA
+          path: |
+            candidates/trialum-v39-qa39-random-signed.apk
+            candidates/qa39-signature.txt
+            candidates/qa39-SHA256SUMS
+            candidates/qa39-build-info.txt
           if-no-files-found: error
           retention-days: 7
 

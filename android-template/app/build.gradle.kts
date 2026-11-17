@@ -184,6 +184,26 @@ android {
             resValue("string", "trialum_firebase_app_id", "")
         }
     }
+    // One-time owner-only v39 phone QA. This preserves the internal-beta game
+    // code and tester controls while using a separate package/UID so it cannot
+    // replace the Play installation or touch its local save. PGS and FCM are
+    // disabled because this disposable package has no matching Play/Firebase
+    // registrations; the temporary APK is signed with a runner-only key.
+    buildTypes {
+        create("qa39") {
+            initWith(getByName("internalBeta"))
+            applicationIdSuffix = ".qa39"
+            versionNameSuffix = "-qa39"
+            isDebuggable = false
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+            resValue("string", "trialum_firebase_api_key", "")
+            resValue("string", "trialum_firebase_project_id", "")
+            resValue("string", "trialum_firebase_sender_id", "")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
