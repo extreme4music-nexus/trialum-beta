@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [release/lw-c-1.6-LW-dev.12]
+    branches:
+      - release/lw-c-1.6-LW-dev.12
+      - beta/gp-01-living-flora-phyto-20261116
   workflow_dispatch:
 
 permissions:
