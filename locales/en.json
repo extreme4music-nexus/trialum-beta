@@ -297,6 +297,7 @@
     "Бекап и враќање": "Backup & Restore",
     "🔐 Шифрирана архива за пренос": "🔐 Encrypted migration archive",
     "🔓 Врати шифрирана архива": "🔓 Restore encrypted archive",
+    "🔓 Врати бекап": "🔓 Restore Backup",
     "⬇ JSON без приватни разговори": "⬇ Plain JSON (no private chats)",
     "🛟 Спасувачки копии": "🛟 Rescue copies",
     "Шифрираната архива го содржи целиот свет, AI-меморијата и локалната историја со пријателите. Се шифрира на уредот со recovery-код што се прикажува само еднаш. Без тој код никој не може да ја дешифрира. Серверот на Trialum не ја прима.": "The encrypted archive includes the complete world, AI memory and locally saved friend conversations. It is encrypted on-device with a recovery code shown only once. Without that code, nobody can decrypt it. Trialum’s server does not receive it.",
