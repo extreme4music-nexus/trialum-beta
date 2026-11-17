@@ -61,11 +61,12 @@ jobs:
           TRIALUM_LOCALE_AUDIT=1 node tests/ui.test.cjs
           node tests/creature-media.test.cjs
           node tests/play-games.test.cjs
+          node tests/privacy-guard.test.cjs
           node tests/version155.test.cjs
           node tests/social-ui.test.cjs
           node tests/beta-contract.test.cjs
           node tests/shared-client.test.cjs
-          node --test --test-name-pattern='no account means|configured opt-in requests|reflected server nicknames|preset send includes' tests/messages-client.test.cjs
+          node --test --test-name-pattern='no account means|configured opt-in requests|reflected server nicknames|preset send stores locally' tests/messages-client.test.cjs
           node tests/playground.test.cjs
           node --test tests/dialogue-session.test.cjs
           node --test tests/lw-d-l3-9-original-plant-engine.test.cjs
