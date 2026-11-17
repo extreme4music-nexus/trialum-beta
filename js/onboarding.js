@@ -42,7 +42,16 @@ function ensure(){
   else if(event.key==='ArrowLeft'){event.preventDefault();position=Math.max(0,position-1);render();}
  });
 }
-function steps(){return active==='intro'?story:guide;}
+function steps(){
+ if(active==='intro')return story;
+ const base=guide.slice();
+ if(root.TrialumAndroid?.betaTesterToolsEnabled?.()===true)base.push([
+  '🧭','Алатки за тестирање','Beta testing tools',
+  'Во Поставки отвори Бета-тестерски центар → Алатки за тест на напредокот. Вклучи тест режим за симулирање 1, 7 или 30 дена, тестни ресурси или нивоа на миленик. Овие измени го менуваат овој локален свет и трајно го исклучуваат од Play Games достигнувања и рангирања. Прво направи JSON бекап.',
+  'In Settings, open Beta Tester Center → Progression test tools. Enable test mode to simulate 1, 7 or 30 days, add test resources or pet levels. These changes affect this local world and permanently make it ineligible for Play Games achievements and leaderboards. Export a JSON backup first.'
+ ]);
+ return base;
+}
 function render(){
  if(!active||!overlay)return;
  const data=steps(),item=data[position];

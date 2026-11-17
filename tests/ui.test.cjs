@@ -322,6 +322,8 @@ async function run(){
   assert(about.includes('Frequently asked questions'),'About & Help must include its FAQ in English');
   assert(about.includes('About the developer'),'About & Help must identify the developer in English');
   assert(about.includes('Tutorial'),'About & Help must explain the replayable tutorial in English');
+  assert(about.includes('Beta tester tools'),'Internal beta must include a dedicated tester guide in About & Help');
+  assert(about.includes('1, 7 or 30 days'),'Tester guide must explain the available day-skip controls');
  }
 
  assert.equal(errors.length,0,'Browser runtime errors: '+errors.join('\n'));

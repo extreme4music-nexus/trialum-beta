@@ -123,6 +123,12 @@ async function main(){
    assert.equal(api.state().tutorialSeen,true);
    assert.equal(api.open('tutorial'),true);
    api.close();assert.equal(api.state().active,null);
+   dom.window.TrialumAndroid={betaTesterToolsEnabled:()=>true};
+   assert.equal(api.open('tutorial'),true);
+   for(let i=0;i<5;i++)dom.window.document.querySelector('[data-tour="next"]').click();
+   assert.equal(dom.window.document.querySelector('#onboardingTitle').textContent,'Beta testing tools');
+   assert(dom.window.document.querySelector('#onboardingText').textContent.includes('1, 7 or 30 days'));
+   api.close();
    assert.equal(dom.window.document.querySelector('#base').textContent,baseline);
  });
  await test('Mnemos unlock is retroactive and rejects unevolved or other creatures',()=>{

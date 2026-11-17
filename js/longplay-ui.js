@@ -262,6 +262,11 @@ function help(){
   ['За развивачот','Развивач: Trialum. Повратни информации и поддршка: toniadrenalin@gmail.com.'],
   ['Бета и плаќања','Ова е бета-верзија. Дел од системите може да се менуваат по тестирањето; пријави проблем со чекорите за повторување и екранот. Во Бета 1.0 нема купувања; кредитите се заработуваат со играње.']
  ];
+ if(root.TrialumAndroid?.betaTesterToolsEnabled?.()===true)sections.splice(sections.length-1,0,[
+  en?'Beta tester tools':'Алатки за бета тестери',
+  en?'These controls are available only in the internal beta. Open Settings → Beta Tester Center → Progression test tools, enable test mode, then simulate 1, 7 or 30 days, add test resources, or raise a pet’s test level. This changes the local save and permanently excludes it from Play Games achievements and leaderboards. Export a JSON backup first. Report bugs with the steps and screen where they occurred.':
+     'Овие контроли се достапни само во интерната бета. Отвори Поставки → Бета-тестерски центар → Алатки за тест на напредокот, вклучи тест режим, па симулирај 1, 7 или 30 дена, додај тестни ресурси или тест-нивоа на миленик. Ова го менува локалното зачувување и трајно го исклучува од Play Games достигнувања и рангирања. Прво извези JSON бекап. Пријави баг со чекорите и екранот каде што се случил.'
+ ]);
  const cards=sections.map(([title,body])=>'<section class="card"><h3>'+esc(title)+'</h3>'+
   (Array.isArray(body)?body.map(item=>Array.isArray(item)?'<p><b>'+esc(item[0])+'</b> '+esc(item[1])+'</p>':'<p>'+esc(item)+'</p>').join(''):'<p>'+esc(body)+'</p>')+'</section>').join('');
  const contact=en?'Feedback and support':'Повратни информации и поддршка';
