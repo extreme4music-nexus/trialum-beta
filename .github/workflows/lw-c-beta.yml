@@ -174,10 +174,9 @@ jobs:
 
       - name: Sign isolated GP-01 test APK with a one-time runner key
         shell: bash
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
           set -euo pipefail
+          set +x
           unsigned=candidates/trialum-gp01test-UNSIGNED.apk
           signed=candidates/trialum-gp01test-random-signed.apk
           signer_dir=$(mktemp -d)
@@ -196,7 +195,12 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$signed" | tee candidates/gp01test-signature.txt
           sha256sum "$signed" > candidates/gp01test-SHA256SUMS
           {
-            echo "source_commit=$GITHUB_SHA"
+            source_sha="$GITHUB_SHA"
+            if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+              source_sha="$(git rev-parse HEAD^2)"
+            fi
+            echo "source_commit=$source_sha"
+            echo "workflow_commit=$GITHUB_SHA"
             echo "package=com.trialum.ziivaiskra.gp01test"
             echo "version_code=38"
             echo "signing=ephemeral-runner-generated-test-key"
