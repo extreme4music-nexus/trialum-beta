@@ -435,6 +435,8 @@ class MainActivity : Activity() {
         }
         @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
             BuildConfig.BETA_TESTER_TOOLS && ageSignals.isAdultEligible()
+        @JavascriptInterface fun qaSocialAgeBypass(): Boolean =
+            BuildConfig.BETA_TESTER_TOOLS && BuildConfig.QA_SOCIAL_AGE_BYPASS
         @JavascriptInterface fun betaTesterToolsEnabled(): Boolean = BuildConfig.BETA_TESTER_TOOLS
         @JavascriptInterface fun socialCredential(): String = SocialCredentialVault.read(this@MainActivity)
         @JavascriptInterface fun socialStoreCredential(credential: String): Boolean =

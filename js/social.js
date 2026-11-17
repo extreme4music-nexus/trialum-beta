@@ -5,6 +5,7 @@
 'use strict';
 const native=()=>root.TrialumAndroid||null;
 const betaBuild=()=>native()?.betaTesterToolsEnabled?.()===true;
+const qaAgeBypass=()=>betaBuild()&&native()?.qaSocialAgeBypass?.()===true;
 const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const CODE=/^[A-Za-z0-9_-]{43}$/;
 const state={enabled:false,online:false,ready:false,busy:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked'};
@@ -62,7 +63,8 @@ async function run(fn){
 async function init(){
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
-  state.ageAllowed=betaBuild()&&native()?.ageSignalsAdultEligible?.()===true;
+  state.ageAllowed=betaBuild()&&(qaAgeBypass()||native()?.ageSignalsAdultEligible?.()===true);
+  if(qaAgeBypass())state.ageStatus='qa_bypass';
   if(!state.ageAllowed){state.online=false;emit();return;}
   credential=String(native()?.socialCredential?.()||'');
   if(!CODE.test(credential))credential='';
@@ -107,13 +109,14 @@ async function register(name){
 }
 function requestAgeCheck(){
   if(!betaBuild()){state.ageStatus='unavailable';state.error='Социјалните функции се достапни само во одобреното интерно тестирање.';emit();return false;}
+  if(qaAgeBypass()){state.ageAllowed=true;state.ageStatus='qa_bypass';state.error='QA тест: проверката на возраст е привремено исклучена само во ова изолирано издание.';emit();return true;}
   if(!native()?.requestAgeSignals){state.ageStatus='unavailable';state.error='За безбедна потврда е потребна официјалната Android апликација од Google Play.';emit();return false;}
   state.ageAllowed=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];
   root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
   state.error='';state.ageStatus='checking';emit();native().requestAgeSignals();return true;
 }
 function setAgeSignal(result){
-  const eligible=betaBuild()&&result?.status==='adult_signal'&&result?.adultEligible===true;
+  const eligible=betaBuild()&&(qaAgeBypass()||(result?.status==='adult_signal'&&result?.adultEligible===true));
   state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
   if(!eligible){state.online=false;state.ready=false;state.identity=null;state.friends=[];root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.';emit();return;}
   state.error='';emit();return init();
@@ -199,6 +202,7 @@ function render(){
   const label=state.online?'Поврзано со серверот за пријатели':(state.enabled?(state.identity?'Серверот моментално е недостапен':'Поврзи се доброволно со серверот за пријатели'):'Онлајн серверот не е конфигуриран за оваа верзија');
   let html='<section class="social-hub"><div class="social-header"><span class="social-icon">🤝</span><div><h2>Пријатели</h2><p class="small subtle">'+safe(label)+'</p></div></div>';
   html+='<p class="desc">Покани пријател со еден линк. Нема задолжителен Google профил, реклами или споделување лични податоци. Сопствениот свет работи и офлајн.</p>';
+  if(qaAgeBypass())html+='<div class="notice social-warning" role="status">QA издание само за сопствен тест: проверката на возраст е привремено исклучена. Не споделувај го ова APK. Создавањето профил и испраќањето прекар до серверот сè уште бараат твоја потврда.</div>';
   if(!state.ageAllowed){
     html+='<div class="card"><h3>🔒 Социјалните функции се заклучени</h3><p class="desc">Во ова интерно тестирање, Google Play мора да сподели возрастен сигнал 18+. Не бараме датум на раѓање, Google е-пошта или документ. Детски управуван, помлад, одбиен или непознат профил останува офлајн. Ако сигналот не е достапен, основната игра продолжува офлајн.</p>'+
       '<button class="primary" data-do="socialAgeCheck"'+(state.ageStatus==='checking'?' disabled':'')+'>🛡️ Провери возраст со Google Play</button>'+

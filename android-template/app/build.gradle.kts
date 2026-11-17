@@ -8,6 +8,7 @@ android {
     defaultConfig {
         applicationId = "com.trialum.ziivaiskra"
         buildConfigField("Boolean", "BETA_TESTER_TOOLS", "false")
+        buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
@@ -197,6 +198,25 @@ android {
             isDebuggable = false
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
             manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+            resValue("string", "trialum_firebase_api_key", "")
+            resValue("string", "trialum_firebase_project_id", "")
+            resValue("string", "trialum_firebase_sender_id", "")
+        }
+    }
+    // Owner-only server smoke test. The age gate is bypassed only for this
+    // isolated package; the official and internal-beta variants remain fail-closed.
+    // Friends still require explicit profile creation and nickname confirmation.
+    buildTypes {
+        create("qa39social") {
+            initWith(getByName("internalBeta"))
+            applicationIdSuffix = ".qa39social"
+            versionNameSuffix = "-qa39social"
+            isDebuggable = false
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "true")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39social"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
             resValue("string", "trialum_firebase_api_key", "")
