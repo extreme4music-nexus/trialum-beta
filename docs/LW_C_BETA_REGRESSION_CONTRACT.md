@@ -7,7 +7,7 @@
 - Private source of truth: `extreme4music-nexus/Trialum`, LW-C branch `feature/lw-c-contextual-turntaking-session-20261113`.
 - Snapshot source commit recorded for this beta: `04457df48b9c012f8667504b935a7ca501d13f07`.
 - Public beta candidate: `extreme4music-nexus/trialum-beta`, Draft PR #2, branch `release/lw-c-1.6-LW-dev.12`.
-- Product identity: **Trialum**, first edition **Living World**, Beta `1.0`. Owner uploaded versionCode `37`; proposed next internal-test candidate is versionCode `38`.
+- Product identity: **Trialum**, first edition **Living World**, Beta `1.0`. Owner uploaded versionCode `37`; the owner-requested next internal-test candidate is versionCode `39` / versionName `1.1`.
 - Android package IDs remain `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, and `com.trialum.ziivaiskra.signdebug`.
 - LW-D is a separate development track. No LW-D source or commits belong in this beta snapshot.
 - GitHub Actions builds APK candidates. The official package remains unsigned in CI and uses the owner's local Release signer. The isolated one-time `.pgstest` diagnosis package may use a runner-ephemeral signer with its own PGS OAuth credential. The owner's persistent signing keys remain local. Do not publish an app release to Play or mark owner QA passed without device testing.
