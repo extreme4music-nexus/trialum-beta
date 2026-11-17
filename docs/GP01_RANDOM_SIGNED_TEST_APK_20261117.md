@@ -19,8 +19,12 @@ The isolated random-signed test package deliberately has Play Games disabled (pr
 The HTTPS social API configuration is injected using the existing public build variable; no server credentials or private repository history enter the snapshot.
 
 ## Required test record
-- GP-01 plant-engine regression: pending Actions result.
-- Friends UI/shared client/message, PGS, and beta contract regressions: pending Actions result.
-- APK package identity, version, random certificate fingerprint, and SHA-256: record from the run artifact.
+- GitHub Actions run #43989558036 passed plant engine regression, social UI/shared-client, messaging client cases, Play Games source tests, beta contract, Android compilation, package/resource checks and ephemeral signing on commit `9db6b97ca9bcf870132accc287f17249c270cc6c`.
+- The public snapshot intentionally excludes the private server, so server-side FCM delivery assertions were not run.
+- APK: [Trialum-GP01-random-signed-test.apk](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/43989558036), artifact expires 2026-11-24.
+- SHA-256: `161989281bd0ec409c9e9833a92dbe8b3446980ded66318e1d629b24aa02e2a7`.
+- Ephemeral certificate SHA-1: `bd972603b43779d8b718f68ca3742ea5ac8c881d`; SHA-256: `5c45636400ba9cabfadbd0aea9729dd296fda08379f7aa4a4e3e334a9361accd`.
+- Owner device test: pending. Only the owner can provide OWNER PASS.
+- No merge, Play upload, or rollout is authorized by this candidate.
 - Owner device test: pending. Only the owner can provide OWNER PASS.
 - No merge, Play upload, or rollout is authorized by this candidate.
