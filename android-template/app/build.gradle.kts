@@ -170,6 +170,20 @@ android {
             }
         }
     }
+    // One-time GP-01 gameplay test install. Separate package and local data so
+    // the disposable GitHub runner signature cannot replace Trialum or QA apps.
+    // PGS and FCM are intentionally disabled in this random-signed, offline-focused test APK.
+    buildTypes {
+        create("gp01test") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".gp01test"
+            versionNameSuffix = "-gp01test"
+            isDebuggable = true
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-gp01test"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
