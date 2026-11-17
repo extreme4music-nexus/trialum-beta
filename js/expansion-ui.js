@@ -17,9 +17,9 @@ function food(s){
  const r=E.ensureResearch(s),p=E.currentPet(s),sp=p&&E.SPECIES[p.species];
  const cards=E.foodRecipes.map(f=>{
  const locked=r.level<f.tier,stock=s.foodFactory.stock[f.id]||0,good=p&&E.feedCompatible(sp,f,p);
- return '<div class="card"><h3>'+f.icon+' '+esc(f.name)+'</h3><p>'+esc(f.desc)+'</p><p class="price">Лабораторија '+f.tier+' · Порции '+stock+' · Цена: '+f.cost.biomass+' биомаса и '+f.cost.compounds+' молекули</p><div class="btn-line">'+btn('⚗️ Создај '+f.yield+' порции','craftFood','data-recipe="'+f.id+'"',locked||s.labActions<1)+btn('🍽️ Нахрани','feedFood','data-recipe="'+f.id+'"',!good||!stock||p.actionsLeft<1)+'</div><p class="small">'+(good?'✅ Оваа формула одговара':'🔒 Специјализирана за друга група')+'</p></div>';
+ return '<div class="card"><h3>'+f.icon+' '+esc(f.name)+'</h3><p>'+esc(f.desc)+'</p><p class="price">Лабораторија '+f.tier+' · Во магацин '+(root.TrialumWarehouseInventory?.project?.(s,[f])?.[0]?.warehouse??stock)+' · Цена: '+f.cost.biomass+' биомаса и '+f.cost.compounds+' молекули</p><div class="btn-line">'+btn('⚗️ Создај '+f.yield+' порции','craftFood','data-recipe="'+f.id+'"',locked||s.labActions<1)+'</div><p class="small">'+(good?'✅ Оваа формула одговара':'🔒 Специјализирана за друга група')+'</p></div>';
  }).join('');
- return '<div class="tab-main"><h2>🍱 Нутритивна лабораторија</h2><p class="desc">Храната се произведува посебно. Универзалните порции одговараат на сите; специјалните даваат подобра исхрана и еволутивен бонус за точно определени групи.</p><div class="notice">Миленик: '+(p?esc(p.name)+' · '+p.actionsLeft+'/'+E.petActionLimit(s)+' акции':'нема избрано')+' · Лабораториски акции '+s.labActions+'</div><div class="cards">'+cards+'</div></div>';
+ return '<div class="tab-main"><h2>🍱 Нутритивна лабораторија</h2><p class="desc">Лабораторијата САМО произведува; порциите веднаш се заведуваат во Стовариштето за храна. Нахрани го миленикот од резервата во неговиот дом. Универзалните порции одговараат на сите; специјалните даваат подобра исхрана и еволутивен бонус за точно определени групи.</p><div class="notice">Миленик: '+(p?esc(p.name)+' · '+p.actionsLeft+'/'+E.petActionLimit(s)+' акции':'нема избрано')+' · Лабораториски акции '+s.labActions+'</div><div class="cards">'+cards+'</div></div>';
 }
 function dna(s){
  const r=E.ensureResearch(s),p=E.currentPet(s),lv=p?E.evolutionProgress(p).level:0,ok=r.level>=6&&lv>=22;
@@ -30,8 +30,47 @@ function gallery(s){
  const a=E.achievementList(s).earned;
  return '<div class="tab-main"><h2>📸 Галерија и постигнувања</h2><p class="desc">Сликите се создаваат локално во PNG. За споделување на други апликации потребно е да го допреш копчето. Ништо не се испраќа автоматски.</p><div class="btn-line">'+btn('📷 Зачувај PNG','saveScreenshot','class="primary"')+btn('📤 Сподели биосвет','shareScreenshot')+'</div><h3>🏆 Отклучени постигнувања ('+a.length+')</h3><div class="cards">'+(a.length?a.slice().reverse().map(x=>'<div class="card"><h3>🏆 '+esc(x.title)+'</h3><p>'+esc(x.description)+'</p><p class="price">Ден '+fmt(x.day)+'</p>'+btn('📤 Сподели','shareAchievement','data-achievement="'+esc(x.id)+'"')+'</div>').join(''):'<div class="card">Нема постигнувања. Продолжи да истражуваш!</div>')+'</div></div>';
 }
-const pages={research,food,dna,achievements:gallery};
-const actions=new Set(['study','upgradeLab','unlockSpecies','craftFood','feedFood','cognitiveAction','dnaEdit','saveScreenshot','shareScreenshot','shareAchievement']);
+
+function warehouse(s){
+ const I=root.TrialumWarehouseInventory;
+ if(!I)return '<div class="tab-main"><h2>📦 Стовариште за храна</h2><p class="notice">Модулот за складирање не е вчитан. Залихите не се менуваат.</p></div>';
+ const recipes=E.foodRecipes||[],rows=I.project(s,recipes);
+ const total=rows.reduce((a,r)=>a+r.stock,0),stored=rows.reduce((a,r)=>a+r.warehouse,0);
+ const selected=E.currentPet(s),Presence=root.TrialumPresence;
+ const atHome=p=>!!(s.habitats||[]).find(h=>h.id===p.habitatId)&&
+   (!Presence||Presence.get(s,p.id)?.kind===Presence.HOME);
+ const actionButton=(title,action,id,attr,disabled)=>btn(title,action,'data-recipe="'+esc(id)+'" '+attr,disabled);
+ const storage=rows.map(r=>{
+  const recipe=recipes.find(f=>f.id===r.id),label=esc(recipe?.icon||'🥣')+' '+esc(r.name);
+  const moves=[
+   ['rack','📚 Полици'],['cold','❄️ Ладилник'],['packing','📦 Пакување']
+  ].map(([zone,name])=>'<div class="settingrow"><span>'+name+': <b>'+fmt(r[zone])+'</b></span><span class="btn-line">'+
+    actionButton('Земи 1','warehouseMove',r.id,'data-op="take" data-from="'+zone+'" data-to="hand"',r[zone]<1)+
+    actionButton('Остави 1','warehouseMove',r.id,'data-op="put" data-from="hand" data-to="'+zone+'"',r.hand<1)+
+   '</span></div>').join('');
+  const pets=(s.pets||[]).filter(p=>atHome(p)&&E.feedCompatible(E.SPECIES[p.species],recipe,p));
+  const delivery=pets.map(p=>{
+   const owned=I.petView(s,[recipe],p.id)[0]?.petReserve||0;
+   return '<div class="settingrow"><span>🐾 '+esc(p.name)+' · дома '+fmt(owned)+'</span><span class="btn-line">'+
+    ['rack','cold','packing'].map(zone=>actionButton('+1 '+({rack:'📚',cold:'❄️',packing:'📦'}[zone]),'warehousePet',r.id,
+      'data-op="supply" data-zone="'+zone+'" data-pet="'+esc(p.id)+'"',r[zone]<1)).join('')+
+    actionButton('↩ Врати 1','warehousePet',r.id,'data-op="return" data-zone="rack" data-pet="'+esc(p.id)+'"',owned<1)+
+   '</span></div>';
+  }).join('');
+  return '<details class="card game-accordion"><summary>'+label+' · складиште '+fmt(r.warehouse)+' · вкупно '+fmt(r.stock)+'</summary>'+
+   '<p class="small">Лична резерва кај миленици: '+fmt(r.stock-r.warehouse)+' · во рака: '+fmt(r.hand)+'</p>'+
+   moves+'<h4>🏠 Достави во домот на милениче</h4>'+
+   (delivery||'<p class="small">Нема компатибилно милениче во сопствениот дом.</p>')+'</details>';
+ }).join('');
+ return '<div class="tab-main"><h2>📦 Стовариште за храна</h2>'+
+ '<p class="desc">Лабораторијата ја произведува храната. Тука ги распоредуваш вистинските порции меѓу полици, ладилник и пакување, а потоа ги доставуваш во личните резерви на миленичињата.</p>'+
+ '<div class="notice"><b>Вкупно произведени и непотрошени порции: '+fmt(total)+'</b> · Во стовариште: '+fmt(stored)+' · Во лични резерви: '+fmt(total-stored)+'</div>'+
+ '<p class="small">Преместување: прво „Земи 1“, потоа „Остави 1“ во посакуваната зона. Секоја успешна операција автоматски се зачувува во оригиналниот свет.</p>'+
+ '<div class="cards">'+storage+'</div>'+
+ '<div class="btn-line"><button data-tab="food">⚗️ Лабораторија за храна</button><button data-tab="pets">🐾 Миленици</button></div></div>';
+}
+const pages={research,food,warehouse,dna,achievements:gallery};
+const actions=new Set(['study','upgradeLab','unlockSpecies','craftFood','feedFood','warehouseMove','warehousePet','cognitiveAction','dnaEdit','saveScreenshot','shareScreenshot','shareAchievement']);
 function handle(action,b,s,ctx){
  let r=null,sfx='grow';
  switch(action){
@@ -39,6 +78,25 @@ function handle(action,b,s,ctx){
  case 'upgradeLab':r=E.upgradeLab(s);sfx='build';break;
  case 'unlockSpecies':r=E.unlockSpecies(s,Number(b.dataset.species));break;
  case 'craftFood':r=E.craftFood(s,b.dataset.recipe);break;
+ case 'warehouseMove':{
+  const I=root.TrialumWarehouseInventory;
+  r=I?I.action(s,E.foodRecipes,{op:b.dataset.op,recipe:b.dataset.recipe,
+    from:b.dataset.from,to:b.dataset.to}):{ok:false,message:'Нема модул за складирање.'};
+  break;
+ }
+ case 'warehousePet':{
+  const I=root.TrialumWarehouseInventory,Presence=root.TrialumPresence;
+  const pet=s.pets.find(p=>p.id===b.dataset.pet);
+  const home=s.habitats?.some(h=>h.id===pet?.habitatId);
+  if(!pet||!home||(Presence&&Presence.get(s,pet.id)?.kind!==Presence.HOME)){
+   r={ok:false,message:'Миленичето мора да е во својот дом.'};break;
+  }
+  r=I?I.transferPet(s,E.foodRecipes,{op:b.dataset.op,recipe:b.dataset.recipe,
+    petId:pet.id,zone:b.dataset.zone,amount:1},
+    (p,f)=>E.feedCompatible(E.SPECIES[p.species],f,p)):
+    {ok:false,message:'Нема модул за складирање.'};
+  break;
+ }
  case 'feedFood':r=E.feedPrepared(s,s.selectedPet,b.dataset.recipe);sfx='feed';break;
  case 'cognitiveAction':r=E.cognitiveAction(s,s.selectedPet,b.dataset.kind);sfx='select';break;
  case 'dnaEdit':r=E.editFictionalGenes(s,s.selectedPet,{hue:Number(document.getElementById('dnaHue')?.value),eyes:Number(document.getElementById('dnaEyes')?.value),shape:document.getElementById('dnaShape')?.value});break;

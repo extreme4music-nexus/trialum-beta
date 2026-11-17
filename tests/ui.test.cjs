@@ -307,7 +307,7 @@ async function run(){
 
  if(process.env.TRIALUM_LOCALE_AUDIT){
   await w.TrialumI18n.change('en');
-  for(const page of ['lab','habitats','pets','research','more','about','dna','food','plants','playground','shared','friends','messages','achievements','diary','notifications','settings']){
+  for(const page of ['lab','habitats','pets','research','more','about','dna','food','warehouse','plants','playground','shared','friends','messages','achievements','diary','notifications','settings']){
    click(page);w.TrialumI18n.translateDOM(d.getElementById('tabContent'));
    const copy=d.getElementById('tabContent').cloneNode(true);
    copy.querySelectorAll('.log-entry,.chat-message,.pet-option,.user-authored,[data-no-translate],#languagePicker option').forEach(n=>n.remove());
