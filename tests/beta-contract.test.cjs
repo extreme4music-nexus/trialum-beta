@@ -85,7 +85,14 @@ test('age access is internal-beta-only, privacy-minimal and fails closed',()=>{
  assert(gradle.includes('create("internalBeta")')&&gradle.includes('BETA_TESTER_TOOLS", "true"'));
  assert(native.includes('AgeSignalsStatus.SHARED')&&native.includes('ageLower >= 18')&&native.includes('ageUpper == null'));
  assert(native.includes('AgeRangeSource.TIER_A')&&native.includes('AgeRangeSource.TIER_C')&&native.includes('AgeRangeSource.TIER_D'));
- assert(!native.includes('AgeRangeSource.TIER_B'));
+ const eligibilityStart=native.indexOf('val eligibleSource');
+ const eligibilityEnd=native.indexOf('// This is restricted',eligibilityStart);
+ assert(eligibilityStart>=0&&eligibilityEnd>eligibilityStart);
+ assert(!native.slice(eligibilityStart,eligibilityEnd).includes('AgeRangeSource.TIER_B'),
+  'Supervised TIER_B signals must not unlock Friends');
+ assert(native.includes('AgeRangeSource.TIER_B -> "TIER_B"'),
+  'The local diagnostic may identify a supervised source tier without exposing age data');
+ assert(native.includes('VERIFICATION_REQUIRED'));
  assert(native.includes('put("status", status).put("adultEligible", eligible)'));
  assert(!/ageLower|ageUpper|ageRangeSource|installId/.test(native.slice(native.indexOf('private fun finish'))),
   'Raw Play age data must not cross the native bridge');
