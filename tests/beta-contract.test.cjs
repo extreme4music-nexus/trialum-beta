@@ -99,9 +99,10 @@ test('age access is internal-beta-only, privacy-minimal and fails closed',()=>{
  assert(activity.includes('ageSignalsAdultEligible()')&&activity.includes('BuildConfig.BETA_TESTER_TOOLS'));
  assert.match(activity,/fun requestAgeSignals\(\)\s*\{\s*if \(!BuildConfig\.BETA_TESTER_TOOLS\) return/);
  assert(social.includes('if(!state.ageAllowed||!betaBuild())throw Error'));
- assert(messages.includes('root.TrialumSocial?.isAdultAllowed?.()===true'));
- assert(shared.includes('root.TrialumSocial?.isAdultAllowed?.()!==true'));
- assert(app.includes("['messages','shared'].includes(which)&&!Social?.isAdultAllowed?.()"));
+  assert(messages.includes('root.TrialumSocial?.isSocialProfileActive?.()===true'));
+  assert(shared.includes('root.TrialumSocial?.isSocialProfileActive?.()!==true'));
+  assert(app.includes("['messages','shared'].includes(which)&&!Social?.isSocialAllowed?.()"));
+  assert(app.includes("['messages','shared'].includes(which)&&!Social?.isSocialProfileActive?.()"));
  assert(app.includes("if(!Social?.isAdultAllowed?.())return Social?.render()"),
   'Friends renderer must show the age gate while hiding legacy social controls');
 });
