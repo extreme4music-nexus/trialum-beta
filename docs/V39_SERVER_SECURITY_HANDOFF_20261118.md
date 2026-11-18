@@ -2,56 +2,54 @@
 
 **Date:** 2026-11-18  
 **For:** the Codex session maintaining the main `Trialum` repository  
-**Status:** implementation handoff only; no server code/config has been deployed.
+**Status:** current server facts and rollout guidance; no live server configuration or service has been changed.
 
 ## Owner decisions to preserve
 
 - Keep Friends, messaging, and push available. **Do not disable them globally.**
-- Age verification must be evaluated for each individual client. The v39 Android source restores the Play Age Signals gate and records only privacy-limited diagnostics locally.
-- Do not send date of birth, exact age, Google account details, or Play install identifiers to the Trialum server.
-- Conversation history and pet AI memory belong on the user's device. Optional long-term transfer/sync is user-controlled through Google services, not Trialum storage.
-- Activate server changes only after the owner tests the candidate app and the app/server release is coordinated.
+- Evaluate Play Age Signals separately on each client. The v39 Android app restores this gate and handles the returned age range/status locally. Do not send DOB, exact age, Google account details, install identifiers, or the raw signal to Trialum.
+- Conversation history and pet AI memory stay on-device; optional user-controlled Google backup is separate from Trialum server storage.
+- Coordinate any server behavior change with the matching app release, after owner testing.
+- Do not modify firewall, Caddy, Webmin, Plex, Samba, router, or other host services.
 
-## Findings from the live Trialum server inspection
+## Verified live-server behavior
 
-- The API is healthy and its host mapping is loopback-only.
-- The server source has no Play Age Signals or age-eligibility check on social/message requests. A client-only gate can be bypassed by a modified client, so do not describe the backend as enforcing age eligibility.
-- The message endpoint receives plaintext text, encrypts it with a server-held key, and stores message cards in PostgreSQL. This is encryption at rest, **not end-to-end encryption or zero-retention**: the API sees plaintext before storing it and can decrypt the stored content.
-- Existing feature switches are global. They are not a per-client age or consent control. Leave them unchanged while implementing the per-client design; a global off switch would break all players.
+- Trialum API health reported version `1.5.6-beta1`; its host port is loopback-bound.
+- The API receives message text as plaintext, encrypts it using a server-held key, then stores it in PostgreSQL. This is encryption at rest, **not end-to-end encryption**: the server handles plaintext and can decrypt stored rows.
+- Message rows expire after 7 days. The API runs a periodic cleanup that deletes expired messages; a message can be removed sooner when both participants have deleted it.
+- Message reports are cleaned after 30 days. The Privacy Policy should disclose this retention and avoid promising immediate physical erasure from backups.
+- The server has no independent, verifiable Play Age Signals check. The Android client can gate features per player, but a modified client could call public API routes directly. Do not claim backend age enforcement or trust a client boolean such as `isAdult`.
+- Existing social, shared-playground, message, free-text, and push switches are global. Leave them unchanged; they are not per-client consent/age controls.
 
-A root-only pre-change config archive and PostgreSQL dump were created on the server and their archive formats/checksums were verified. They contain private material and user data and must stay on the server; do not copy them into GitHub, CI artifacts, logs, or chat. No firewall, Caddy, Webmin, Plex, or other host services were changed.
+A root-only pre-change config archive and PostgreSQL dump were created on the server and checked. They contain private material and user data and must remain on the server; never copy them to GitHub, CI artifacts, logs, or chat. No host firewall or unrelated service was changed.
 
-## Required implementation in main `Trialum`
+## Current decision: keep message storage, disclose it accurately
 
-### 1. Per-client age enforcement
+Server-side message storage is not inherently forbidden by a universal technical standard. It does create a meaningful confidentiality risk because the service processes plaintext. Keep the existing short-lived, encrypted-at-rest behavior for this beta rather than risking a breaking messaging rewrite. The policy must clearly say that Trialum’s server processes and temporarily stores messages, that database encryption is not end-to-end encryption, and that message cards expire within 7 days while reports expire within 30 days. Users should be told not to include real names, contact details, school, precise location, passwords, or other sensitive information.
 
-- Preserve the v39 app's fail-closed behavior for `NOT_SHARED`, `VERIFICATION_REQUIRED`, ineligible age bands, and API errors.
-- Do not add a server API that trusts a client-supplied `isAdult` / `ageApproved` boolean.
-- The Play Age Signals API is client-side and its result is for the requesting app. Review Google's current rules before transmitting any signal to a backend.
-- If server-side enforcement is required, design a verifiable app/request attestation flow and bind it to the specific social action. Play Integrity may help establish app/device integrity, but must not be treated by itself as proof of age. If the age result cannot be securely verified server-side without sending restricted age data, document the limit and keep the age decision in the app; do not falsely claim backend age enforcement.
-- Store no DOB, exact age, Google account identifier, or install ID. Do not log age signal values.
+This decision does **not** assert legal compliance or zero risk. Retention must remain limited, deletion and cleanup must continue to work, access to the server/database key must stay restricted, and the policy must match actual behavior. A future move to client-side E2E/online-only relay needs a separate compatible design, offline-delivery decision, migration, tests, and owner approval.
 
-References: [Request age signals](https://developer.android.com/google/play/age-signals/request-age-signals) · [Understand age signals responses](https://developer.android.com/google/play/age-signals/understand-age-signals-responses).
+## Per-client age handling
 
-### 2. Message confidentiality and retention
+- Preserve the v39 fail-closed app behavior for unavailable, unshared, verification-required, or ineligible age signals.
+- Do not store DOB, exact age, account identity, install ID, or raw age signal; do not log them.
+- Play Age Signals is an app-facing API; the server cannot independently verify a client’s local result. Do not add a spoofable `ageApproved=true` API field.
+- If backend age enforcement becomes a requirement, first design an app-bound, server-verifiable authorization flow and establish what age data may lawfully be sent. Play Integrity alone proves neither age nor parental consent.
+- Keep all backend features available for clients that satisfy their own eligibility/consent state; do not turn off features globally.
 
-- Replace server-visible message text with client-side end-to-end encryption before the request reaches Trialum.
-- For the owner's no-server-retention requirement, use an online-only relay over the existing authenticated transport: route opaque ciphertext in memory and do not persist message payloads in PostgreSQL, files, analytics, or logs. If the recipient is offline, report that delivery did not occur; do not silently queue content server-side.
-- Keep history only on each device. Add optional export/restore through the user's chosen Google storage flow; do not mirror local conversation or AI memory to Trialum.
-- Push may carry only generic, content-free event references and must follow each client's opt-in. Never include message text or pet/AI content.
-- Keep abuse/reporting and account-deletion behavior compatible with this design. Reports must not silently upload message text.
+References: [Play Age Signals request](https://developer.android.com/google/play/age-signals/request-age-signals) · [Age Signals responses](https://developer.android.com/google/play/age-signals/understand-age-signals-responses).
 
-### 3. Migration and rollout
+## Rollout / handoff to main repository
 
-- Implement source changes and tests in the main repository first; keep this public beta repo as the owner-approved Android snapshot plus this handoff. Keep the Android build-center repo limited to its documented Android-only purpose.
-- Write an explicit migration for legacy stored message cards. Do not purge existing rows as part of an unreviewed deploy; use the existing backup and obtain owner approval for any irreversible deletion.
-- Add a staging/rollback runbook. Never run `docker compose down -v` on the live data volume.
-- Keep the live server unchanged until the owner has installed/tested the matching v39 app. Then deploy only the Trialum API/DB changes, verify health and private routing, and retain a tested rollback path.
+- Port the per-client v39 Age Signals behavior into the main app source without sending the signal to Trialum.
+- Keep server feature flags and deployment topology as they are for this pass. Only update operational code if a demonstrated defect in retention/deletion or access controls is found.
+- Update `/var/www/trialum/privacy-policy.html` and `user-agreement.html` to reflect message processing, server-side at-rest encryption (not E2E), 7-day message expiry, 30-day report cleanup, and v39 Age Signals behavior.
+- Do not apply a database migration or restart unrelated services for a documentation-only change.
+- Before any future server code/config deployment: take a root-only backup, use a reversible Trialum-only change, verify API health/message expiry/per-client behavior, and preserve rollback. Never use `docker compose down -v` on the production data volume.
 
-## Acceptance criteria for the main-repo PR
+## Acceptance facts to carry forward
 
-- Tests cover each age status independently and prove an unknown/error state cannot enable Friends.
-- Direct API calls cannot bypass whatever per-client gate the approved design claims to enforce.
-- A test message is absent from database rows, files, logs, and push payloads after delivery; only the two clients retain message history.
-- Offline delivery behavior is explicit and does not create hidden server retention.
-- Backup and restore are rehearsed in staging, migrations are reversible or have a documented restore path, and no other host services are touched.
+- App age handling is client-specific and fail-closed; the backend does not independently attest age.
+- Message content is not zero-retention or E2E; it is encrypted at rest and expires within 7 days.
+- Message reports expire after 30 days.
+- Keep friends, messaging, and push enabled; do not disrupt other server services.
