@@ -6,7 +6,7 @@ const {JSDOM}=require('jsdom');
 const ROOT=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const scripts=[
- 'js/theme.js','js/i18n.js','js/onboarding.js','js/engine.js','js/evolution.js','js/progression.js','js/longplay.js','js/fauna-lab.js','js/debug-tools.js',
+ 'js/legal-consent.js','js/theme.js','js/i18n.js','js/onboarding.js','js/engine.js','js/evolution.js','js/progression.js','js/longplay.js','js/fauna-lab.js','js/debug-tools.js',
  'js/playground.js','js/peer.js','js/social.js','js/messages.js','js/shared-playground.js','js/shared-scene.js','js/creature-art.js','js/world.js','js/share.js','js/gif-encoder.js','js/media.js','js/play-games.js','js/expansion-ui.js','js/advanced-intelligence.js','js/longplay-ui.js','js/app.js'
 ];
 function create(){
@@ -21,6 +21,7 @@ function create(){
  w.TrialumAndroid={betaTesterToolsEnabled:()=>true,ageSignalsAdultEligible:()=>true,
   socialApiUrl:()=>'',socialCredential:()=>'',pushStatus:()=> 'unavailable'};
  for(const file of scripts.slice(0,-1))w.eval(fs.readFileSync(path.join(ROOT,file),'utf8'));
+ w.localStorage.setItem('trialum.terms.accepted.v39',JSON.stringify({version:39,acceptedAt:'2026-11-18T00:00:00.000Z'}));
  const E=w.TrialumEngine;
  const world=E.newGame('real');world.settings.language='mk'; // Existing MK assertions remain deterministic; locale auto mode is tested separately.
  world.stage=7;world.lastDay=400;world.createdAt=Date.now()-399*E.DAY_MS;
@@ -215,8 +216,13 @@ async function run(){
  check('playground','Игротека');
  assert(scene.hidden,'Local playground must not show the sticky home aquarium');
  check('shared','Пред да ги вклучиш Пријатели и социјалните услуги');
-  assert(d.querySelector('#socialConsentCheck'),'Social consent must be explicit before entering shared services');
-  assert(d.querySelector('#socialConsentEnable')?.disabled,'Social services must remain disabled until the consent box is checked');
+ assert(d.querySelector('#socialConsentCheck'),'Social consent must be explicit before entering shared services');
+ assert(d.querySelector('#socialConsentEnable')?.disabled,'Social services must remain disabled until the consent box is checked');
+ const consent=w.TrialumSocial.setSocialConsent(true);
+  await consent;
+  w.TrialumSocial.setAgeSignal({eligible:true,status:'adult_signal'});
+  await delay(10);
+  check('shared','Заедничка игротека');
  assert(scene.hidden,'Shared playground must not show the sticky home aquarium');
  assert.equal(d.querySelector('#tabs [data-tab="more"]')?.getAttribute('aria-current'),'page',
   'secondary screens must expose their active More destination to screen readers');
