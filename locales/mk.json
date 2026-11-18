@@ -1,0 +1,13 @@
+{
+  "language": "mk",
+  "nativeName": "Македонски",
+  "baseLanguage": "mk",
+  "direction": "ltr",
+  "version": "1.5",
+  "notes": "Original source strings in Macedonian. No translation is necessary until changing current language.",
+  "strings": {
+    "Јазик": "Јазик",
+    "Македонски": "Македонски",
+    "Англиски": "Англиски"
+  }
+}
