@@ -72,9 +72,9 @@ object TrialumDiagnostics {
         val events = try { JSONArray(prefs.getString(EVENTS_KEY, "[]")) } catch (_: Exception) { JSONArray() }
         return JSONObject()
             .put("format", "trialum-diagnostic-report-v1")
-            .put("purpose", "one-time Play Games troubleshooting")
+            .put("purpose", "opt-in local Trialum diagnostics, including Play Games and Play Age Signals troubleshooting")
             .put("exportedAt", System.currentTimeMillis())
-            .put("scope", "App uncaught exceptions, JavaScript errors, and Play Games diagnostic events only. Android system logcat and native-process crashes are not readable by this app.")
+            .put("scope", "App uncaught exceptions, JavaScript errors, and local Play Games / Play Age Signals status events. Age diagnostics contain only coarse status, band, source tier, and eligibility; no date of birth or exact age bounds. Android system logcat and native-process crashes are not readable by this app.")
             .put("app", JSONObject()
                 .put("package", context.packageName)
                 .put("versionName", packageInfo.versionName ?: "")
