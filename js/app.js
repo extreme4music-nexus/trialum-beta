@@ -83,7 +83,7 @@ function sendNative(){if(!s)return;try{if(globalThis.TrialumAndroid&&typeof glob
   }
   W.setSceneVisible?.(home);
  }
-function chooseTab(which){if(['messages','shared'].includes(which)&&!Social?.isAdultAllowed?.()){toast('🔒 Прво е потребна доброволна проверка на возраст во Пријатели.');which='friends';}globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
+function chooseTab(which){if(['messages','shared'].includes(which)&&!Social?.isSocialAllowed?.()){toast('🔒 Прво прифати ги условите за социјални услуги и заврши ја проверката во Пријатели.');which='friends';}else if(['messages','shared'].includes(which)&&!Social?.isSocialProfileActive?.()){toast('🔒 Пораките и заедничката игротека бараат активен социјален профил. Создај или поврзи профил во Пријатели.');which='friends';}globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
   const target=n.dataset.tab,active=target===which||(target==='more'&&!primary.includes(which));
   n.classList.toggle('active',active);
   if(n.closest('#tabs')){
@@ -145,7 +145,7 @@ function filterDiary(){
  if(el('diaryEmpty'))el('diaryEmpty').hidden=visible>0;
 }
 function friendsTab(){const guest=P?.remote(),connected=P?.connected(),ps=s.friends||[],p=E.currentPet(s);
- if(!Social?.isAdultAllowed?.())return Social?.render()||'<div class="notice">Социјалните функции се заклучени.</div>';
+ if(!Social?.isSocialAllowed?.())return Social?.render()||'<div class="notice">Социјалните функции се заклучени.</div>';
  const oldP2P='<div class="tab-main"><h2>🤝 Стар директен P2P режим</h2>'+
  '<p class="desc">Без регистрација, без наши сервери, реклами или плаќање. Двата телефона мора да имаат отворена апликација. Понекогаш NAT/firewall спречува поврзување без TURN relay.</p>'+
  '<div class="notice"><b>Состојба: '+safe(P?.status()||'Неподдржано')+'</b><br>'+ (guest?'👋 '+safe(guest.name)+' · '+safe(guest.pet.name)+' (ниво '+guest.pet.level+')':'Нема активен гостин.')+'</div>'+
@@ -278,7 +278,8 @@ function exportBackup(){
 function doAction(button){if(restoring)return;const action=button.dataset.do,kind=button.dataset.kind;if(button.disabled)return;if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
- if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isAdultAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција е заклучена во оваа состојба.');return;}
+ if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
+ if(['shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialProfileActive?.()){chooseTab('friends');toast('🔒 Пораките и заедничката игротека бараат активен социјален профил.');return;}\n if(action==='socialConsentAccept'){if(!el('socialConsentCheck')?.checked){toast('Прво означи дека ги разбираш условите.');return;}Social?.setSocialConsent?.(true).then(ok=>{if(ok){renderTab();if(Social?.isAdultAllowed?.())toast('Социјалната согласност е вклучена на овој уред.');}});return;}\n if(action==='socialConsentLater'){chooseTab('lab');toast('Социјалните услуги остануваат исклучени. Офлајн играта е достапна.');return;}\n if(action==='socialConsentDisable'){if(confirm('Да ги исклучам социјалните услуги на овој уред? Нема повеќе да се поврзува преку овој уред. Серверскиот профил нема да се избрише; избриши го посебно во Пријатели ако го сакаш тоа.'))Social?.setSocialConsent?.(false).then(ok=>{if(ok){chooseTab('friends');toast('Социјалните услуги се исклучени на овој уред.');}else toast('Не успеав да ја зачувам промената на уредот.');});return;}\n if(action==='legalViewTerms'){globalThis.TrialumLegal?.openTerms?.();return;}
  if(action==='betaNotify'){const result=globalThis.TrialumAndroid?.pushTestLocalNotification?.()||'unavailable';toast(result==='scheduled'?'Пробното известување е закажано.':('Известувањето: '+result));return;}
  if(action==='betaPgsRefresh'){globalThis.TrialumAndroid?.pgsRefresh?.();toast('Барањето за освежување на Play Games е испратено.');return;}
  if(action==='betaSocialRefresh'){Social?.refresh?.();return;}
@@ -568,7 +569,7 @@ globalThis.TrialumLLMEvent=(event)=>{
   const advanced=el('mindDownloadStatus');if(advanced)advanced.textContent=text;
  }
 };
-async function init(){globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);try{s=await S.load()}catch(e){console.warn('Save read error',e)}
+async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);try{s=await S.load()}catch(e){console.warn('Save read error',e)}
  const prefer=s?.settings?.language||'auto';await globalThis.TrialumI18n?.change(prefer);
  if(['system','light','dark'].includes(s?.settings?.theme))Theme?.set(s.settings.theme);globalThis.TrialumI18n?.translateDOM(document.body);
  if(s&&E.validate(s)){Shared?.bindWorld?.(s);Presence?.ensure(s);PG?.reconcile?.(s);Presence?.expireLocal?.(s);E.ensureResearch(s);const elapsed=E.advance(s);A.sync(s.settings);W.setState(s);render();await forceSave();if(elapsed)toast(`Поминуваа ${elapsed} дена додека светот беше затворен.`);}else{el('welcome').hidden=false;}
@@ -583,7 +584,7 @@ async function init(){globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);tr
  });
  document.addEventListener('click',ev=>{const startBtn=ev.target.closest('[data-start]');if(startBtn){start(startBtn.dataset.start);return}const tabBtn=ev.target.closest('[data-tab]');if(tabBtn){chooseTab(tabBtn.dataset.tab);return}const btn=ev.target.closest('[data-do]');if(btn)doAction(btn);});
  el('habitatSwitch').addEventListener('change',ev=>selectHabitat(ev.target.value));
- document.addEventListener('change',ev=>{if(ev.target?.id==='msgFriend')Messages?.select(ev.target.value);});
+ document.addEventListener('change',ev=>{if(ev.target?.id==='msgFriend')Messages?.select(ev.target.value);if(ev.target?.id==='socialConsentCheck'){const button=el('socialConsentEnable');if(button)button.disabled=!ev.target.checked;}});
  Social?.onChange(()=>{if(s&&tab==='friends')renderTab();});
  Shared?.onChange(()=>{if(s&&tab==='shared')renderTab();});
  Shared?.onPresenceChange(()=>{if(s){render();scheduleSave();}});

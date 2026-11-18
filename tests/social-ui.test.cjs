@@ -47,3 +47,24 @@ test('age signal is required even when an existing social credential is stored',
   assert.equal(globalThis.TrialumSocial.isAdultAllowed(),false);
  }finally{globalThis.TrialumAndroid=oldNative;globalThis.fetch=oldFetch;}
 });
+
+test('social server is not contacted until the separate local opt-in is accepted',async()=>{
+ const oldNative=globalThis.TrialumAndroid,oldLegal=globalThis.TrialumLegal,oldFetch=globalThis.fetch;
+ const oldStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage'),values=new Map();let calls=0;
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,writable:true,value:{getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)}});
+ globalThis.TrialumLegal={socialAccepted:()=>values.get('trialum.social.consent.v39')==='accepted',grantSocialConsent:()=>{values.set('trialum.social.consent.v39','accepted');return true;},revokeSocialConsent:()=>{values.delete('trialum.social.consent.v39');return true;}};
+ globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,qaSocialAgeBypass:()=>false,ageSignalsAdultEligible:()=>true,
+   socialApiUrl:()=> 'https://friends.example',socialCredential:()=> ''};
+ globalThis.fetch=async()=>{calls++;return{ok:true,status:200,json:async()=>({ready:true})};};
+ try{
+  await globalThis.TrialumSocial.init();
+  assert.equal(calls,0,'no social request before opt-in');
+  assert.equal(globalThis.TrialumSocial.isSocialAllowed(),false);
+  assert.equal(await globalThis.TrialumSocial.setSocialConsent(true),true);
+  assert.equal(calls,0,'an accepted choice alone does not create a profile or trigger network');
+  assert.equal(globalThis.TrialumSocial.isSocialAllowed(),true);
+  assert.equal(globalThis.TrialumSocial.isSocialProfileActive(),false,'messages/shared-play still need a profile');
+  await globalThis.TrialumSocial.setSocialConsent(false);
+  assert.equal(globalThis.TrialumSocial.isSocialAllowed(),false);
+ }finally{globalThis.TrialumAndroid=oldNative;globalThis.TrialumLegal=oldLegal;globalThis.fetch=oldFetch;if(oldStorage)Object.defineProperty(globalThis,'localStorage',oldStorage);else delete globalThis.localStorage;}
+});

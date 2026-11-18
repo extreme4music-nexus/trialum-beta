@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 let calls=0;
 globalThis.fetch=()=>{calls++;throw Error('unconsented outbound fetch')};
 globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=> 'https://test.ts.net',socialCredential:()=>''};
-globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:null,friends:[]})};
+globalThis.TrialumSocial={isSocialProfileActive:()=>true,getState:()=>({identity:null,friends:[]})};
 globalThis.TrialumEngine={SPECIES:[{shape:'jelly'}]};
 require('../js/shared-playground.js');
 const sh=globalThis.TrialumShared;
@@ -50,7 +50,7 @@ test('accepting a friend room invitation selects that exact shared room',async()
  globalThis.WebSocket=undefined;
  globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'member-1',nickname:'Member'},friends:[]})};
+ globalThis.TrialumSocial={isSocialProfileActive:()=>true,getState:()=>({identity:{id:'member-1',nickname:'Member'},friends:[]})};
  let accepted=false;
  const world={pets:[],selectedPet:null};
  globalThis.fetch=async(url)=>{
@@ -109,7 +109,7 @@ test('LW-A all confirmed shared pets renew independently, while visits do not',a
  globalThis.WebSocket=undefined;
  globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'tester',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isSocialProfileActive:()=>true,getState:()=>({identity:{id:'tester',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async(url,options={})=>{
   const path=new URL(url).pathname;let value;
   if(path.endsWith('/status'))value={ready:true,presenceEnabled:true};
@@ -153,7 +153,7 @@ test('LW-A Home-screen reconnect does not return remote pet until authenticated'
  globalThis.TrialumPresence=Presence;
  globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isSocialProfileActive:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async url=>{
   requests++;
   if(offline)throw Error('offline');
@@ -195,7 +195,7 @@ test('LW-A offline shared snapshot stays visible and queued return reconciles on
  globalThis.WebSocket=undefined;
  globalThis.TrialumAndroid={betaTesterToolsEnabled:()=>true,socialApiUrl:()=>'https://test.ts.net',
   socialCredential:()=> 'z'.repeat(43)};
- globalThis.TrialumSocial={isAdultAllowed:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
+ globalThis.TrialumSocial={isSocialProfileActive:()=>true,getState:()=>({identity:{id:'owner',nickname:'Owner'},friends:[]})};
  globalThis.fetch=async(url,options={})=>{
   if(offline)throw Error('simulated radio disconnect');
   const path=new URL(url).pathname;

@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),crypto=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../js/messages.js'),'utf8');
-function client(credential='',calls=[]){
+function client(credential='',calls=[],profileActive=true){
  const token=credential,friend='123e4567-e89b-42d3-a456-426614174000',me='223e4567-e89b-42d3-a456-426614174000';
  calls.socketMessages=[];
  const w={
@@ -15,7 +15,7 @@ function client(credential='',calls=[]){
    pushEnable(){throw Error('FCM must not auto-initialize')},
    pushDisable(){throw Error('FCM must not auto-initialize')}
   },
-  TrialumSocial:{isAdultAllowed:()=>true,getState:()=>({identity:token?{id:me}:null,friends:[{id:friend,nickname:'Ана'}]})},
+  TrialumSocial:{isSocialProfileActive:()=>profileActive,getState:()=>({identity:token?{id:me}:null,friends:[{id:friend,nickname:'Ана'}]})},
   TrialumLocalConversations:{append:async(peer,item)=>item,get:async()=>[],update:async()=>true,remove:async()=>true,clear:async()=>true},
   document:{hidden:false},
   WebSocket:class{
@@ -38,6 +38,10 @@ function client(credential='',calls=[]){
 test('no account means no network on activation and no FCM registration',()=>{
  const c=client();c.api.activate();assert.equal(c.calls.length,0);
  assert.match(c.api.render(),/Прво отвори Пријатели/);
+ c.api.deactivate();
+});
+test('messages do not connect without an active social profile',()=>{
+ const c=client('P'.repeat(43),[],false);c.api.activate();assert.equal(c.calls.length,0);
  c.api.deactivate();
 });
 test('configured opt-in requests only authenticated inbox, never token in URL',async()=>{
