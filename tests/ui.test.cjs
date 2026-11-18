@@ -214,7 +214,9 @@ async function run(){
  console.log('✓ Google Play Games offline fallback UI');
  check('playground','Игротека');
  assert(scene.hidden,'Local playground must not show the sticky home aquarium');
- check('shared','Заедничка игротека');
+ check('shared','Пред да ги вклучиш Пријатели и социјалните услуги');
+  assert(d.querySelector('#socialConsentCheck'),'Social consent must be explicit before entering shared services');
+  assert(d.querySelector('#socialConsentEnable')?.disabled,'Social services must remain disabled until the consent box is checked');
  assert(scene.hidden,'Shared playground must not show the sticky home aquarium');
  assert.equal(d.querySelector('#tabs [data-tab="more"]')?.getAttribute('aria-current'),'page',
   'secondary screens must expose their active More destination to screen readers');
