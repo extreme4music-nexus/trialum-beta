@@ -103,6 +103,6 @@ test('age access is internal-beta-only, privacy-minimal and fails closed',()=>{
   assert(shared.includes('root.TrialumSocial?.isSocialProfileActive?.()!==true'));
   assert(app.includes("['messages','shared'].includes(which)&&!Social?.isSocialAllowed?.()"));
   assert(app.includes("['messages','shared'].includes(which)&&!Social?.isSocialProfileActive?.()"));
- assert(app.includes("if(!Social?.isAdultAllowed?.())return Social?.render()"),
-  'Friends renderer must show the age gate while hiding legacy social controls');
+ assert(app.includes("if(!Social?.isSocialAllowed?.())return Social?.render()"),
+  'Friends renderer must require explicit social consent and an eligible age signal');
 });
