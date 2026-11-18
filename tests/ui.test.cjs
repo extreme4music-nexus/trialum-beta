@@ -220,7 +220,7 @@ async function run(){
  assert(d.querySelector('#socialConsentEnable')?.disabled,'Social services must remain disabled until the consent box is checked');
  const consent=w.TrialumSocial.setSocialConsent(true);
   await consent;
-  w.TrialumSocial.setAgeSignal({eligible:true,status:'adult_signal'});
+  w.TrialumSocial.setAgeSignal({adultEligible:true,status:'adult_signal'});
   await delay(10);
   check('shared','Заедничка игротека');
  assert(scene.hidden,'Shared playground must not show the sticky home aquarium');
