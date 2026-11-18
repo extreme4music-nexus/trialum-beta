@@ -222,7 +222,7 @@ async function run(){
   await consent;
   w.TrialumSocial.setAgeSignal({adultEligible:true,status:'adult_signal'});
   await delay(10);
-  check('shared','Заедничка игротека');
+  check('shared','Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса');
  assert(scene.hidden,'Shared playground must not show the sticky home aquarium');
  assert.equal(d.querySelector('#tabs [data-tab="more"]')?.getAttribute('aria-current'),'page',
   'secondary screens must expose their active More destination to screen readers');
@@ -234,7 +234,7 @@ async function run(){
   'returning Home after a shared-screen swipe must restore the expanded aquarium');
  assert.equal(d.querySelector('#tabs [data-tab="habitats"]')?.getAttribute('aria-current'),'page',
   'screen reader must identify Habitats as the active primary destination');
- check('messages','Пријателски пораки');
+ check('messages','Онлајн серверот не е конфигуриран за оваа верзија');
  assert(w.TrialumMessages?.render,'Message inbox module missing from APK UI');
  assert(!d.querySelector('[data-do="msgSend"]'),'Unauthenticated offline world must NOT show send buttons');
  assert(w.TrialumPlayground?.ensure,'Playground module missing');
