@@ -13,6 +13,7 @@ internal class LicensesBridge(private val context: Context) {
         val llamaLicense = readAsset(root + "llama-android-0.1.1/LICENSE")
         val modelLicenses = readAsset(root + "MODEL-LICENSES.md")
         val apacheLicense = readAsset(root + "APACHE-2.0.txt")
+        val zzfxLicense = readAsset(root + "ZZFX-MIT.txt")
         val report = JSONObject(readAsset(root + "ANDROID-DEPENDENCY-LICENSES.json"))
         val dependencies = report.optJSONArray("dependencies")
         val inventory = buildString {
@@ -56,6 +57,8 @@ internal class LicensesBridge(private val context: Context) {
             llamaLicense,
             "Apache License 2.0 — optional Qwen and SmolLM2 GGUF model downloads",
             apacheLicense,
+            "ZZFX audio library — MIT license",
+            zzfxLicense,
             modelLicenses,
             inventory
         ).joinToString("\n\n")
