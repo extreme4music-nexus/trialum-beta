@@ -115,6 +115,26 @@ jobs:
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
           gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
+      - name: Generate release dependency license report and SBOM
+        run: |
+          set -euo pipefail
+          gradle -p android-template :app:generateLicenseReport --no-daemon
+          mkdir -p candidates/legal
+          cp android-template/app/build/reports/licenses/licenses.json candidates/legal/ANDROID-DEPENDENCY-LICENSES.json
+          cp android-template/app/build/reports/licenses/licenses.html candidates/legal/ANDROID-DEPENDENCY-LICENSES.html
+          npm install --no-save --ignore-scripts --no-audit @cyclonedx/cyclonedx-npm@1.19.0
+          npx --no-install cyclonedx-npm --output-file candidates/legal/TRIALUM-SOURCE-SBOM.cdx.json
+          cat > candidates/legal/LEGAL-RELEASE-GATE.md <<'EOF'
+          Release gate — v41 / 1.2
+          - Review the generated Android dependency license report against every transitive component in the AAB.
+          - The source SBOM is not the Android runtime SBOM; reconcile it with the exact AAB contents.
+          - Obtain matching native THIRD-PARTY-NOTICES from the dependency publisher and verify the AAR's embedded notice matches bundled copy.
+          - Keep each optional model's full LICENSE at its pinned commit and verify redistribution/model terms before enabling downloads.
+          - Verify rights and licenses for every bundled image, icon, sound, music file and font, including creator/contract provenance.
+          - Confirm the versioned Privacy Policy, User Agreement, Play Data Safety answers, target audience/Families declarations and social/age-signal disclosures match actual behavior.
+          - Resolve all marked unknowns and obtain qualified legal review before broad release. This checklist is not legal advice or a warranty.
+          EOF
+
       - name: Verify version and capture matching Play diagnostics
         run: |
           set -euo pipefail
