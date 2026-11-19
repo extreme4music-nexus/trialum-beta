@@ -76,6 +76,65 @@ jobs:
           node --test tests/lw-d-food-supply-chain.test.cjs
           for file in js/*.js; do node --check "$file"; done
 
+      - name: Generate and bundle exact v41 Android license inventory
+        run: |
+          set -euo pipefail
+          gradle -p android-template :app:generateLicenseReport --no-daemon --no-configuration-cache --no-build-cache --rerun-tasks
+          report=android-template/app/build/reports/licenses
+          test -s "$report/licenses.json"
+          test -s "$report/licenses.html"
+          mkdir -p candidates/legal android-template/app/src/main/assets/licenses
+          cp "$report/licenses.json" candidates/legal/ANDROID-DEPENDENCY-LICENSES.json
+          cp "$report/licenses.html" candidates/legal/ANDROID-DEPENDENCY-LICENSES.html
+          cp "$report/licenses.json" android-template/app/src/main/assets/licenses/ANDROID-DEPENDENCY-LICENSES.json
+          cp docs/licenses/MODEL-LICENSES.md android-template/app/src/main/assets/licenses/MODEL-LICENSES.md
+          cp vendor/LICENSE-ZZFX.txt android-template/app/src/main/assets/licenses/ZZFX-MIT.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("candidates/legal/ANDROID-DEPENDENCY-LICENSES.json").read_text())
+          deps = report.get("dependencies", [])
+          if not deps:
+              raise SystemExit("Android runtime license report is empty")
+          missing = []
+          for dep in deps:
+              licenses = dep.get("moduleLicenses") or []
+              if not licenses and not dep.get("moduleLicense"):
+                  missing.append(f"{dep.get('moduleName', 'unknown')}:{dep.get('moduleVersion', 'unknown')}")
+          lines = [
+              "# v41 Android dependency license report",
+              "",
+              f"Runtime components reported: {len(deps)}",
+              f"Components without publisher license metadata: {len(missing)}",
+              "",
+              "Review the full JSON and HTML inventory. Publisher metadata is not a substitute for checking exact upstream terms and required notices.",
+          ]
+          if missing:
+              lines += ["", "## Components requiring manual license identification", ""] + [f"- {item}" for item in missing]
+          else:
+              lines += ["", "No component lacked a license field in publisher metadata."]
+          Path("candidates/legal/ANDROID-LICENSE-REVIEW.md").write_text("\n".join(lines) + "\n")
+          PY
+          aar_root="$HOME/.gradle/caches/modules-2/files-2.1/dev.ffmpegkit-maintained/llama-android/0.1.1"
+          aar=$(find "$aar_root" -type f -name '*.aar' -print -quit 2>/dev/null || true)
+          notice_file=android-template/app/src/main/assets/licenses/llama-android-0.1.1/THIRD-PARTY-NOTICES.txt
+          if [ -n "$aar" ]; then
+            entry=$(unzip -Z1 "$aar" | grep 'THIRD-PARTY-NOTICES.txt' | head -n 1 || true)
+            if [ -n "$entry" ]; then
+              if unzip -p "$aar" "$entry" | cmp -s - "$notice_file"; then
+                echo "- llama-android 0.1.1 embedded notice: exact byte-for-byte match." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+              else
+                echo "- llama-android 0.1.1 embedded notice differs from bundled upstream notice; manual review required." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+              fi
+            else
+              echo "- No named third-party notice file found inside the resolved llama-android 0.1.1 AAR; manual review required." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+            fi
+          else
+            echo "- Exact llama-android 0.1.1 AAR was not located in the Gradle cache; notice comparison was not performed." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+          fi
+          cp docs/licenses/THIRD-PARTY-NOTICES.txt candidates/legal/
+          cp docs/licenses/MODEL-LICENSES.md candidates/legal/
+
       - name: Build internal beta and isolated phone QA APK
         env:
           PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
@@ -199,6 +258,7 @@ jobs:
           path: |
             candidates/trialum-v41-internal-beta-UNSIGNED.aab
             candidates/play-diagnostics/**
+            candidates/legal/**
             candidates/BUILD-INFO.txt
           if-no-files-found: error
           retention-days: 7
