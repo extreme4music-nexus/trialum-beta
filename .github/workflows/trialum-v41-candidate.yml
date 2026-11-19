@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - release/lwc-v41-1.2-classic-food-warehouse-20261119
+      - docs/v41-third-party-licenses-20261119
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - release/lwc-v41-1.2-classic-food-warehouse-20261119
   workflow_dispatch:
 
 permissions:
@@ -74,6 +77,47 @@ jobs:
           node --test tests/lw-d-food-supply-chain.test.cjs
           for file in js/*.js; do node --check "$file"; done
 
+      - name: Generate and bundle exact v41 Android license inventory
+        run: |
+          set -euo pipefail
+          gradle -p android-template :app:generateLicenseReport --no-daemon --no-configuration-cache --no-build-cache --rerun-tasks
+          report=android-template/app/build/reports/licenses
+          test -s "$report/licenses.json"
+          test -s "$report/licenses.html"
+          mkdir -p candidates/legal android-template/app/src/main/assets/licenses
+          cp "$report/licenses.json" candidates/legal/ANDROID-DEPENDENCY-LICENSES.json
+          cp "$report/licenses.html" candidates/legal/ANDROID-DEPENDENCY-LICENSES.html
+          cp "$report/licenses.json" android-template/app/src/main/assets/licenses/ANDROID-DEPENDENCY-LICENSES.json
+          cp docs/licenses/MODEL-LICENSES.md android-template/app/src/main/assets/licenses/MODEL-LICENSES.md
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("candidates/legal/ANDROID-DEPENDENCY-LICENSES.json").read_text())
+          deps = report.get("dependencies", [])
+          if not deps:
+              raise SystemExit("Android runtime license report is empty")
+          missing = []
+          for dep in deps:
+              licenses = dep.get("moduleLicenses") or []
+              if not licenses and not dep.get("moduleLicense"):
+                  missing.append(f"{dep.get('moduleName', 'unknown')}:{dep.get('moduleVersion', 'unknown')}")
+          lines = [
+              "# v41 Android dependency license report",
+              "",
+              f"Runtime components reported: {len(deps)}",
+              f"Components without publisher license metadata: {len(missing)}",
+              "",
+              "Review the full JSON and HTML inventory. License metadata is not a substitute for checking the exact upstream terms and required notices.",
+          ]
+          if missing:
+              lines += ["", "## Components requiring manual license identification", ""] + [f"- {item}" for item in missing]
+          else:
+              lines += ["", "No component lacked a license field in the publisher metadata."]
+          Path("candidates/legal/ANDROID-LICENSE-REVIEW.md").write_text("\\n".join(lines) + "\\n")
+          PY
+          cp docs/licenses/THIRD-PARTY-NOTICES.txt candidates/legal/
+          cp docs/licenses/MODEL-LICENSES.md candidates/legal/
+
       - name: Build internal beta and isolated phone QA APK
         env:
           PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
@@ -115,13 +159,10 @@ jobs:
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
           gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
-      - name: Generate release dependency license report and SBOM
+      - name: Generate source SBOM and legal release checklist
         run: |
           set -euo pipefail
-          gradle -p android-template :app:generateLicenseReport --no-daemon
           mkdir -p candidates/legal
-          cp android-template/app/build/reports/licenses/licenses.json candidates/legal/ANDROID-DEPENDENCY-LICENSES.json
-          cp android-template/app/build/reports/licenses/licenses.html candidates/legal/ANDROID-DEPENDENCY-LICENSES.html
           npm install --no-save --ignore-scripts --no-audit @cyclonedx/cyclonedx-npm@1.19.0
           npx --no-install cyclonedx-npm --output-file candidates/legal/TRIALUM-SOURCE-SBOM.cdx.json
           cat > candidates/legal/LEGAL-RELEASE-GATE.md <<'EOF'
