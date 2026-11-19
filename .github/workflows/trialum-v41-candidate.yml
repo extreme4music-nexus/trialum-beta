@@ -113,7 +113,7 @@ jobs:
           [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+          gradle -p android-template :app:assembleQa42 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
 
       - name: Verify version and capture matching Play diagnostics
         run: |
