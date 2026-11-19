@@ -388,6 +388,7 @@ private fun nativeText(macedonian: String, english: String): String =
         }
         web.addJavascriptInterface(Bridge(), "TrialumAndroid")
         web.addJavascriptInterface(LicensesBridge(this), "TrialumLicenses")
+        web.addJavascriptInterface(LicensesBridge(this), "TrialumLicenses")
         playGames.initialize()
         web.loadUrl("https://$host/assets/web/index.html")
         val job = PeriodicWorkRequestBuilder<CareWorker>(6, TimeUnit.HOURS).build()
