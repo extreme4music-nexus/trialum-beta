@@ -1,7 +1,6 @@
 package com.trialum.ziivaiskra
 
-    private fun text(macedonian: String, english: String): String =
-        TrialumNativeText.get(activity, macedonian, english)
+
 
 import android.Manifest
 import android.app.Activity
@@ -34,6 +33,9 @@ internal class TrialumNearby(
     private val dispatch: (JSONObject) -> Unit
 ) {
     private val client by lazy { Nearby.getConnectionsClient(activity) }
+private fun text(macedonian: String, english: String): String =
+        TrialumNativeText.get(activity, macedonian, english)
+
     private val service = activity.packageName + ".friends"
     private val code = Regex("^[A-Za-z0-9_-]{43}$")
     private val strategy = Strategy.P2P_POINT_TO_POINT
