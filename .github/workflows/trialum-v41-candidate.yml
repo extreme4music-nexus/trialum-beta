@@ -120,22 +120,7 @@ jobs:
           aar=$(find "$aar_root" -type f -name '*.aar' -print -quit 2>/dev/null || true)
           notice_file=android-template/app/src/main/assets/licenses/llama-android-0.1.1/THIRD-PARTY-NOTICES.txt
           if [ -n "$aar" ]; then
-            entry=$(unzip -Z1 "$aar" | grep 'THIRD-PARTY-NOTICES.txt' | head -n 1 || true)
-            if [ -n "$entry" ]; then
-              if unzip -p "$aar" "$entry" | cmp -s - "$notice_file"; then
-                echo "- llama-android 0.1.1 embedded notice: byte-for-byte match with the shipped notice." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
-              else
-                echo "- llama-android 0.1.1 embedded notice differs from the shipped notice; review exact publisher notice before release." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
-              fi
-            else
-              echo "- llama-android 0.1.1 AAR contains no named third-party notice file; verify its redistribution notice requirements manually." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
-            fi
-          else
-            echo "- Exact llama-android 0.1.1 AAR was not located for notice comparison." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
-          fi
-          cp docs/licenses/THIRD-PARTY-NOTICES.txt candidates/legal/
-          cp docs/licenses/MODEL-LICENSES.md candidates/legal/
-
+            entry=$(unzip -Z1 "$aar" | grep 'THIRD-PARTY-NOTICES.txt'
       - name: Build internal beta and isolated phone QA APK
         env:
           PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
