@@ -348,23 +348,25 @@ private fun nativeText(macedonian: String, english: String): String =
         web.overScrollMode = View.OVER_SCROLL_NEVER
         // Respect only physical display-cutout insets, not transient system bars.
         web.setOnApplyWindowInsetsListener { view, insets ->
-            val safe = if (Build.VERSION.SDK_INT >= 30) {
-                insets.getInsets(WindowInsets.Type.displayCutout())
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                @Suppress("DEPRECATION")
-                val cutout = insets.displayCutout
-                android.graphics.Insets.of(
-                    cutout?.safeInsetLeft ?: 0,
-                    cutout?.safeInsetTop ?: 0,
-                    cutout?.safeInsetRight ?: 0,
-                    cutout?.safeInsetBottom ?: 0
-                )
-            } else {
-                android.graphics.Insets.NONE
+            val safe = when {
+                Build.VERSION.SDK_INT >= 30 -> insets.getInsets(WindowInsets.Type.displayCutout()).let {
+                    intArrayOf(it.left, it.top, it.right, it.bottom)
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
+                    @Suppress("DEPRECATION")
+                    val cutout = insets.displayCutout
+                    intArrayOf(
+                        cutout?.safeInsetLeft ?: 0,
+                        cutout?.safeInsetTop ?: 0,
+                        cutout?.safeInsetRight ?: 0,
+                        cutout?.safeInsetBottom ?: 0
+                    )
+                }
+                else -> intArrayOf(0, 0, 0, 0)
             }
-            if (view.paddingLeft != safe.left || view.paddingTop != safe.top ||
-                view.paddingRight != safe.right || view.paddingBottom != safe.bottom) {
-                view.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+            if (view.paddingLeft != safe[0] || view.paddingTop != safe[1] ||
+                view.paddingRight != safe[2] || view.paddingBottom != safe[3]) {
+                view.setPadding(safe[0], safe[1], safe[2], safe[3])
             }
             insets
         }
