@@ -1,0 +1,9 @@
+Trialum third-party notices — v41 / 1.2
+
+This file is the complete verbatim notice published with dev.ffmpegkit-maintained:llama-android:0.1.1. It names MIT-licensed llama.cpp and ggml; the associated LICENSE file is included in the same directory.
+
+The exact app model GGUF files are not bundled in the APK. They are optional user-initiated downloads and are listed in ../MODEL-LICENSES.md with immutable source revisions and SHA-256 checksums.
+
+Other Android, Google Play, Firebase, Kotlin and AndroidX dependencies are separately identified in the generated v41 SBOM. Their upstream license texts and copyright notices are included in the application’s offline Licenses screen where redistribution terms require them. The SBOM must be regenerated from the exact release dependency graph before each release; this branch record is not a substitute for that release artifact.
+
+Trialum original code and content remain under the repository’s proprietary LICENSE. Third-party notices do not grant rights to Trialum original content.
