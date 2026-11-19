@@ -331,6 +331,9 @@ async function run(){
   assert(about.includes('About the developer'),'About & Help must identify the developer in English');
   assert(about.includes('Tutorial'),'About & Help must explain the replayable tutorial in English');
   assert(about.includes('Beta tester tools'),'Internal beta must include a dedicated tester guide in About & Help');
+ assert(about.includes('Licenses & Notices'),'About & Help must include offline third-party license access');
+ click('showLicenses');
+ assert(d.getElementById('licensesDialog'),'License notice dialog must exist in the HTML shell');
   assert(about.includes('1, 7 or 30 days'),'Tester guide must explain the available day-skip controls');
  }
 
