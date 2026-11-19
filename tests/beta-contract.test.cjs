@@ -80,7 +80,7 @@ test('age access is internal-beta-only, privacy-minimal and fails closed',()=>{
  const native=read('android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumAgeSignals.kt');
  const activity=read('android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt');
  const social=read('js/social.js'),messages=read('js/messages.js'),shared=read('js/shared-playground.js'),app=read('js/app.js');
- assert.match(gradle,/versionCode\s*=\s*39/);
+ assert.match(gradle,/versionCode\s*=\s*40/);
  assert(gradle.includes('com.google.android.play:age-signals:0.0.4'));
  assert(gradle.includes('create("internalBeta")')&&gradle.includes('BETA_TESTER_TOOLS", "true"'));
  assert(native.includes('AgeSignalsStatus.SHARED')&&native.includes('ageLower >= 18')&&native.includes('ageUpper == null'));
