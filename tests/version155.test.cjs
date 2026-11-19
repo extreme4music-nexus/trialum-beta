@@ -35,7 +35,7 @@ async function main(){
    assert.equal(await api.change('auto'),'es');
    assert.equal(api.preference(),'auto');
    assert.equal(api.t('Поставки'),'Configuración');
-   assert.equal(api.t('Се согласувам за локален AI'),'Allow local AI');
+   assert.equal(api.t('Се согласувам за локален AI'),'Permitir IA local');
    assert.equal(await api.change('en'),'en');
    assert.equal(api.t('Напредна интелигенција на Мнемос'),'Mnemos advanced intelligence');
    assert.equal(await api.change('xx'),'es');
