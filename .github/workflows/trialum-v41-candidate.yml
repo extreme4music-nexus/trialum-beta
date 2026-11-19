@@ -5,7 +5,9 @@ on:
     branches:
       - release/lwc-v41-1.2-classic-food-warehouse-20261119
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - release/lwc-v41-1.2-classic-food-warehouse-20261119
   workflow_dispatch:
 
 permissions:
