@@ -1,0 +1,203 @@
+name: Trialum v42 / 1.2 Wi-Fi availability fix
+
+on:
+  push:
+    branches:
+      - release/lwc-v42-wifi-availability-fix-20261119
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Install headless test dependencies
+        run: npm install --no-save --ignore-scripts --no-audit jsdom@26.1.0 gifuct-js@2.1.2
+
+      - name: Run v38-v40 and regression tests
+        run: |
+          set -euo pipefail
+          node tests/engine.test.cjs
+          node tests/evolution.test.cjs
+          node tests/progression.test.cjs
+          node tests/longplay.test.cjs
+          TRIALUM_LOCALE_AUDIT=1 node tests/ui.test.cjs
+          node tests/creature-media.test.cjs
+          node tests/play-games.test.cjs
+          node tests/privacy-guard.test.cjs
+          node tests/version155.test.cjs
+          node tests/social-ui.test.cjs
+          node tests/beta-contract.test.cjs
+          node tests/shared-client.test.cjs
+          node --test --test-name-pattern='no account means|configured opt-in requests|reflected server nicknames|preset send stores locally' tests/messages-client.test.cjs
+          node tests/playground.test.cjs
+          node --test tests/dialogue-session.test.cjs
+          node --test tests/lw-d-l3-9-original-plant-engine.test.cjs
+          node --test tests/playground-ai.test.cjs
+          node --test tests/dialogue-mix.test.cjs
+          node --test tests/playground-memory.test.cjs
+          node --test tests/presence.test.cjs
+          node tests/classic-food-warehouse.test.cjs
+          node --test tests/lw-d-food-supply-chain.test.cjs
+          for file in js/*.js; do node --check "$file"; done
+
+      - name: Build internal beta and isolated phone QA APK
+        env:
+          PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+          PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
+          PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
+          PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
+          PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
+          PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
+          PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
+          PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
+          PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
+          PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
+        run: |
+          set -euo pipefail
+          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
+          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
+          : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
+          args=(
+            "-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
+            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
+            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
+            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
+            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
+          )
+          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
+          [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
+          [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
+          [ -n "$PGS_ACH_LEARNED" ] && args+=("-PtrialumPgsAchievement_learned=$PGS_ACH_LEARNED")
+          [ -n "$PGS_ACH_ADVANCED" ] && args+=("-PtrialumPgsAchievement_advanced=$PGS_ACH_ADVANCED")
+          [ -n "$PGS_ACH_ECOLOGY" ] && args+=("-PtrialumPgsAchievement_ecology=$PGS_ACH_ECOLOGY")
+          [ -n "$PGS_ACH_LAB6" ] && args+=("-PtrialumPgsAchievement_lab6=$PGS_ACH_LAB6")
+          [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
+          [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
+          [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
+          gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+
+      - name: Verify version and capture matching Play diagnostics
+        run: |
+          set -euo pipefail
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+          apk=$(find android-template/app/build/outputs/apk/qa42 -name '*.apk' -print -quit)
+          aab=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
+          test -s "$apk" && test -s "$aab"
+          badge=$("$AAPT" dump badging "$apk")
+          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa42'"
+          printf '%s\n' "$badge" | grep -Fq "versionCode='42'"
+          printf '%s\n' "$badge" | grep -Fq "versionName='1.2-qa42'"
+          printf '%s\n' "$badge" | grep -Fq "uses-feature-not-required: name='android.hardware.wifi'"
+          unzip -t "$aab" >/dev/null
+          mkdir -p candidates
+          cp "$apk" candidates/trialum-v42-qa42-UNSIGNED.apk
+          cp "$aab" candidates/trialum-v42-internal-beta-UNSIGNED.aab
+          mapping=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
+          symbols=android-template/app/build/outputs/native-debug-symbols/internalBeta/native-debug-symbols.zip
+          test -s "$mapping"
+          mkdir -p candidates/play-diagnostics
+          cp "$mapping" candidates/play-diagnostics/mapping.txt
+          if [ -s "$symbols" ]; then
+            cp "$symbols" candidates/play-diagnostics/native-debug-symbols.zip
+            native_status="play-diagnostics/native-debug-symbols.zip (FULL)"
+          else
+            cat > candidates/play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt <<'EOF'
+          Android Gradle Plugin did not produce a native-debug-symbols.zip for this build, even with ndk.debugSymbolLevel=FULL on internalBeta.
+          The app includes prebuilt native libraries from dependencies. Debug metadata is commonly stripped before those libraries are published.
+          Obtain matching unstripped symbols from the dependency publisher or rebuild the native dependency with symbols before submitting symbols to Play Console.
+          No placeholder or fabricated symbol archive was created.
+          EOF
+            native_status="not generated: prebuilt dependency debug metadata unavailable; see play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt"
+          fi
+          sha256sum candidates/trialum-v42-internal-beta-UNSIGNED.aab candidates/play-diagnostics/mapping.txt > candidates/play-diagnostics/SHA256SUMS
+          {
+            echo "source_commit=$GITHUB_SHA"
+            echo "package=com.trialum.ziivaiskra"
+            echo "version_code=42"
+            echo "version_name=1.2"
+            echo "candidate=internalBeta"
+            echo "aab_signing=unsigned; owner must sign locally after QA"
+            echo "r8_mapping=play-diagnostics/mapping.txt"
+            echo "native_symbols=$native_status"
+          } > candidates/BUILD-INFO.txt
+
+      - name: Sign only the isolated QA APK with an ephemeral runner key
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          signer_dir=$(mktemp -d)
+          signer_file="$signer_dir/trialum-v42-qa42.p12"
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$signer_file" \
+            -storepass "$password" -keypass "$password" -alias trialum-v42-qa42 \
+            -keyalg RSA -keysize 2048 -validity 30 -dname "CN=Trialum v42 Isolated QA"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias trialum-v42-qa42 \
+            --ks-pass "pass:$password" --key-pass "pass:$password" \
+            --out candidates/trialum-v42-qa42-random-signed.apk candidates/trialum-v42-qa42-UNSIGNED.apk
+          "$APKSIGNER" verify --verbose --print-certs candidates/trialum-v42-qa42-random-signed.apk | tee candidates/qa42-signature.txt
+          sha256sum candidates/trialum-v42-qa42-random-signed.apk > candidates/qa42-SHA256SUMS
+          rm -f "$signer_file"
+          rmdir "$signer_dir"
+          rm -f candidates/trialum-v42-qa42-UNSIGNED.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-v42-random-signed-phone-QA
+          path: |
+            candidates/trialum-v42-qa42-random-signed.apk
+            candidates/qa42-signature.txt
+            candidates/qa42-SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-v42-internal-beta-unsigned-AAB-and-diagnostics
+          path: |
+            candidates/trialum-v42-internal-beta-UNSIGNED.aab
+            candidates/play-diagnostics/**
+            candidates/BUILD-INFO.txt
+          if-no-files-found: error
+          retention-days: 7
