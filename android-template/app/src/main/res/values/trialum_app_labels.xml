@@ -2,4 +2,5 @@
 <resources>
     <string name="trialum_app_label">Trialum</string>
     <string name="trialum_invite_scheme">trialum</string>
+    <string name="third_party_licenses">Third-party licenses</string>
 </resources>
