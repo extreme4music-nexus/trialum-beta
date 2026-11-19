@@ -1,7 +1,6 @@
 package com.trialum.ziivaiskra
 
-    private fun nativeText(macedonian: String, english: String): String =
-        TrialumNativeText.get(this, macedonian, english)
+
 
 import android.Manifest
 import android.content.Intent
@@ -43,6 +42,9 @@ import org.json.JSONArray
 
 /** Android WebView wrapper for compiled Trialum 1.5.5 APK. */
 class MainActivity : Activity() {
+private fun nativeText(macedonian: String, english: String): String =
+        TrialumNativeText.get(this, macedonian, english)
+
     private lateinit var web: WebView
     private lateinit var modelRuntime: ModelRuntime
     private lateinit var playGames: TrialumPlayGames
