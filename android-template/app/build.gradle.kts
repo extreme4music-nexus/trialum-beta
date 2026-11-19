@@ -12,8 +12,8 @@ android {
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 39
-        versionName = "1.1"
+        versionCode = 40
+        versionName = "1.1.1"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
         val socialApiUrl = (project.findProperty("trialumSocialApiUrl") as? String)
@@ -62,7 +62,12 @@ android {
     // Isolated install for LW-A QA. It never replaces the existing debug APK.
     // It uses its own Android UID, WebView storage and Android Keystore scope.
     buildTypes {
-        // Internal testing candidate only. Play's internal tester list controls
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        // Internal testing candidate only. Play's internal testing list controls
         // distribution; the normal release build never includes this test panel.
         create("internalBeta") {
             initWith(getByName("release"))

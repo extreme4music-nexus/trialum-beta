@@ -225,7 +225,7 @@ function help(){
  const en=root.TrialumI18n?.language?.()==='en';
  const sections=en?[
   ['About Trialum','Trialum — Living World is an offline-first, long-form creature and ecosystem game. Beta 1.0 tests the LW-C feature set. Later Living World phases are still in development.'],
-  ['What’s new in v39','A clearer first-launch User Agreement and a separate optional consent for Friends, messages and shared play. Social features require an eligible per-device age signal and an active social profile. This update also documents what social data is processed, message retention and safety choices. Core offline play remains available without social services.'],
+  ['What’s new in v40','Bug fixes and translations only. Translations have been updated across all supported languages, including the full User Agreement, and untranslated interface text has been fixed.'],
   ['How to play','Explore the Lab, discover materials and research, create life, grow plants, build habitats, and care for your pets. Actions and resources recover over time. Use the journal and menus to follow discoveries and pet needs.'],
   ['A fictional world','The chemistry, organisms, evolution and ecosystems in Trialum are fictional game systems. They are not a scientific model, medical advice, or instructions for creating real life.'],
   ['Play offline and protect your save','Core play is local and works offline. Use the encrypted migration archive in Settings to move the full world, private AI memories and local friend-message history. Keep its recovery code separately. Plain JSON and Google Play Games Cloud Save exclude private conversations and AI memories.'],
@@ -245,7 +245,7 @@ function help(){
   ['Beta and payments','This is a beta. Some systems may change after testing; report reproducible issues with the screen and steps. No purchases are enabled in Beta 1.0; credits are earned through play.']
  ]:[
   ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. Бета 1.0 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
-  ['Што е ново во v39','Појасен User Agreement при првото отворање и посебна опционална согласност за Пријатели, пораки и заедничка игротека. Социјалните функции бараат дозволен возрастен сигнал за овој уред и активен социјален профил. Ажурирани се објаснувањата за обработката на податоци, роковите за пораки и безбедносните избори. Основната офлајн игра останува достапна без социјални услуги.'],
+  ['Што е ново во v40','Само поправки на грешки и преводи. Ажурирани се преводите на сите поддржани јазици, вклучувајќи го целиот User Agreement, и се поправени непреведените текстови во интерфејсот.'],
   ['Како се игра','Истражувај ја Лабораторијата, откривај материјали и сознанија, создавај живот, одгледувај растенија, гради биосветови и грижи се за милениците. Акциите и ресурсите се обновуваат со време. Дневникот и менијата ги следат откритијата и потребите на милениците.'],
   ['Измислен свет','Хемијата, организмите, еволуцијата и екосистемите во Trialum се измислени системи за игра. Тие не се научен модел, медицински совет или упатство за создавање вистински живот.'],
   ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. За пренос на целиот свет, приватните AI-мемории и локалната историја со пријателите користи шифрирана архива од Поставки. Recovery-кодот чувај го одделно. Обичниот JSON и Google Play Games Cloud Save ги изоставуваат приватните разговори и AI-мемориите.'],

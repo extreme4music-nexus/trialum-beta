@@ -1,0 +1,1 @@
+Bug fixes and translations only. Translations have been updated across all supported languages, including the full User Agreement, and untranslated interface text has been fixed.

@@ -546,7 +546,7 @@ async function importBackupState(backup,{confirmed=false,preservePrivate=true}={
  Shared?.reconcileAway?.().catch(()=>{});
  return true;
 }
-async function start(mode){globalThis.TrialumPlaygroundAI?.stop?.();s=E.newGame('real');Shared?.bindWorld?.(s);s.settings.language=globalThis.TrialumI18n?.preference?.()||'auto';s.settings.theme=Theme?.mode?.()||'system';el('welcome').hidden=true;E.advance(s);A.sync(s.settings);W.setState(s);render();await forceSave();toast('✺ Првата искра започна од неживи елементи!');O?.maybeTutorial();}
+async function start(mode){globalThis.TrialumPlaygroundAI?.stop?.();s=E.newGame('real');Shared?.bindWorld?.(s);s.settings.language=globalThis.TrialumI18n?.preference?.()||'auto';s.settings.theme=Theme?.mode?.()||'dark';el('welcome').hidden=true;E.advance(s);A.sync(s.settings);W.setState(s);render();await forceSave();toast('✺ Првата искра започна од неживи елементи!');O?.maybeTutorial();}
 globalThis.TrialumLLMEvent=(event)=>{
  if(!s||!event)return;
  if(globalThis.TrialumPlaygroundAI?.onModelEvent?.(event))return;
@@ -575,7 +575,7 @@ globalThis.TrialumLLMEvent=(event)=>{
 };
 async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis.TrialumPlaygroundAI?.setSave?.(scheduleSave);try{s=await S.load()}catch(e){console.warn('Save read error',e)}
  const prefer=s?.settings?.language||'auto';await globalThis.TrialumI18n?.change(prefer);
- if(['system','light','dark'].includes(s?.settings?.theme))Theme?.set(s.settings.theme);globalThis.TrialumI18n?.translateDOM(document.body);
+ if(s?.settings?.theme==='system'&&!Theme?.hasExplicitPreference?.())s.settings.theme='dark';if(['system','light','dark'].includes(s?.settings?.theme))Theme?.set(s.settings.theme);globalThis.TrialumI18n?.translateDOM(document.body);
  if(s&&E.validate(s)){Shared?.bindWorld?.(s);Presence?.ensure(s);PG?.reconcile?.(s);Presence?.expireLocal?.(s);E.ensureResearch(s);const elapsed=E.advance(s);A.sync(s.settings);W.setState(s);render();await forceSave();if(elapsed)toast(`Поминуваа ${elapsed} дена додека светот беше затворен.`);}else{el('welcome').hidden=false;}
  G?.init({
   getWorld:()=>s,
