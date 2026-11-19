@@ -74,6 +74,7 @@ android {
         create("internalBeta") {
             initWith(getByName("release"))
             isDebuggable = false
+            ndk.debugSymbolLevel = "FULL"
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
             manifestPlaceholders["trialumInviteScheme"] = "trialum"
         }
