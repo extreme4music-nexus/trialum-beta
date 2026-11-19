@@ -108,175 +108,30 @@ jobs:
               f"Runtime components reported: {len(deps)}",
               f"Components without publisher license metadata: {len(missing)}",
               "",
-              "Review the full JSON and HTML inventory. License metadata is not a substitute for checking the exact upstream terms and required notices.",
+              "Review the full JSON and HTML inventory. Publisher metadata is not a substitute for checking exact upstream terms and required notices.",
           ]
           if missing:
               lines += ["", "## Components requiring manual license identification", ""] + [f"- {item}" for item in missing]
           else:
-              lines += ["", "No component lacked a license field in the publisher metadata."]
+              lines += ["", "No component lacked a license field in publisher metadata."]
           Path("candidates/legal/ANDROID-LICENSE-REVIEW.md").write_text("\n".join(lines) + "\n")
           PY
           aar_root="$HOME/.gradle/caches/modules-2/files-2.1/dev.ffmpegkit-maintained/llama-android/0.1.1"
           aar=$(find "$aar_root" -type f -name '*.aar' -print -quit 2>/dev/null || true)
           notice_file=android-template/app/src/main/assets/licenses/llama-android-0.1.1/THIRD-PARTY-NOTICES.txt
           if [ -n "$aar" ]; then
-            entry=$(unzip -Z1 "$aar" | grep 'THIRD-PARTY-NOTICES.txt'
-      - name: Build internal beta and isolated phone QA APK
-        env:
-          PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
-          PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
-          PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
-          PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
-          PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
-          PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
-          PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
-          PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
-          PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
-          PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
-        run: |
-          set -euo pipefail
-          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
-          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
-          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
-          : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
-          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
-          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
-          args=(
-            "-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
-            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
-            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
-            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
-            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
-            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
-            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
-          )
-          [ -n "$PGS_PROJECT_ID" ] && args+=("-PtrialumPgsProjectId=$PGS_PROJECT_ID")
-          [ -n "$PGS_ACH_FIRST_PET" ] && args+=("-PtrialumPgsAchievement_first_pet=$PGS_ACH_FIRST_PET")
-          [ -n "$PGS_ACH_FIRST_PLANT" ] && args+=("-PtrialumPgsAchievement_first_plant=$PGS_ACH_FIRST_PLANT")
-          [ -n "$PGS_ACH_LEARNED" ] && args+=("-PtrialumPgsAchievement_learned=$PGS_ACH_LEARNED")
-          [ -n "$PGS_ACH_ADVANCED" ] && args+=("-PtrialumPgsAchievement_advanced=$PGS_ACH_ADVANCED")
-          [ -n "$PGS_ACH_ECOLOGY" ] && args+=("-PtrialumPgsAchievement_ecology=$PGS_ACH_ECOLOGY")
-          [ -n "$PGS_ACH_LAB6" ] && args+=("-PtrialumPgsAchievement_lab6=$PGS_ACH_LAB6")
-          [ -n "$PGS_ACH_DNA" ] && args+=("-PtrialumPgsAchievement_dna=$PGS_ACH_DNA")
-          [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
-          [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
-          gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
-
-      - name: Generate source SBOM and legal release checklist
-        run: |
-          set -euo pipefail
-          mkdir -p candidates/legal
-          npm install --no-save --ignore-scripts --no-audit @cyclonedx/cyclonedx-npm@1.19.0
-          npx --no-install cyclonedx-npm --output-file candidates/legal/TRIALUM-SOURCE-SBOM.cdx.json
-          cat > candidates/legal/LEGAL-RELEASE-GATE.md <<'EOF'
-          Release gate — v41 / 1.2
-          - Review the generated Android dependency license report against every transitive component in the AAB.
-          - The source SBOM is not the Android runtime SBOM; reconcile it with the exact AAB contents.
-          - Obtain matching native THIRD-PARTY-NOTICES from the dependency publisher and verify the AAR's embedded notice matches bundled copy.
-          - Keep each optional model's full LICENSE at its pinned commit and verify redistribution/model terms before enabling downloads.
-          - Verify rights and licenses for every bundled image, icon, sound, music file and font, including creator/contract provenance.
-          - Confirm the versioned Privacy Policy, User Agreement, Play Data Safety answers, target audience/Families declarations and social/age-signal disclosures match actual behavior.
-          - Resolve all marked unknowns and obtain qualified legal review before broad release. This checklist is not legal advice or a warranty.
-          EOF
-
-      - name: Verify version and capture matching Play diagnostics
-        run: |
-          set -euo pipefail
-          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
-          apk=$(find android-template/app/build/outputs/apk/qa41 -name '*.apk' -print -quit)
-          aab=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
-          test -s "$apk" && test -s "$aab"
-          badge=$("$AAPT" dump badging "$apk")
-          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa41'"
-          printf '%s\n' "$badge" | grep -Fq "versionCode='41'"
-          printf '%s\n' "$badge" | grep -Fq "versionName='1.2-qa41'"
-          unzip -t "$aab" >/dev/null
-          mkdir -p candidates
-          cp "$apk" candidates/trialum-v41-qa41-UNSIGNED.apk
-          cp "$aab" candidates/trialum-v41-internal-beta-UNSIGNED.aab
-          mapping=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
-          symbols=android-template/app/build/outputs/native-debug-symbols/internalBeta/native-debug-symbols.zip
-          test -s "$mapping"
-          mkdir -p candidates/play-diagnostics
-          cp "$mapping" candidates/play-diagnostics/mapping.txt
-          if [ -s "$symbols" ]; then
-            cp "$symbols" candidates/play-diagnostics/native-debug-symbols.zip
-            native_status="play-diagnostics/native-debug-symbols.zip (FULL)"
-          else
-            cat > candidates/play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt <<'EOF'
-          Android Gradle Plugin did not produce a native-debug-symbols.zip for this build, even with ndk.debugSymbolLevel=FULL on internalBeta.
-          The app includes prebuilt native libraries from dependencies. Debug metadata is commonly stripped before those libraries are published.
-          Obtain matching unstripped symbols from the dependency publisher or rebuild the native dependency with symbols before submitting symbols to Play Console.
-          No placeholder or fabricated symbol archive was created.
-          EOF
-            native_status="not generated: prebuilt dependency debug metadata unavailable; see play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt"
-          fi
-          sha256sum candidates/trialum-v41-internal-beta-UNSIGNED.aab candidates/play-diagnostics/mapping.txt > candidates/play-diagnostics/SHA256SUMS
-          {
-            echo "source_commit=$GITHUB_SHA"
-            echo "package=com.trialum.ziivaiskra"
-            echo "version_code=41"
-            echo "version_name=1.2"
-            echo "candidate=internalBeta"
-            echo "aab_signing=unsigned; owner must sign locally after QA"
-            echo "r8_mapping=play-diagnostics/mapping.txt"
-            echo "native_symbols=$native_status"
-          } > candidates/BUILD-INFO.txt
-
-      - name: Sign only the isolated QA APK with an ephemeral runner key
-        shell: bash
-        run: |
-          set -euo pipefail
-          set +x
-          signer_dir=$(mktemp -d)
-          signer_file="$signer_dir/trialum-v41-qa41.p12"
-          password=$(openssl rand -hex 24)
-          echo "::add-mask::$password"
-          keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$signer_file" \
-            -storepass "$password" -keypass "$password" -alias trialum-v41-qa41 \
-            -keyalg RSA -keysize 2048 -validity 30 -dname "CN=Trialum v41 Isolated QA"
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
-          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias trialum-v41-qa41 \
-            --ks-pass "pass:$password" --key-pass "pass:$password" \
-            --out candidates/trialum-v41-qa41-random-signed.apk candidates/trialum-v41-qa41-UNSIGNED.apk
-          "$APKSIGNER" verify --verbose --print-certs candidates/trialum-v41-qa41-random-signed.apk | tee candidates/qa41-signature.txt
-          sha256sum candidates/trialum-v41-qa41-random-signed.apk > candidates/qa41-SHA256SUMS
-          rm -f "$signer_file"
-          rmdir "$signer_dir"
-          rm -f candidates/trialum-v41-qa41-UNSIGNED.apk
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Trialum-v41-random-signed-phone-QA
-          path: |
-            candidates/trialum-v41-qa41-random-signed.apk
-            candidates/qa41-signature.txt
-            candidates/qa41-SHA256SUMS
-          if-no-files-found: error
-          retention-days: 7
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Trialum-v41-internal-beta-unsigned-AAB-and-diagnostics
-          path: |
-            candidates/trialum-v41-internal-beta-UNSIGNED.aab
-            candidates/play-diagnostics/**
-            candidates/legal/**
-            candidates/BUILD-INFO.txt
-          if-no-files-found: error
-          retention-days: 7
- | head -n 1 || true)
+            entry=$(unzip -Z1 "$aar" | grep 'THIRD-PARTY-NOTICES.txt' | head -n 1 || true)
             if [ -n "$entry" ]; then
               if unzip -p "$aar" "$entry" | cmp -s - "$notice_file"; then
-                echo "- llama-android 0.1.1 embedded notice: byte-for-byte match with the shipped notice." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+                echo "- llama-android 0.1.1 embedded notice: exact byte-for-byte match." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
               else
-                echo "- llama-android 0.1.1 embedded notice differs from shipped notice; review exact publisher notice before release." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+                echo "- llama-android 0.1.1 embedded notice differs from bundled upstream notice; manual review required." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
               fi
             else
-              echo "- llama-android 0.1.1 AAR contains no named THIRD-PARTY-NOTICES.txt entry; verify its redistribution notice requirements manually." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+              echo "- No named third-party notice file found inside the resolved llama-android 0.1.1 AAR; manual review required." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
             fi
           else
-            echo "- Exact llama-android 0.1.1 AAR was not located in the Gradle cache for notice comparison." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
+            echo "- Exact llama-android 0.1.1 AAR was not located in the Gradle cache; notice comparison was not performed." >> candidates/legal/ANDROID-LICENSE-REVIEW.md
           fi
           cp docs/licenses/THIRD-PARTY-NOTICES.txt candidates/legal/
           cp docs/licenses/MODEL-LICENSES.md candidates/legal/
@@ -321,23 +176,6 @@ jobs:
           [ -n "$PGS_BOARD_XP" ] && args+=("-PtrialumPgsLeaderboard_xp=$PGS_BOARD_XP")
           [ -n "$PGS_BOARD_SPECIES" ] && args+=("-PtrialumPgsLeaderboard_species=$PGS_BOARD_SPECIES")
           gradle -p android-template :app:assembleQa41 :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
-
-      - name: Generate source SBOM and legal release checklist
-        run: |
-          set -euo pipefail
-          mkdir -p candidates/legal
-          npm install --no-save --ignore-scripts --no-audit @cyclonedx/cyclonedx-npm@1.19.0
-          npx --no-install cyclonedx-npm --output-file candidates/legal/TRIALUM-SOURCE-SBOM.cdx.json
-          cat > candidates/legal/LEGAL-RELEASE-GATE.md <<'EOF'
-          Release gate — v41 / 1.2
-          - Review the generated Android dependency license report against every transitive component in the AAB.
-          - The source SBOM is not the Android runtime SBOM; reconcile it with the exact AAB contents.
-          - Obtain matching native THIRD-PARTY-NOTICES from the dependency publisher and verify the AAR's embedded notice matches bundled copy.
-          - Keep each optional model's full LICENSE at its pinned commit and verify redistribution/model terms before enabling downloads.
-          - Verify rights and licenses for every bundled image, icon, sound, music file and font, including creator/contract provenance.
-          - Confirm the versioned Privacy Policy, User Agreement, Play Data Safety answers, target audience/Families declarations and social/age-signal disclosures match actual behavior.
-          - Resolve all marked unknowns and obtain qualified legal review before broad release. This checklist is not legal advice or a warranty.
-          EOF
 
       - name: Verify version and capture matching Play diagnostics
         run: |
