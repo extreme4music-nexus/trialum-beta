@@ -6,6 +6,11 @@
   "version": "1.6-LW",
   "notes": "Translated from the canonical English catalog for the Trialum Beta 1.0 localization update. Native-speaker review of legal wording is recommended.",
   "strings": {
+    "Дебагирање": "Depuración",
+    "Истражување": "Investigación",
+    "Живеалишта": "Hábitats",
+    "Филтрирај по вид": "Filtrar por tipo",
+    "Ова е единственото место со целата хронологија. Прикажани се последните {shown} од {total} зачувани настани. Целосната архива е во JSON бекапот.": "Aquí se muestra la cronología completa: los {shown} eventos más recientes de {total}. El archivo completo está en la copia de seguridad JSON.",
     "Може ли да ми кажеш повеќе за тоа?": "¿Podría contarme más sobre eso?",
     "ТРИАЛУМ": "TRIALUM",
     "Користи само измислен прекар. Прекарот и имињата на милениците може да се испратат до социјалниот сервер на Trialum и да им се прикажат на прифатените пријатели. Не внесувај вистинско име, контактни податоци, училиште или локација. Автоматската проверка не може да го препознае секое вистинско име. Продолжи?": "Uuse únicamente un apodo inventado. Su apodo y nombres de mascotas pueden enviarse al servidor social de Trialum y mostrarse a los amigos aceptados. Nunca utilice un nombre real, datos de contacto, escuela o ubicación. Los controles automatizados no pueden reconocer todos los nombres reales. ¿Continuar?",

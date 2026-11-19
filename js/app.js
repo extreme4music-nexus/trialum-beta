@@ -132,15 +132,31 @@ function plantsTab(){const h=E.currentHabitat(s);return `<div class="tab-main"><
  ${h?`<h3>Растенија во ${safe(h.name)}</h3><div class="cards">${h.flora.map(f=>{const species=E.PLANTS.find(p=>p.id===f.species);return `<div class="card"><h3>${species?.icon||'🌱'} ${species?.name||'Примитивна флора'}</h3>${meter('Раст',f.growth)}</div>`}).join('')||'<div class="notice">Нема растенија во овој биосвет.</div>'}</div>`:''}</div>`;}
 function diaryTab(){
  const list=[...s.logs].reverse().slice(0,400);
+ const tr=value=>globalThis.TrialumI18n?.t?.(value)||value;
+ const format=(template,values)=>Object.entries(values).reduce((text,[key,value])=>text.replaceAll('{'+key+'}',String(value)),template);
+ const diaryText=value=>{
+  const names=[...(s.pets||[]).map(p=>p.name),...(s.habitats||[]).map(h=>h.name)].filter(name=>typeof name==='string'&&name.trim()).sort((a,b)=>b.length-a.length);
+  const protectedNames=[];
+  let source=String(value||'');
+  for(const name of names){
+   const token='TRIALUMPROTECTEDNAME'+protectedNames.length+'TOKEN';
+   source=source.split(name).join(token);
+   if(source.includes(token))protectedNames.push([token,name]);
+  }
+  let result=tr(source);
+  for(const [token,name] of protectedNames)result=result.split(token).join(name);
+  return result;
+ };
  const types=[['all','Сите настани'],['milestone','Еволуција и успеси'],['care','Грижа'],['habitat','Живеалишта'],['research','Истражување'],['debug','Дебагирање']];
- return '<div class="tab-main"><h2>📖 Хронолошки дневник</h2><p class="desc">Ова е единственото место со целата хронологија. Прикажани се последните '+list.length+' од '+nf(s.logs.length)+' зачувани настани. Целосната архива е во JSON бекапот.</p>'+
- '<div class="diary-controls"><input id="diarySearch" type="search" placeholder="Пребарај настани…" aria-label="Пребарај дневник">'+
- '<select id="diaryFilter" aria-label="Филтрирај по вид">'+types.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></div>'+
- '<div class="log-list" id="diaryList">'+(list.length?list.map(e=>'<div class="log-entry" data-kind="'+safe(e.kind||'info')+'" data-search="'+safe(String(e.text||'').toLowerCase())+'"><time>Ден '+(Number(e.day)||1)+'</time><p>'+safe(e.text||'')+'</p></div>').join(''):'<p>Уште нема настани. Започни со синтеза на молекули.</p>')+'</div>'+
- '<p id="diaryEmpty" class="subtle" hidden>Нема резултати за избраниот филтер.</p></div>';
+ const description=format(tr('Ова е единственото место со целата хронологија. Прикажани се последните {shown} од {total} зачувани настани. Целосната архива е во JSON бекапот.'),{shown:list.length,total:nf(s.logs.length)});
+ return '<div class="tab-main"><h2>📖 '+safe(tr('Хронолошки дневник'))+'</h2><p class="desc">'+safe(description)+'</p>'+
+ '<div class="diary-controls"><input id="diarySearch" type="search" placeholder="'+safe(tr('Пребарај настани…'))+'" aria-label="'+safe(tr('Пребарај дневник'))+'">'+
+ '<select id="diaryFilter" aria-label="'+safe(tr('Филтрирај по вид'))+'">'+types.map(([v,t])=>'<option value="'+v+'">'+safe(tr(t))+'</option>').join('')+'</select></div>'+
+ '<div class="log-list" id="diaryList">'+(list.length?list.map(e=>{const original=String(e.text||''),translated=diaryText(original);return '<div class="log-entry" data-kind="'+safe(e.kind||'info')+'" data-search="'+safe((original+' '+translated).toLocaleLowerCase())+'"><time>'+safe(format(tr('Ден {day}'),{day:Number(e.day)||1}))+'</time><p>'+safe(translated)+'</p></div>';}).join(''):'<p>'+safe(tr('Уште нема настани. Започни со синтеза на молекули.'))+'</p>')+'</div>'+
+ '<p id="diaryEmpty" class="subtle" hidden>'+safe(tr('Нема резултати за избраниот филтер.'))+'</p></div>';
 }
 function filterDiary(){
- const needle=(el('diarySearch')?.value||'').toLocaleLowerCase('mk-MK').trim(),kind=el('diaryFilter')?.value||'all';let visible=0;
+ const needle=(el('diarySearch')?.value||'').toLocaleLowerCase().trim(),kind=el('diaryFilter')?.value||'all';let visible=0;
  document.querySelectorAll('#diaryList .log-entry').forEach(row=>{const ok=(kind==='all'||row.dataset.kind===kind||kind==='milestone'&&['milestone','evolution'].includes(row.dataset.kind))&&row.dataset.search.includes(needle);row.hidden=!ok;if(ok)visible++;});
  if(el('diaryEmpty'))el('diaryEmpty').hidden=visible>0;
 }
