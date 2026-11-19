@@ -12,7 +12,7 @@ android {
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 41
+        versionCode = 42
         versionName = "1.2"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
@@ -232,17 +232,17 @@ android {
             resValue("string", "trialum_firebase_sender_id", "")
         }
     }
-    // Disposable phone-QA install for v41. Keeps internal-beta tester controls,
+    // Disposable phone-QA install for v42. Keeps internal-beta tester controls,
     // but has a unique package and no Play Games/FCM registration so the runner key
     // cannot replace the Play install or touch its data.
     buildTypes {
-        create("qa41") {
+        create("qa42") {
             initWith(getByName("internalBeta"))
-            applicationIdSuffix = ".qa41"
-            versionNameSuffix = "-qa41"
+            applicationIdSuffix = ".qa42"
+            versionNameSuffix = "-qa42"
             isDebuggable = false
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
-            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa41"
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa42"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
             resValue("string", "trialum_firebase_api_key", "")
