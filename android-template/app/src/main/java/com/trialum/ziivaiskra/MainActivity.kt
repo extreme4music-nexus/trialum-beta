@@ -23,6 +23,7 @@ import android.webkit.WebChromeClient
 import android.webkit.JsResult
 import android.webkit.JsPromptResult
 import android.view.WindowInsets
+import android.view.View
 import java.io.ByteArrayOutputStream
 import android.os.Build
 import android.os.Bundle
@@ -250,6 +251,37 @@ private fun nativeText(macedonian: String, english: String): String =
         }
     }
 
+    private fun applyFullscreenImmersiveMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.let { controller ->
+                controller.hide(WindowInsets.Type.systemBars())
+                controller.systemBarsBehavior =
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                )
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyFullscreenImmersiveMode()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyFullscreenImmersiveMode()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingBackupId = savedInstanceState?.getString("pendingBackupId")
@@ -309,18 +341,32 @@ private fun nativeText(macedonian: String, english: String): String =
             }
         }
         setContentView(web)
-        // Target 35+ draws into the status-bar region on some Android builds.
-        // Respect the actual system-bar inset so the TRIALUM title and HUD
-        // never sit under the clock, camera cutout or screen-recorder indicator.
+        // Keep the WebView at a stable full-screen size. System bars may be
+        // revealed temporarily by an edge swipe, but must not resize the game.
+        applyFullscreenImmersiveMode()
+        // Avoid Android's overscroll stretch effect distorting the whole game.
+        web.overScrollMode = View.OVER_SCROLL_NEVER
+        // Respect only physical display-cutout insets, not transient system bars.
         web.setOnApplyWindowInsetsListener { view, insets ->
-            val statusTop = if (Build.VERSION.SDK_INT >= 30) {
-                insets.getInsets(WindowInsets.Type.statusBars()).top
-            } else {
-                @Suppress("DEPRECATION")
-                insets.systemWindowInsetTop
+            val safe = when {
+                Build.VERSION.SDK_INT >= 30 -> insets.getInsets(WindowInsets.Type.displayCutout()).let {
+                    intArrayOf(it.left, it.top, it.right, it.bottom)
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
+                    @Suppress("DEPRECATION")
+                    val cutout = insets.displayCutout
+                    intArrayOf(
+                        cutout?.safeInsetLeft ?: 0,
+                        cutout?.safeInsetTop ?: 0,
+                        cutout?.safeInsetRight ?: 0,
+                        cutout?.safeInsetBottom ?: 0
+                    )
+                }
+                else -> intArrayOf(0, 0, 0, 0)
             }
-            if (view.paddingTop != statusTop) {
-                view.setPadding(view.paddingLeft, statusTop, view.paddingRight, view.paddingBottom)
+            if (view.paddingLeft != safe[0] || view.paddingTop != safe[1] ||
+                view.paddingRight != safe[2] || view.paddingBottom != safe[3]) {
+                view.setPadding(safe[0], safe[1], safe[2], safe[3])
             }
             insets
         }
@@ -387,6 +433,7 @@ private fun nativeText(macedonian: String, english: String): String =
             }
         }
         web.addJavascriptInterface(Bridge(), "TrialumAndroid")
+        web.addJavascriptInterface(LicensesBridge(this), "TrialumLicenses")
         playGames.initialize()
         web.loadUrl("https://$host/assets/web/index.html")
         val job = PeriodicWorkRequestBuilder<CareWorker>(6, TimeUnit.HOURS).build()

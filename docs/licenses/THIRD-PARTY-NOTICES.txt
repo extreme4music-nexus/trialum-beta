@@ -1,0 +1,9 @@
+Trialum third-party notices — v41 / 1.2
+
+The upstream llama-android 0.1.1 THIRD-PARTY-NOTICES.txt and MIT license are bundled under android-template/app/src/main/assets/licenses/llama-android-0.1.1/. The workflow compares the notice inside the exact resolved AAR with the bundled copy and records whether it matches. The MIT license for the bundled ZZFX audio library is copied from vendor/LICENSE-ZZFX.txt into the app's notices. The Apache-2.0 text is bundled for the optional pinned Qwen and SmolLM2 models. The app's Licenses & Notices screen displays these notices and the exact Android runtime dependency inventory generated for this build.
+
+The candidate workflow generates both JSON and HTML dependency license reports from internalBetaRuntimeClasspath, embeds the JSON inventory in the app, and attaches the reports to the unsigned internal-beta artifact. The report records publisher-provided license names and URLs; it does not replace inspection of exact upstream license terms, copyright notices, or redistribution requirements. Components with missing publisher license metadata are called out in ANDROID-LICENSE-REVIEW.md.
+
+The GGUF models are optional user-initiated downloads and are not bundled in the APK. Their exact pinned revisions, publisher license metadata, source URLs, and SHA-256 values are listed in MODEL-LICENSES.md.
+
+Trialum original code and content remain under the repository's proprietary LICENSE. Third-party notices do not grant rights to Trialum original content.

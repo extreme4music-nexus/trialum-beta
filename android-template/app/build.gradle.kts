@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.github.jk1.dependency-license-report")
 }
 android {
     namespace = "com.trialum.ziivaiskra"
@@ -256,6 +257,24 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true }
+}
+/*
+ * Reports the exact v41 internalBeta Android runtime dependency graph.
+ * This reporting plugin is build-only and is not added to the APK.
+ */
+licenseReport {
+    outputDir = layout.buildDirectory.dir("reports/licenses").get().asFile.absolutePath
+    configurations = arrayOf("internalBetaRuntimeClasspath")
+    renderers = arrayOf<com.github.jk1.license.render.ReportRenderer>(
+        com.github.jk1.license.render.JsonReportRenderer("licenses.json", false),
+        com.github.jk1.license.render.InventoryHtmlReportRenderer(
+            "licenses.html",
+            "Trialum v41 third-party software"
+        )
+    )
+    filters = arrayOf<com.github.jk1.license.filter.DependencyFilter>(
+        com.github.jk1.license.filter.LicenseBundleNormalizer()
+    )
 }
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
