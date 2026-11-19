@@ -12,8 +12,8 @@ android {
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40
-        versionName = "1.1.1"
+        versionCode = 41
+        versionName = "1.2"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
         val socialApiUrl = (project.findProperty("trialumSocialApiUrl") as? String)
@@ -65,6 +65,8 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Include file/line symbols for native crash reports in Play Console.
+            ndk.debugSymbolLevel = "FULL"
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         // Internal testing candidate only. Play's internal testing list controls
@@ -222,6 +224,24 @@ android {
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
             buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "true")
             manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39social"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+            resValue("string", "trialum_firebase_api_key", "")
+            resValue("string", "trialum_firebase_project_id", "")
+            resValue("string", "trialum_firebase_sender_id", "")
+        }
+    }
+    // Disposable phone-QA install for v41. Keeps internal-beta tester controls,
+    // but has a unique package and no Play Games/FCM registration so the runner key
+    // cannot replace the Play install or touch its data.
+    buildTypes {
+        create("qa41") {
+            initWith(getByName("internalBeta"))
+            applicationIdSuffix = ".qa41"
+            versionNameSuffix = "-qa41"
+            isDebuggable = false
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa41"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
             resValue("string", "trialum_firebase_api_key", "")

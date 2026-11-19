@@ -133,7 +133,7 @@ function toggle(s,scope,notify,save,render){
   if(!modelAvailable()){notify?.('Прво преземи го мини моделот од панелот на миленичето.');return true;}
   if(scope==='shared'){
    if(!root.TrialumShared?.getState?.()?.aiRelayEnabled){notify?.('AI преносот не е вклучен на серверот.');return true;}
-   if(root.confirm&&!root.confirm('Дозволуваш кратки AI реплики на ова милениче да се пренесуваат до присутните членови на приватната игротека? Ова не е приватен шифриран разговор.'))return true;
+   if(root.confirm&&!root.confirm(root.TrialumI18n?.t?.('Дозволуваш кратки AI реплики на ова милениче да се пренесуваат до присутните членови на приватната игротека? Ова не е приватен шифриран разговор.')||'Дозволуваш кратки AI реплики на ова милениче да се пренесуваат до присутните членови на приватната игротека? Ова не е приватен шифриран разговор.'))return true;
   }
  }
  p[field]=!p[field];
@@ -170,7 +170,7 @@ function toggleBackground(s,notify,save,render){
    !st.presences?.some(x=>x.petId===p.id&&x.sessionId===loc.sessionId)){
   notify?.('Прво испрати го миленичето во активната заедничка игротека.');return true;
  }
- if(root.confirm&&!root.confirm('Да продолжи локалниот мини AI со приватни разговори во заднина? Android прикажува известување со Stop AI. Се користи батеријата и интернетот; системот може да го прекине сервисот.'))return true;
+ if(root.confirm&&!root.confirm(root.TrialumI18n?.t?.('Да продолжи локалниот мини AI со приватни разговори во заднина? Android прикажува известување со Stop AI. Се користи батеријата и интернетот; системот може да го прекине сервисот.')||'Да продолжи локалниот мини AI со приватни разговори во заднина? Android прикажува известување со Stop AI. Се користи батеријата и интернетот; системот може да го прекине сервисот.'))return true;
  if(!n.setPlaygroundBackgroundAi(true,st.selected,p.id,loc.sessionId,p.name||'Pet')){
   notify?.('Провери ја Android дозволата за известувања и повторно притисни.');return true;
  }
@@ -181,7 +181,7 @@ function toggleBackground(s,notify,save,render){
 function forget(s,notify,save,render){
  const p=E()?.currentPet?.(s);
  if(!p||!Memory()?.read?.(p)?.length)return false;
- if(root.confirm&&!root.confirm('Да ги избришам сите тематски сеќавања на ова милениче од игротеките? Ова не ги менува XP и дневникот.'))return true;
+ if(root.confirm&&!root.confirm(root.TrialumI18n?.t?.('Да ги избришам сите тематски сеќавања на ова милениче од игротеките? Ова не ги менува XP и дневникот.')||'Да ги избришам сите тематски сеќавања на ова милениче од игротеките? Ова не ги менува XP и дневникот.'))return true;
  Memory().clear(p);
  root.TrialumAndroid?.clearBackgroundAiMemories?.(p.id);
  delete p.playgroundAiBackgroundSeen;

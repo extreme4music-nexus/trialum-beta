@@ -13,8 +13,8 @@ Status: staging plan, not a release approval. This branch starts from the public
 | Package | Prepared source | Scope | State |
 |---|---|---|---|
 | GP-01 | LW-D L3.9, exact source 7466c38c0f863cf4299fbdf6263f823c60b2608d, original Trialum PR #73 | Canonical plant lifecycle and its existing Classic PhytoLab/greenhouse UI | First isolated Classic integration branch; see its handoff document |
-| GP-02 | LW-D S5 warehouse, PR #82 head ba405fa0eb33f96961d49048f1dcde399f7cccbb | Existing inventory/warehouse model | Not yet staged. S5's zone transfer controls are currently in 3D prototype only; no Classic UI is claimed |
-| GP-03 | LW-D S6 personal reserves, exact source ee05d2555fc00920edd9c7f4872829af51ab2e69, PR #83 | Existing food supply, return-to-rack, and feeding flow in Classic Pet Home | Not yet staged; preserve its dependency on the S5 inventory model and document the absent Classic zone-transfer UI |
+| GP-02 | LW-D S5 warehouse, PR #82 head ba405fa0eb33f96961d49048f1dcde399f7cccbb | Existing inventory/warehouse model | Classic allocation port prepared in the v40 candidate branch; 3D bridge remains out of scope |
+| GP-03 | LW-D S6 personal reserves, exact source ee05d2555fc00920edd9c7f4872829af51ab2e69, PR #83 | Existing food supply, return-to-rack, and feeding flow in Classic Pet Home | Prepared together with GP-02 in the v40 candidate because both share one conserved stock ledger; device QA pending |
 | GP-04 | Existing LW-C public baseline source 04457df48b9c012f8667504b935a7ca501d13f07 | Contextual Living Conversations | Already represented in the LW-C snapshot; compare the exact candidate before making another package |
 | GP-05+ | Future owner-approved LW-D source only | Later gameplay increments | Create one branch per actual mechanic; do not stage 3D-only shells as Classic gameplay |
 
@@ -29,3 +29,5 @@ The staged GP-01 branch is based on the current public LW-C release snapshot, no
 
 ## Android Build repository
 The corresponding build-stage branch must contain a minimal, clean public source snapshot and the same package documentation, based only on public beta source. It must keep the existing unsigned-only workflow and source-SHA acknowledgement gate. This plan does not copy private repository history or introduce any credentials.
+
+The integrated Classic GP-02/GP-03 candidate and provenance are tracked in [LW-C v40 Classic Food Warehouse preparation](LW_C_V40_CLASSIC_FOOD_WAREHOUSE_PREP_20261117.md).

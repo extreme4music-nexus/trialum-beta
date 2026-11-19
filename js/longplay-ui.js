@@ -96,9 +96,9 @@ function food(s){
  const unlocked=r.level>=f.tier,stock=s.foodFactory.stock[f.id]||0,good=p&&E.feedCompatible(sp,f,p);
  return '<div class="card '+(unlocked?'':'locked-card')+'"><h3>'+f.icon+' '+esc(f.name)+'</h3>'+
  '<p>'+esc(f.desc)+'</p><p class="price">🔒 Лаб '+f.tier+(f.id.startsWith('research-')?' · прво пронајди преку истражувања':'')+' · '+f.cost.biomass+' биомаса + '+f.cost.compounds+' молекули</p>'+
- '<p>Порции: '+stock+' · '+(good?'✓ Соодветна за избраниот вид':'Специјализирана за друга група')+'</p>'+
+ '<p>Вкупно произведени: '+stock+' · Во склад: '+(root.TrialumWarehouseInventory?.project?.(s,[f])?.[0]?.warehouse??stock)+' · '+(good?'✓ Соодветна за избраниот вид':'Специјализирана за друга група')+'</p>'+
  b('⚗️ Произведи','craftFood','data-recipe="'+f.id+'"',!unlocked||s.labActions<1)+
- b('🍽️ Нахрани','feedFood','data-recipe="'+f.id+'"',!good||stock<1||p.actionsLeft<1)+'</div>';
+ '</div>';
  }).join('')+'</div></div>';
 }
 function dna(s){
@@ -284,6 +284,7 @@ function more(){
  ['🧬','ДНК лабораторија','dna','Еволутивни трансформации'],
  ['🌿','Флора','plants','Растенија и откритија'],
  ['🍱','Храна','food','Рецепти и исхрана'],
+ ['📦','Стовариште за храна','warehouse','Полици, ладилник, пакување и домашни резерви'],
  ['🤝','Пријатели','friends','Покани и приватна дружба'],
  ['💌','Пораки','messages','Приватни фрази и известувања, без јавен чет'],
  ['🎠','Игротека','playground','Анимирани игри, вештини и заработени надградби'],

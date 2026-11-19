@@ -28,6 +28,8 @@ internal class TrialumPush(
 ) {
     private var generation=0
     private var wantsPush=false
+    private fun text(macedonian: String, english: String): String =
+        TrialumNativeText.get(activity, macedonian, english)
     private fun event(kind: String, message: String) = dispatch(
         JSONObject().put("kind", kind).put("message", message)
     )
@@ -39,9 +41,9 @@ internal class TrialumPush(
         else -> "off"
     }
     fun enable() {
-        if (!configured(activity)) { event("unavailable", "FCM не е конфигуриран во ова APK."); return }
+        if (!configured(activity)) { event("unavailable", text("FCM не е конфигуриран во ова APK.", "FCM is not configured in this APK.")); return }
         if (SocialCredentialVault.read(activity).isEmpty()) {
-            event("error", "Прво создај социјален профил."); return
+            event("error", text("Прво создај социјален профил.", "Create a social profile first.")); return
         }
         if (Build.VERSION.SDK_INT >= 33 && activity.checkSelfPermission(
                 Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -50,7 +52,7 @@ internal class TrialumPush(
         }
         ensureNotificationChannel(activity)
         if (!notificationChannelEnabled(activity)) {
-            event("blocked","Каналот ТРИАЛУМ пријатели е исклучен во Android Settings.")
+            event("blocked",text("Каналот TRIALUM пријатели е исклучен во Android Settings.","The TRIALUM Friends notification channel is disabled in Android Settings."))
             return
         }
         begin()
@@ -60,14 +62,14 @@ internal class TrialumPush(
         if (grants.isNotEmpty() && grants.all { it == PackageManager.PERMISSION_GRANTED }) {
             ensureNotificationChannel(activity)
             if(notificationChannelEnabled(activity))begin()
-            else event("blocked","Каналот ТРИАЛУМ пријатели е исклучен во Android Settings.")
-        } else event("error", "Известувањата се исклучени. Пораките остануваат во играта.")
+            else event("blocked",text("Каналот TRIALUM пријатели е исклучен во Android Settings.","The TRIALUM Friends notification channel is disabled in Android Settings."))
+        } else event("error", text("Известувањата се исклучени. Пораките остануваат во играта.", "Notifications are off. Messages remain available in the game."))
     }
     private fun begin() {
         wantsPush=true
         val attempt=++generation
         try {
-            if (!prepare()) { wantsPush=false;event("unavailable", "FCM не е достапен."); return }
+            if (!prepare()) { wantsPush=false;event("unavailable", text("FCM не е достапен.", "FCM is unavailable.")); return }
             val messaging=FirebaseMessaging.getInstance()
             messaging.isAutoInitEnabled = true
             messaging.token.addOnSuccessListener { token ->
@@ -86,23 +88,23 @@ internal class TrialumPush(
                         if (ok) {
                             prefs(activity).edit().putBoolean(ENABLED,true).putBoolean(REVOKE,false)
                                 .putLong(LAST_SYNC,System.currentTimeMillis()).apply()
-                            event("enabled","Известувањата се вклучени.")
+                            event("enabled",text("Известувањата се вклучени.","Notifications are enabled."))
                         } else {
                             wantsPush=false
                             prefs(activity).edit().putBoolean(REVOKE,true).apply()
                             syncRevocation(activity.applicationContext)
                             messaging.isAutoInitEnabled = false
                             messaging.deleteToken()
-                            event("error","Не успеа регистрацијата. Пробај подоцна.")
+                            event("error",text("Не успеа регистрацијата. Пробај подоцна.","Registration failed. Try again later."))
                         }
                     }
                 }
             }.addOnFailureListener {
                 if(attempt==generation)wantsPush=false
                 messaging.isAutoInitEnabled = false
-                event("error","FCM не успеа да добие токен.")
+                event("error",text("FCM не успеа да добие токен.","FCM could not retrieve a token."))
             }
-        } catch (_: Exception) { event("error","FCM не е достапен на уредот.") }
+        } catch (_: Exception) { event("error",text("FCM не е достапен на уредот.","FCM is unavailable on this device.")) }
     }
     fun disable() {
         wantsPush=false
@@ -117,7 +119,7 @@ internal class TrialumPush(
             }
         } catch (_: Exception) {}
         syncRevocation(context)
-        event("disabled","Известувањата се исклучени. Пораките остануваат достапни.")
+        event("disabled",text("Известувањата се исклучени. Пораките остануваат достапни.","Notifications are off. Messages remain available."))
     }
     companion object {
         const val REQUEST_CODE=1567
@@ -128,7 +130,7 @@ internal class TrialumPush(
             if(Build.VERSION.SDK_INT>=26){
                 val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 manager.createNotificationChannel(NotificationChannel(
-                    CHANNEL,"ТРИАЛУМ пријатели",NotificationManager.IMPORTANCE_DEFAULT))
+                    CHANNEL,TrialumNativeText.get(c,"TRIALUM пријатели","TRIALUM Friends"),NotificationManager.IMPORTANCE_DEFAULT))
             }
         }
         // Deterministic, local-only system notification probe. No server, FCM,
@@ -150,8 +152,8 @@ internal class TrialumPush(
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 val n=NotificationCompat.Builder(c,CHANNEL)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setContentTitle("ТРИАЛУМ · Android тест")
-                    .setContentText("Пробно известување. Не е примена нова порака.")
+                    .setContentTitle(TrialumNativeText.get(c,"TRIALUM · Android тест","TRIALUM · Android test"))
+                    .setContentText(TrialumNativeText.get(c,"Пробно известување. Не е примена нова порака.","Test notification. No new message was received."))
                     .setContentIntent(pending)
                     .setAutoCancel(true)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -291,8 +293,8 @@ internal class TrialumPush(
             val n=NotificationCompat.Builder(c,channelId)
                 // A monochrome status-bar icon, unlike an adaptive launcher mipmap.
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("ТРИАЛУМ")
-                .setContentText("Имаш ново известување во играта.")
+                .setContentTitle("TRIALUM")
+                .setContentText(TrialumNativeText.get(c,"Имаш ново известување во играта.","You have a new in-game notification."))
                 .setContentIntent(pending)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)

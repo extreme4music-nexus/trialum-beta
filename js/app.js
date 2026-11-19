@@ -191,13 +191,14 @@ function render(){if(!s)return;Presence?.ensure(s);E.ensureResearch(s);W.setStat
  if(el('soundBtn'))el('soundBtn').textContent=s.settings.sound?'🔊 Звук: вклучен':'🔇 Звук: исклучен';if(el('musicBtn'))el('musicBtn').textContent=s.settings.music?'♫ Музика: вклучена':'♫ Музика: исклучена';if(el('volume'))el('volume').value=Math.round(s.settings.volume*100);
  const p=E.currentPet(s);if(p){const sp=E.SPECIES[p.species],h=s.habitats.find(x=>x.id===p.habitatId);
  const where=Presence?.get(s,p.id),away=where?.kind!==Presence?.HOME;
+ const reserveTotal=(globalThis.TrialumWarehouseInventory?.petView?.(s,E.foodRecipes,p.id)||[]).reduce((n,r)=>n+r.petReserve,0);
  const whereText=p.pendingRemoteReturn?.sessionId===where?.sessionId&&where?.kind===Presence?.SHARED?
    '⏳ Привремено прикажано дома · се чека серверска потврда':
    away?(where?.status==='pending'?'⏳ Се потврдува заминувањето':where?.kind===Presence?.LOCAL?'🎠 Во локалната игротека':where?.kind===Presence?.SHARED?'🌳 Во заедничката игротека':'🤝 На посета'):'🏠 Дома';el('careBadge').textContent=`${p.actionsLeft}/${E.petActionLimit(s)} акции`;el('petDetails').innerHTML=`<div class="pet-head"><div class="pet-avatar">${sp.icon}</div><div><h3>${safe(p.name)}</h3><p>${sp.name} · ${safe(h?.name||'')} · ${p.ageDays} дена · раст ${Math.round(p.growth)}%</p><p>🗣 <i>${safe(p.language)}…</i> · ${safe(p.mood)}</p><p>📍 ${whereText}</p></div></div>
  <div class="evo-panel"><div class="mini-row"><b>🧬 ${safe(E.evolutionProgress(p).epoch)} · Ниво ${E.evolutionProgress(p).level}</b><span class="pill">🧠 ${E.evolutionProgress(p).trained} учења</span></div>
  <p class="small subtle">${safe(E.evolutionProgress(p).description)} · ${E.evolutionProgress(p).limbs} екстремитети · ${E.evolutionProgress(p).feelers} сензори</p>
  ${fill(100*E.evolutionProgress(p).xp/E.evolutionProgress(p).next)}<p class="small subtle">XP ${E.evolutionProgress(p).xp}/${E.evolutionProgress(p).next} · наредно ниво најрано на возраст ${E.evolutionProgress(p).ageGate} дена · самостојно: ${safe(E.evolutionProgress(p).intent)}</p></div>
- ${meter('Ситост',p.satiety)}${meter('Радост',p.joy)}${meter('Енергија',p.energy)}${meter('Чистота',p.clean)}${meter('Блискост',p.bond)}<div class="btn-grid">${[['feed','🍽 Нахрани'],['play','🎾 Играј'],['wash','🫧 Измиј'],['rest','🌙 Одмори'],['talk','🗣 Разговарај']].map(([kind,title])=>btn(title,'petCare','','data-kind="'+kind+'"',(p.actionsLeft===0||away))).join('')}</div><button class="smallbtn" data-do="renamePet">✏️ Именувај</button>`;
+ ${meter('Ситост',p.satiety)}${meter('Радост',p.joy)}${meter('Енергија',p.energy)}${meter('Чистота',p.clean)}${meter('Блискост',p.bond)}<div class="btn-grid">${[['feed','🍽 Нахрани'],['play','🎾 Играј'],['wash','🫧 Измиј'],['rest','🌙 Одмори'],['talk','🗣 Разговарај']].map(([kind,title])=>btn(title,'petCare','','data-kind="'+kind+'"',(p.actionsLeft===0||away||(kind==='feed'&&reserveTotal<1)))).join('')}</div><button class="smallbtn" data-do="renamePet">✏️ Именувај</button>${globalThis.TrialumFoodHomeUI?.render?.(s,p,away,E)||''}`;
  }else{el('careBadge').textContent='0/4 акции';el('petDetails').innerHTML='<p class="subtle">Нема избрано суштество во овој биосвет. Создај прво милениче во лабораторијата.</p>'}
  const msgs=E.alerts(s);if(el('alertsCount'))el('alertsCount').textContent=msgs.length;if(el('alerts'))el('alerts').innerHTML=msgs.length?msgs.slice(0,7).map(a=>`<div class="alert ${a.level==='high'?'high':''}">⚠ ${safe(a.text)}</div>`).join(''):'<div class="allgood">✓ Во моментов нема критични потреби.</div>';
  renderTab();globalThis.TrialumI18n?.translateDOM?.(document.querySelector('.shell'));}
@@ -452,6 +453,20 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  case 'buildStep':result=E.buildStep(s);sound='build';break;
  case 'createPet':result=E.createPet(s,Number(button.dataset.species));sound='grow';break;
  case 'petCare':result=E.petCare(s,s.selectedPet,kind);sound=kind==='wash'?'wash':kind==='play'?'play':kind==='feed'?'feed':'select';break;
+ case 'petFoodSupply':case 'petFoodReturn':case 'petFeedPrepared':{
+  const pet=E.currentPet(s),id=button.dataset.id,recipe=button.dataset.recipe;
+  const location=Presence?.get(s,pet?.id);
+  if(!pet||pet.id!==id||location?.kind!==Presence?.HOME){result={ok:false,message:'Избери миленик што е дома.'};break;}
+  if(!E.foodRecipes.some(f=>f.id===recipe)){result={ok:false,message:'Рецептот не е достапен.'};break;}
+  if(action==='petFeedPrepared'){result=E.feedPrepared(s,pet.id,recipe);sound='feed';}
+  else{
+   const I=globalThis.TrialumWarehouseInventory,zone=action==='petFoodSupply'?button.dataset.zone:'rack';
+   result=I?.transferPet?.(s,E.foodRecipes,{op:action==='petFoodSupply'?'supply':'return',recipe,petId:pet.id,zone,amount:1},
+    (receiver,f)=>E.feedCompatible(E.SPECIES[receiver.species],f,receiver))||{ok:false,message:'Инвентарот не е достапен.'};
+   sound='select';
+  }
+  break;
+ }
  case 'selectPet':result=E.selectPet(s,button.dataset.id);sound='select';if(result.ok){const p=E.currentPet(s);A.speak(p)}break;
  case 'selectHabitat':selectHabitat(button.dataset.id);return;
  case 'habCare':result=E.habitatCare(s,kind);sound='wash';break;

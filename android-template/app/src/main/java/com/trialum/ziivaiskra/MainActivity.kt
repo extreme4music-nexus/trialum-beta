@@ -1,5 +1,8 @@
 package com.trialum.ziivaiskra
 
+    private fun nativeText(macedonian: String, english: String): String =
+        TrialumNativeText.get(this, macedonian, english)
+
 import android.Manifest
 import android.content.Intent
 import android.util.Base64
@@ -120,7 +123,7 @@ class MainActivity : Activity() {
     }
 
     private fun readBackupBounded(uri: android.net.Uri): String {
-        val input = contentResolver.openInputStream(uri) ?: error("Не можам да ја отворам датотеката.")
+        val input = contentResolver.openInputStream(uri) ?: error(nativeText("Не можам да ја отворам датотеката.", "Could not open the file."))
         input.use { source ->
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(32 * 1024)
@@ -129,7 +132,7 @@ class MainActivity : Activity() {
                 val count = source.read(buffer)
                 if (count < 0) break
                 length += count
-                if (length > maxBackupBytes) error("Бекапот е поголем од 20 MB.")
+                if (length > maxBackupBytes) error(nativeText("Бекапот е поголем од 20 MB.", "The backup file exceeds 20 MB."))
                 output.write(buffer, 0, count)
             }
             return String(output.toByteArray(), Charsets.UTF_8).removePrefix("\uFEFF")
@@ -154,7 +157,7 @@ class MainActivity : Activity() {
             if(requestCode == modelOpenRequest) pendingModelTier=null
             if(requestCode == crashReportSaveRequest) {
                 pendingCrashReport = null
-                crashReportNotice(false, "Извозот е откажан.")
+                crashReportNotice(false, nativeText("Извозот е откажан.", "Export canceled."))
             }
             return
         }
@@ -163,15 +166,15 @@ class MainActivity : Activity() {
             pendingCrashReport = null
             val uri = data?.data
             if (report == null || uri == null) {
-                crashReportNotice(false, "Не можам да ја зачувам JSON-датотеката.")
+                crashReportNotice(false, nativeText("Не можам да ја зачувам JSON-датотеката.", "Could not save the JSON file."))
                 return
             }
             try {
                 contentResolver.openOutputStream(uri)?.use { it.write(report.toByteArray(Charsets.UTF_8)) }
-                    ?: error("Не може да се отвори датотеката.")
-                crashReportNotice(true, "Краш-логот е извезен како JSON.")
+                    ?: error(nativeText("Не може да се отвори датотеката.", "Could not open the file."))
+                crashReportNotice(true, nativeText("Краш-логот е извезен како JSON.", "Crash log exported as JSON."))
             } catch (e: Exception) {
-                crashReportNotice(false, "Извозот не успеа: " + (e.message ?: "грешка"))
+                crashReportNotice(false, nativeText("Извозот не успеа: ", "Export failed: ") + (e.message ?: nativeText("грешка", "error")))
             }
             return
         }
@@ -208,18 +211,18 @@ class MainActivity : Activity() {
                 pendingBackupId = null
                 pendingBackupEncrypted = false
                 if (archiveId == null) {
-                    backupNotice(false,"Нема проверена внатрешна копија за извоз.","write")
+                    backupNotice(false,nativeText("Нема проверена внатрешна копија за извоз.","No verified internal copy is available to export."),"write")
                 } else {
                     backupWorker.execute {
                         try {
                             val bytes = if (encrypted) backupVault.loadEncrypted(archiveId) else backupVault.load(archiveId)
                             val title = backupVault.exportToFolder(uri, bytes, name)
                             runOnUiThread { backupNotice(true,
-                                "Проверен JSON бекап: " + title + " (нова датотека).","saved") }
+                                nativeText("Проверен JSON бекап: ","Verified JSON backup: ") + title + nativeText(" (нова датотека)."," (new file)."),"saved") }
                         } catch (e: Exception) {
                             runOnUiThread { backupNotice(false,
-                                "Надворешниот извоз не успеа; внатрешната спасувачка копија останува. " +
-                                    (e.message ?: "грешка"),"write") }
+                                nativeText("Надворешниот извоз не успеа; внатрешната спасувачка копија останува. ","External export failed; the internal recovery copy is still available. ") +
+                                    (e.message ?: nativeText("грешка","error")),"write") }
                         }
                     }
                 }
@@ -239,7 +242,7 @@ class MainActivity : Activity() {
                         null
                     )
                 } catch (e: Exception) {
-                    backupNotice(false,"Неуспешно читање на бекапот: " + (e.message ?: "непозната грешка"),"read")
+                    backupNotice(false,nativeText("Неуспешно читање на бекапот: ","Could not read the backup: ") + (e.message ?: nativeText("непозната грешка","unknown error")),"read")
                 }
             }
         }
@@ -339,10 +342,10 @@ class MainActivity : Activity() {
             override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 if (result == null) return false
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("ТРИАЛУМ")
+                    .setTitle("TRIALUM")
                     .setMessage(message ?: "")
-                    .setPositiveButton(android.R.string.ok) { _, _ -> result.confirm() }
-                    .setNegativeButton(android.R.string.cancel) { _, _ -> result.cancel() }
+                    .setPositiveButton(nativeText("Во ред", "OK")) { _, _ -> result.confirm() }
+                    .setNegativeButton(nativeText("Откажи", "Cancel")) { _, _ -> result.cancel() }
                     .setOnCancelListener { result.cancel() }
                     .show()
                 return true
@@ -358,11 +361,11 @@ class MainActivity : Activity() {
                     setSelection(text.length)
                 }
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("ТРИАЛУМ")
+                    .setTitle("TRIALUM")
                     .setMessage(message ?: "")
                     .setView(input)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> result.confirm(input.text.toString()) }
-                    .setNegativeButton(android.R.string.cancel) { _, _ -> result.cancel() }
+                    .setPositiveButton(nativeText("Во ред", "OK")) { _, _ -> result.confirm(input.text.toString()) }
+                    .setNegativeButton(nativeText("Откажи", "Cancel")) { _, _ -> result.cancel() }
                     .setOnCancelListener { result.cancel() }
                     .show()
                 return true
@@ -408,7 +411,7 @@ class MainActivity : Activity() {
                     startActivityForResult(picker, crashReportSaveRequest)
                 } catch (e: Exception) {
                     pendingCrashReport = null
-                    crashReportNotice(false, "Не можам да подготвам извештај: " + (e.message ?: "грешка"))
+                    crashReportNotice(false, nativeText("Не можам да подготвам извештај: ", "Could not prepare the report: ") + (e.message ?: nativeText("грешка", "error")))
                 }
             }
         }
@@ -578,7 +581,7 @@ class MainActivity : Activity() {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, text)
                 }
-                try { startActivity(Intent.createChooser(send, "Испрати ТРИАЛУМ покана")) }
+                    try { startActivity(Intent.createChooser(send, nativeText("Испрати ТРИАЛУМ покана", "Send a Trialum invitation"))) }
                 catch (_: Exception) {}
             }
         }
@@ -591,7 +594,7 @@ class MainActivity : Activity() {
         @JavascriptInterface fun saveBackup(json: String, fileName: String) {
             val bytes = json.toByteArray(Charsets.UTF_8)
             if (bytes.size > maxBackupBytes || bytes.size < 100) {
-                runOnUiThread { backupNotice(false, "Бекапот е празен или е поголем од 20 MB.", "tooLarge") }
+                runOnUiThread { backupNotice(false, nativeText("Бекапот е празен или е поголем од 20 MB.", "The backup file is empty or exceeds 20 MB."), "tooLarge") }
                 return
             }
             backupWorker.execute {
@@ -601,13 +604,13 @@ class MainActivity : Activity() {
                         try {
                             val savedAt = backupVault.exportToDownloads(bytes, fileName)
                             runOnUiThread {
-                                backupNotice(true,"Бекапот е запишан и прочитан назад: " + savedAt, "saved")
+                                backupNotice(true,nativeText("Бекапот е запишан и прочитан назад: ","Backup saved and verified: ") + savedAt, "saved")
                             }
                         } catch (e: Exception) {
                             runOnUiThread {
-                                backupNotice(false, "Надворешниот извоз не успеа; спасувачката копија " +
-                                    archiveId + " е зачувана во апликацијата. " +
-                                    (e.message ?: "грешка"), "write")
+                                backupNotice(false, nativeText("Надворешниот извоз не успеа; спасувачката копија ","External export failed; recovery copy ") +
+                                    archiveId + nativeText(" е зачувана во апликацијата. "," is saved in the app. ") +
+                                    (e.message ?: nativeText("грешка","error")), "write")
                             }
                         }
                     } else {
@@ -621,15 +624,15 @@ class MainActivity : Activity() {
                             try { startActivityForResult(picker, backupSaveRequest) }
                             catch (e: Exception) {
                                 pendingBackupId = null
-                                backupNotice(false, "Не може да се отвори избор на папка. " +
-                                    (e.message ?: "грешка"), "pickerSave")
+                                backupNotice(false, nativeText("Не може да се отвори избор на папка. ","Could not open the folder picker. ") +
+                                    (e.message ?: nativeText("грешка","error")), "pickerSave")
                             }
                         }
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        backupNotice(false, "Бекапот НЕ е направен: " +
-                            (e.message ?: "нема простор или е невалиден свет"), "write")
+                        backupNotice(false, nativeText("Бекапот НЕ е направен: ","Backup was NOT created: ") +
+                            (e.message ?: nativeText("нема простор или е невалиден свет","not enough storage or the world is invalid")), "write")
                     }
                 }
             }
@@ -724,8 +727,8 @@ class MainActivity : Activity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        backupNotice(false, "Не можам да ги прочитам спасувачките копии: " +
-                            (e.message ?: "грешка"), "read")
+                        backupNotice(false, nativeText("Не можам да ги прочитам спасувачките копии: ","Could not read recovery copies: ") +
+                            (e.message ?: nativeText("грешка","error")), "read")
                     }
                 }
             }
@@ -743,8 +746,8 @@ class MainActivity : Activity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        backupNotice(false, "Спасувачката копија не помина проверка: " +
-                            (e.message ?: "грешка"), "read")
+                        backupNotice(false, nativeText("Спасувачката копија не помина проверка: ","Recovery copy did not pass validation: ") +
+                            (e.message ?: nativeText("грешка","error")), "read")
                     }
                 }
             }
@@ -759,7 +762,7 @@ class MainActivity : Activity() {
                 }
                 try { startActivityForResult(intent, backupOpenRequest) }
                 catch (e: Exception) {
-                    backupNotice(false,"Не можам да го отворам изборот за враќање: " + (e.message ?: "грешка"),"pickerRestore")
+                    backupNotice(false,nativeText("Не можам да го отворам изборот за враќање: ","Could not open the restore picker: ") + (e.message ?: nativeText("грешка","error")),"pickerRestore")
                 }
             }
         }
@@ -780,7 +783,10 @@ class MainActivity : Activity() {
         @JavascriptInterface fun updateState(json: String) {
             // Do not let web content write arbitrary files or invoke system actions.
             if (json.length > 1_000_000) return
-            getSharedPreferences("trialum", MODE_PRIVATE).edit().putString("snapshot", json).apply()
+            val language = try { JSONObject(json).optString("language", "en") } catch (_: Exception) { "en" }
+            getSharedPreferences("trialum", MODE_PRIVATE).edit()
+                .putString("uiLanguage", if (language == "mk") "mk" else "en")
+                .putString("snapshot", json).apply()
         }
         @JavascriptInterface fun shareImage(dataUrl: String, title: String) {
             val bytes = readPng(dataUrl) ?: return
@@ -796,7 +802,7 @@ class MainActivity : Activity() {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 runOnUiThread {
-                    try { startActivity(Intent.createChooser(share, "Сподели ТРИАЛУМ")) }
+                    try { startActivity(Intent.createChooser(share, nativeText("Сподели ТРИАЛУМ", "Share Trialum"))) }
                     catch (_: Exception) { }
                 }
             } catch (_: Exception) { }
@@ -858,10 +864,10 @@ class MainActivity : Activity() {
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = mimeType
                             putExtra(Intent.EXTRA_STREAM, uri)
-                            putExtra(Intent.EXTRA_TEXT, "TRIALUM — Жива искра")
+                            putExtra(Intent.EXTRA_TEXT, nativeText("TRIALUM — Жива искра", "TRIALUM — Living Spark"))
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        try { startActivity(Intent.createChooser(intent, "Сподели ТРИАЛУМ")) }
+                        try { startActivity(Intent.createChooser(intent, nativeText("Сподели ТРИАЛУМ", "Share Trialum"))) }
                         catch (_: Exception) { }
                     }
                     val feedback = JSONObject().put("ok", true).put("name", name)
@@ -871,7 +877,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 val feedback = JSONObject().put("ok", false)
-                    .put("message", (e.message ?: "Неуспешно зачувување").take(180))
+                    .put("message", (e.message ?: nativeText("Неуспешно зачувување", "Save failed")).take(180))
                 runOnUiThread {
                     web.evaluateJavascript("window.TrialumMediaSaved && window.TrialumMediaSaved("+
                         feedback.toString()+");", null)
