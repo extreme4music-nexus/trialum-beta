@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.github.jk1.dependency-license-report")
 }
 android {
     namespace = "com.trialum.ziivaiskra"
@@ -261,7 +262,6 @@ android {
  * Reports the exact v41 internalBeta Android runtime dependency graph.
  * This reporting plugin is build-only and is not added to the APK.
  */
-plugins.apply("com.github.jk1.dependency-license-report")
 licenseReport {
     outputDir = layout.buildDirectory.dir("reports/licenses").get().asFile
     configurations = arrayOf("internalBetaRuntimeClasspath")
