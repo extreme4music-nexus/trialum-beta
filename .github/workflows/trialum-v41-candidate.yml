@@ -1,9 +1,9 @@
-name: Trialum v41 / 1.2 candidate
+name: Trialum v42 / 1.2 Wi-Fi availability fix
 
 on:
   push:
     branches:
-      - release/lwc-v41-1.2-classic-food-warehouse-20261119
+      - release/lwc-v42-wifi-availability-fix-20261119
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -119,17 +119,18 @@ jobs:
         run: |
           set -euo pipefail
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
-          apk=$(find android-template/app/build/outputs/apk/qa41 -name '*.apk' -print -quit)
+          apk=$(find android-template/app/build/outputs/apk/qa42 -name '*.apk' -print -quit)
           aab=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
           test -s "$apk" && test -s "$aab"
           badge=$("$AAPT" dump badging "$apk")
-          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa41'"
-          printf '%s\n' "$badge" | grep -Fq "versionCode='41'"
-          printf '%s\n' "$badge" | grep -Fq "versionName='1.2-qa41'"
+          printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa42'"
+          printf '%s\n' "$badge" | grep -Fq "versionCode='42'"
+          printf '%s\n' "$badge" | grep -Fq "versionName='1.2-qa42'"
+          printf '%s\n' "$badge" | grep -Fq "uses-feature-not-required: name='android.hardware.wifi'"
           unzip -t "$aab" >/dev/null
           mkdir -p candidates
-          cp "$apk" candidates/trialum-v41-qa41-UNSIGNED.apk
-          cp "$aab" candidates/trialum-v41-internal-beta-UNSIGNED.aab
+          cp "$apk" candidates/trialum-v42-qa42-UNSIGNED.apk
+          cp "$aab" candidates/trialum-v42-internal-beta-UNSIGNED.aab
           mapping=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
           symbols=android-template/app/build/outputs/native-debug-symbols/internalBeta/native-debug-symbols.zip
           test -s "$mapping"
@@ -147,11 +148,11 @@ jobs:
           EOF
             native_status="not generated: prebuilt dependency debug metadata unavailable; see play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt"
           fi
-          sha256sum candidates/trialum-v41-internal-beta-UNSIGNED.aab candidates/play-diagnostics/mapping.txt > candidates/play-diagnostics/SHA256SUMS
+          sha256sum candidates/trialum-v42-internal-beta-UNSIGNED.aab candidates/play-diagnostics/mapping.txt > candidates/play-diagnostics/SHA256SUMS
           {
             echo "source_commit=$GITHUB_SHA"
             echo "package=com.trialum.ziivaiskra"
-            echo "version_code=41"
+            echo "version_code=42"
             echo "version_name=1.2"
             echo "candidate=internalBeta"
             echo "aab_signing=unsigned; owner must sign locally after QA"
@@ -165,37 +166,37 @@ jobs:
           set -euo pipefail
           set +x
           signer_dir=$(mktemp -d)
-          signer_file="$signer_dir/trialum-v41-qa41.p12"
+          signer_file="$signer_dir/trialum-v42-qa42.p12"
           password=$(openssl rand -hex 24)
           echo "::add-mask::$password"
           keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$signer_file" \
-            -storepass "$password" -keypass "$password" -alias trialum-v41-qa41 \
-            -keyalg RSA -keysize 2048 -validity 30 -dname "CN=Trialum v41 Isolated QA"
+            -storepass "$password" -keypass "$password" -alias trialum-v42-qa42 \
+            -keyalg RSA -keysize 2048 -validity 30 -dname "CN=Trialum v42 Isolated QA"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
-          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias trialum-v41-qa41 \
+          "$APKSIGNER" sign --ks "$signer_file" --ks-key-alias trialum-v42-qa42 \
             --ks-pass "pass:$password" --key-pass "pass:$password" \
-            --out candidates/trialum-v41-qa41-random-signed.apk candidates/trialum-v41-qa41-UNSIGNED.apk
-          "$APKSIGNER" verify --verbose --print-certs candidates/trialum-v41-qa41-random-signed.apk | tee candidates/qa41-signature.txt
-          sha256sum candidates/trialum-v41-qa41-random-signed.apk > candidates/qa41-SHA256SUMS
+            --out candidates/trialum-v42-qa42-random-signed.apk candidates/trialum-v42-qa42-UNSIGNED.apk
+          "$APKSIGNER" verify --verbose --print-certs candidates/trialum-v42-qa42-random-signed.apk | tee candidates/qa42-signature.txt
+          sha256sum candidates/trialum-v42-qa42-random-signed.apk > candidates/qa42-SHA256SUMS
           rm -f "$signer_file"
           rmdir "$signer_dir"
-          rm -f candidates/trialum-v41-qa41-UNSIGNED.apk
+          rm -f candidates/trialum-v42-qa42-UNSIGNED.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Trialum-v41-random-signed-phone-QA
+          name: Trialum-v42-random-signed-phone-QA
           path: |
-            candidates/trialum-v41-qa41-random-signed.apk
-            candidates/qa41-signature.txt
-            candidates/qa41-SHA256SUMS
+            candidates/trialum-v42-qa42-random-signed.apk
+            candidates/qa42-signature.txt
+            candidates/qa42-SHA256SUMS
           if-no-files-found: error
           retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Trialum-v41-internal-beta-unsigned-AAB-and-diagnostics
+          name: Trialum-v42-internal-beta-unsigned-AAB-and-diagnostics
           path: |
-            candidates/trialum-v41-internal-beta-UNSIGNED.aab
+            candidates/trialum-v42-internal-beta-UNSIGNED.aab
             candidates/play-diagnostics/**
             candidates/BUILD-INFO.txt
           if-no-files-found: error
