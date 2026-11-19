@@ -9,7 +9,7 @@ internal class LicensesBridge(private val context: Context) {
     @JavascriptInterface
     fun getNotices(): String = try {
         val root = "licenses/"
-        val notice = readAsset(root + "THIRD-PARTY-NOTICES.txt")
+        val notice = readAsset(root + "llama-android-0.1.1/THIRD-PARTY-NOTICES.txt")
         val llamaLicense = readAsset(root + "llama-android-0.1.1/LICENSE")
         val modelLicenses = readAsset(root + "MODEL-LICENSES.md")
         val report = JSONObject(readAsset(root + "ANDROID-DEPENDENCY-LICENSES.json"))
