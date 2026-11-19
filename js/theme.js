@@ -3,7 +3,7 @@
 'use strict';
 const STORAGE='trialum_theme_preference';
 const allowed=['system','dark','light'];
-let mode='system';
+let mode='dark';
 try{const stored=root.localStorage?.getItem(STORAGE);if(allowed.includes(stored))mode=stored;}catch(_){}
 const media=root.matchMedia?.('(prefers-color-scheme: dark)');
 const system=()=>media?.matches?'dark':'light';
@@ -33,5 +33,5 @@ root.document?.addEventListener?.('visibilitychange',()=>{if(!root.document.hidd
 root.addEventListener?.('pageshow',apply);
 root.addEventListener?.('focus',apply);
 apply();
-root.TrialumTheme={set,apply,mode:()=>mode,effective:()=>mode==='system'?system():mode,options:allowed.slice()};
+root.TrialumTheme={set,apply,mode:()=>mode,hasExplicitPreference:()=>{try{return root.localStorage?.getItem(STORAGE)!==null}catch(_){return false}},effective:()=>mode==='system'?system():mode,options:allowed.slice()};
 })(typeof globalThis!=='undefined'?globalThis:this);
