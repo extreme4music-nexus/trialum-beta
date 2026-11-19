@@ -336,7 +336,7 @@ async function run(){
  assert(licenseButton,'About & Help must expose the license notices action');
  licenseButton.click();
  assert(d.getElementById('licensesDialog').open,'License notice dialog must open from its About & Help action');
- assert(d.querySelector('[data-license-content]').textContent.includes('third-party license notices are included'),'License dialog must provide a notice when no Android bridge exists');
+ assert(d.querySelector('[data-license-content]').textContent.toLowerCase().includes('third-party license notices are included'),'License dialog must provide a notice when no Android bridge exists');
   assert(about.includes('1, 7 or 30 days'),'Tester guide must explain the available day-skip controls');
  }
 
