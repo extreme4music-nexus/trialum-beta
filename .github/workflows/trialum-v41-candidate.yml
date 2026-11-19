@@ -133,11 +133,21 @@ jobs:
           mapping=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
           symbols=android-template/app/build/outputs/native-debug-symbols/internalBeta/native-debug-symbols.zip
           test -s "$mapping"
-          test -s "$symbols"
           mkdir -p candidates/play-diagnostics
           cp "$mapping" candidates/play-diagnostics/mapping.txt
-          cp "$symbols" candidates/play-diagnostics/native-debug-symbols.zip
-          sha256sum candidates/trialum-v41-internal-beta-UNSIGNED.aab candidates/play-diagnostics/* > candidates/play-diagnostics/SHA256SUMS
+          if [ -s "$symbols" ]; then
+            cp "$symbols" candidates/play-diagnostics/native-debug-symbols.zip
+            native_status="play-diagnostics/native-debug-symbols.zip (FULL)"
+          else
+            cat > candidates/play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt <<'EOF'
+          Android Gradle Plugin did not produce a native-debug-symbols.zip for this build, even with ndk.debugSymbolLevel=FULL on internalBeta.
+          The app includes prebuilt native libraries from dependencies. Debug metadata is commonly stripped before those libraries are published.
+          Obtain matching unstripped symbols from the dependency publisher or rebuild the native dependency with symbols before submitting symbols to Play Console.
+          No placeholder or fabricated symbol archive was created.
+          EOF
+            native_status="not generated: prebuilt dependency debug metadata unavailable; see play-diagnostics/NATIVE-SYMBOLS-BLOCKER.txt"
+          fi
+          sha256sum candidates/trialum-v41-internal-beta-UNSIGNED.aab candidates/play-diagnostics/mapping.txt > candidates/play-diagnostics/SHA256SUMS
           {
             echo "source_commit=$GITHUB_SHA"
             echo "package=com.trialum.ziivaiskra"
@@ -146,7 +156,7 @@ jobs:
             echo "candidate=internalBeta"
             echo "aab_signing=unsigned; owner must sign locally after QA"
             echo "r8_mapping=play-diagnostics/mapping.txt"
-            echo "native_symbols=play-diagnostics/native-debug-symbols.zip (FULL)"
+            echo "native_symbols=$native_status"
           } > candidates/BUILD-INFO.txt
 
       - name: Sign only the isolated QA APK with an ephemeral runner key
