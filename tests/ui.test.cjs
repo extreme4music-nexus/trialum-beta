@@ -21,7 +21,7 @@ function create(){
  w.TrialumAndroid={betaTesterToolsEnabled:()=>true,ageSignalsAdultEligible:()=>true,
   socialApiUrl:()=>'',socialCredential:()=>'',pushStatus:()=> 'unavailable'};
  for(const file of scripts.slice(0,-1))w.eval(fs.readFileSync(path.join(ROOT,file),'utf8'));
- w.localStorage.setItem('trialum.terms.accepted.v39',JSON.stringify({version:39,acceptedAt:'2026-11-18T00:00:00.000Z'}));
+ w.localStorage.setItem('trialum.terms.accepted.v40',JSON.stringify({version:40,acceptedAt:'2026-11-19T00:00:00.000Z'}));
  const E=w.TrialumEngine;
  const world=E.newGame('real');world.settings.language='mk'; // Existing MK assertions remain deterministic; locale auto mode is tested separately.
  world.stage=7;world.lastDay=400;world.createdAt=Date.now()-399*E.DAY_MS;
