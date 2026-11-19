@@ -7,7 +7,8 @@
 - Private source of truth: `extreme4music-nexus/Trialum`, LW-C branch `feature/lw-c-contextual-turntaking-session-20261113`.
 - Snapshot source commit recorded for this beta: `04457df48b9c012f8667504b935a7ca501d13f07`.
 - Public beta candidate: `extreme4music-nexus/trialum-beta`, Draft PR #2, branch `release/lw-c-1.6-LW-dev.12`.
-- Product identity: **Trialum**, first edition **Living World**, Beta `1.0`. Owner uploaded versionCode `37`; the owner-requested next internal-test candidate is versionCode `39` / versionName `1.1`.
+- Product identity: **Trialum**, first edition **Living World**, Beta `1.0`. Owner uploaded versionCode `37`; v39 / versionName `1.1` was the preceding candidate. This translation-only Play update retains versionName `1.1` and uses the next required Android versionCode `40`. The separate v40 feature work is not included.
+- Localization ledger: all 861 v39 catalog keys and 1,035 dynamic word mappings are present for each of the 17 supported languages; the 13 first-run consent labels are localized, and the User Agreement has locale-specific copies. The translations were machine-generated and need native-language/legal review.
 - Android package IDs remain `com.trialum.ziivaiskra`, `com.trialum.ziivaiskra.signqa`, and `com.trialum.ziivaiskra.signdebug`.
 - LW-D is a separate development track. No LW-D source or commits belong in this beta snapshot.
 - GitHub Actions builds APK candidates. The official package remains unsigned in CI and uses the owner's local Release signer. The isolated one-time `.pgstest` diagnosis package may use a runner-ephemeral signer with its own PGS OAuth credential. The owner's persistent signing keys remain local. Do not publish an app release to Play or mark owner QA passed without device testing.
