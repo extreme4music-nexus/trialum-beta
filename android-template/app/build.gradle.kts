@@ -263,7 +263,7 @@ android {
  * This reporting plugin is build-only and is not added to the APK.
  */
 licenseReport {
-    outputDir = layout.buildDirectory.dir("reports/licenses").get().asFile
+    outputDir = layout.buildDirectory.dir("reports/licenses").get().asFile.absolutePath
     configurations = arrayOf("internalBetaRuntimeClasspath")
     renderers = arrayOf<com.github.jk1.license.render.ReportRenderer>(
         com.github.jk1.license.render.JsonReportRenderer("licenses.json", false),
