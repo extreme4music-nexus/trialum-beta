@@ -34,7 +34,7 @@ async function main(){
    const api=context.TrialumI18n;
    assert.equal(await api.change('auto'),'es');
    assert.equal(api.preference(),'auto');
-   assert.equal(api.t('Поставки'),'Ajustes');
+   assert.equal(api.t('Поставки'),'Configuración');
    assert.equal(api.t('Се согласувам за локален AI'),'Allow local AI');
    assert.equal(await api.change('en'),'en');
    assert.equal(api.t('Напредна интелигенција на Мнемос'),'Mnemos advanced intelligence');
