@@ -276,7 +276,7 @@ function help(){
  const link=en?'Email Trialum support':'Испрати е-пошта до поддршката';
  return '<div class="tab-main"><h2>ℹ️ '+(en?'About & Help':'За играта и помош')+'</h2><p class="desc">'+(en?'A quick guide to the beta, gameplay and optional online features.':'Краток водич за бетата, играњето и опционалните онлајн функции.')+'</p>'+cards+
  '<section class="card"><h3>'+(en?'User Agreement':'Услови за користење')+'</h3><p>'+(en?'Review the complete version 39 agreement shown at first launch.':'Прегледај го целосниот User Agreement за верзија 39, прикажан при првото отворање.')+'</p><button data-do="legalViewTerms">'+(en?'Open full User Agreement':'Отвори го целиот User Agreement')+'</button></section>'+
- '<section class="card"><h3>'+contact+'</h3><p>'+note+'</p><a href="mailto:toniadrenalin@gmail.com?subject=Trialum%20Beta%20Feedback">'+link+' · toniadrenalin@gmail.com</a></section></div>';
+ '<section class="card"><h3>'+contact+'</h3><p>'+note+'</p><a href="mailto:toniadrenalin@gmail.com?subject=Trialum%20Beta%20Feedback">'+link+' · toniadrenalin@gmail.com</a></section>' +'<section class="card"><h3>'+(en?'Licenses & Notices':'Лиценци и известувања')+'</h3><p>'+(en?'Read the third-party software notices included with this app. Optional model downloads have separate license terms.':'Прочитај ги известувањата за софтвер од трети страни што се вклучени во апликацијата. Преземливите модели имаат посебни услови.')+'</p><button data-do="showLicenses">'+(en?'Open offline license notices':'Отвори офлајн лиценци')+'</button></section></div>';
 }
 function more(){
  const en=root.TrialumI18n?.language?.()==='en';

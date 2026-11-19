@@ -17,7 +17,7 @@ function create(){
  w.HTMLCanvasElement.prototype.getContext=()=>ctx;
  w.requestAnimationFrame=()=>0;
  w.fetch=async url=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(path.join(ROOT,String(url)),'utf8'))});
- w.alert=noop;w.confirm=()=>true;w.prompt=()=>null;
+ w.alert=noop;w.confirm=()=>true;w.prompt=()=>null;w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.TrialumAndroid={betaTesterToolsEnabled:()=>true,ageSignalsAdultEligible:()=>true,
   socialApiUrl:()=>'',socialCredential:()=>'',pushStatus:()=> 'unavailable'};
  for(const file of scripts.slice(0,-1))w.eval(fs.readFileSync(path.join(ROOT,file),'utf8'));
@@ -331,6 +331,12 @@ async function run(){
   assert(about.includes('About the developer'),'About & Help must identify the developer in English');
   assert(about.includes('Tutorial'),'About & Help must explain the replayable tutorial in English');
   assert(about.includes('Beta tester tools'),'Internal beta must include a dedicated tester guide in About & Help');
+ assert(about.includes('Licenses & Notices'),'About & Help must include offline third-party license access');
+ const licenseButton=d.querySelector('[data-do="showLicenses"]');
+ assert(licenseButton,'About & Help must expose the license notices action');
+ licenseButton.click();
+ assert(d.getElementById('licensesDialog').open,'License notice dialog must open from its About & Help action');
+ assert(d.querySelector('[data-license-content]').textContent.toLowerCase().includes('third-party license notices are included'),'License dialog must provide a notice when no Android bridge exists');
   assert(about.includes('1, 7 or 30 days'),'Tester guide must explain the available day-skip controls');
  }
 
