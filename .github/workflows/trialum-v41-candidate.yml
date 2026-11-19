@@ -126,6 +126,7 @@ jobs:
           printf '%s\n' "$badge" | grep -Fq "package: name='com.trialum.ziivaiskra.qa42'"
           printf '%s\n' "$badge" | grep -Fq "versionCode='42'"
           printf '%s\n' "$badge" | grep -Fq "versionName='1.2-qa42'"
+          # Confirm the built manifest keeps Wi-Fi optional for devices without that hardware.
           printf '%s\n' "$badge" | grep -Fq "uses-feature-not-required: name='android.hardware.wifi'"
           unzip -t "$aab" >/dev/null
           mkdir -p candidates
