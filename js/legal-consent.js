@@ -34,8 +34,20 @@ async function showTerms(readOnly=false){
   overlay.append(card);document.body.append(overlay);
  });
 }
+function showPrivacyPolicy(){
+ return new Promise(resolve=>{
+  const overlay=element('div','legal-overlay');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','privacyPolicyTitle');
+  const card=element('section','legal-card');
+  card.append(element('p','microcap','TRIALUM · PRIVACY'));
+  const title=element('h2','',tr('Политика за приватност'));title.id='privacyPolicyTitle';card.append(title);
+  card.append(element('p','',tr('Оваа копија е вградена во апликацијата и може да се прочита офлајн.')));
+  const iframe=element('iframe','legal-document');iframe.title=tr('Политика за приватност на Trialum');iframe.src='assets/privacy-policy.html';card.append(iframe);
+  const row=element('div','btn-line');const close=element('button','primary',tr('Затвори'));close.addEventListener('click',()=>{overlay.remove();resolve(true);});row.append(close);card.append(row);
+  overlay.append(card);document.body.append(overlay);
+ });
+}
 function requireTerms(){return showTerms(false);}
-root.TrialumLegal={requireTerms,openTerms:()=>showTerms(true),termsAccepted:accepted,socialAccepted,
+root.TrialumLegal={requireTerms,openTerms:()=>showTerms(true),openPrivacyPolicy:showPrivacyPolicy,termsAccepted:accepted,socialAccepted,
  grantSocialConsent(){return save(SOCIAL_KEY,'accepted');},
  revokeSocialConsent(){try{localStorage.removeItem(SOCIAL_KEY);return true;}catch(_){return false;}}
 };
