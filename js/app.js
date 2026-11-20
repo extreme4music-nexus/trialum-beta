@@ -301,6 +301,8 @@ function doAction(button){if(restoring)return;const action=button.dataset.do,kin
  if(action==='socialConsentLater'){chooseTab('lab');toast('Социјалните услуги остануваат исклучени. Офлајн играта е достапна.');return;}
  if(action==='socialConsentDisable'){if(confirm('Да ги исклучам социјалните услуги на овој уред? Нема повеќе да се поврзува преку овој уред. Серверскиот профил нема да се избрише; избриши го посебно во Пријатели ако го сакаш тоа.'))Social?.setSocialConsent?.(false).then(ok=>{if(ok){chooseTab('friends');toast('Социјалните услуги се исклучени на овој уред.');}else toast('Не успеав да ја зачувам промената на уредот.');});return;}
  if(action==='legalViewTerms'){globalThis.TrialumLegal?.openTerms?.();return;}
+ if(action==='legalViewPrivacy'){globalThis.TrialumLegal?.openPrivacyPolicy?.();return;}
+ if(action==='legalDeleteAccount'){globalThis.TrialumAndroid?.openDeleteAccount?.();return;}
  if(action==='showLicenses'){const dlg=el('licensesDialog'),pre=dlg?.querySelector('[data-license-content]');if(dlg&&pre){let notices='';try{notices=globalThis.TrialumLicenses?.getNotices?.()||'';}catch(_){}pre.textContent=notices||'Third-party license notices are included with the app. Optional model license and source information is available in the Trialum repository documentation.';dlg.showModal();}return;}
  if(action==='betaNotify'){const result=globalThis.TrialumAndroid?.pushTestLocalNotification?.()||'unavailable';toast(result==='scheduled'?'Пробното известување е закажано.':('Известувањето: '+result));return;}
  if(action==='betaPgsRefresh'){globalThis.TrialumAndroid?.pgsRefresh?.();toast('Барањето за освежување на Play Games е испратено.');return;}
