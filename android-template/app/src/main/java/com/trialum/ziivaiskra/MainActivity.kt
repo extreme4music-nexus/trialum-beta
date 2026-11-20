@@ -4,6 +4,7 @@ package com.trialum.ziivaiskra
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.util.Base64
 import org.json.JSONObject
 import androidx.core.content.FileProvider
@@ -423,12 +424,20 @@ private fun nativeText(macedonian: String, english: String): String =
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? =
                 request?.url?.let { loader.shouldInterceptRequest(it) }
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // This WebView has a privileged Android bridge. Allow top-level
-                // navigation ONLY within the APK's asset-loader HTTPS prefix:
-                // a host match alone is not a safe origin/path check.
+                // The JS bridge is privileged: keep app navigation on bundled assets.
+                // Only the two published Trialum legal pages may leave this WebView.
                 val uri = request?.url ?: return true
                 val local = uri.scheme == "https" && uri.host == host &&
                     uri.port == -1 && (uri.path ?: "").startsWith("/assets/web/")
+                val legalPage = uri.scheme == "https" && uri.host == "dedopero.servegame.com" &&
+                    uri.port == -1 && uri.userInfo == null && uri.query == null && uri.fragment == null &&
+                    uri.path in setOf("/privacy-policy", "/delete-account")
+                val supportEmail = uri.scheme == "mailto" && uri.schemeSpecificPart.startsWith("toniadrenalin@gmail.com")
+                val supportPhone = uri.scheme == "tel" && uri.schemeSpecificPart == "+38978371741"
+                if (legalPage || supportEmail || supportPhone) {
+                    openExternalLegalUri(uri)
+                    return true
+                }
                 return !local
             }
         }
@@ -447,7 +456,22 @@ private fun nativeText(macedonian: String, english: String): String =
         if (::nearby.isInitialized) nearby.onPermissionsResult(requestCode, grantResults)
         if (::push.isInitialized) push.permissionResult(requestCode, grantResults)
     }
+    private fun openExternalLegalUri(uri: Uri) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: Exception) {
+            Toast.makeText(this, nativeText("Не можам да ја отворам страницата.", "Could not open the page."), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun openDeleteAccountPage() {
+        openExternalLegalUri(Uri.parse("https://dedopero.servegame.com/delete-account"))
+    }
+
     inner class Bridge {
+        @JavascriptInterface fun openDeleteAccount() {
+            runOnUiThread { openDeleteAccountPage() }
+        }
         @JavascriptInterface fun exportCrashLog() {
             runOnUiThread {
                 try {
