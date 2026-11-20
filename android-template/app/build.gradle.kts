@@ -13,7 +13,7 @@ android {
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
-        versionCode = 41
+        versionCode = 42
         versionName = "1.2"
         // No social server configured in public/debug APKs until HTTPS endpoint is deployed.
         // Never accept http://, LAN IPs or historical DDNS as the release endpoint.
