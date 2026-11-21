@@ -121,6 +121,7 @@ function createPet(s,speciesIndex){if(s.stage<6)return fail('Прво отклу
  const minLoad=sp.weight;if(occupancy(s,h.id)+minLoad>h.capacity)return fail('Нема простор во живеалиштето. Изгради ново или префрли миленик.');
  s.biomass-=22;s.compounds-=8;const number=s.pets.length+1;
  const p={id:id(s,'pet'),species:speciesIndex,name:sp.name+' '+number,habitatId:h.id,hue:(sp.hue+Math.round((rng(s)-.5)*36)+360)%360,seed:Math.floor(rng(s)*100000),eyes:sp.eyes,shape:sp.shape,birthDay:s.lastDay,ageDays:0,growth:2,satiety:80,joy:70,energy:78,clean:86,bond:10,actionsLeft:PET_ACTIONS,mood:'Љубопитно',language:['у-ру','квип','лим','проо','буру'][Math.floor(rng(s)*5)]};
+ globalThis.TrialumCognitiveMemory?.record(p,'birth',{day:s.lastDay,location:h.id});
  s.pets.push(p);s.selectedPet=p.id;log(s,`🐾 Создаден нов непостоечки вид: ${p.name}, во ${h.name}.`,'milestone');return ok('Се појави '+p.name+'! Допрете го во аквариумот.');}
 function selectPet(s,id){const p=s.pets.find(x=>x.id===id);if(!p)return fail('Нема таков миленик.');s.selectedPet=id;s.activeHabitat=p.habitatId;return ok('Избрано: '+p.name)}
 function petCare(s,id,type){const p=s.pets.find(x=>x.id===id);if(!p)return fail('Прво одбери миленик.');if(p.actionsLeft<=0)return fail(`${p.name} ги искористи своите 4 дневни акции.`);
@@ -130,6 +131,7 @@ function petCare(s,id,type){const p=s.pets.find(x=>x.id===id);if(!p)return fail(
  else if(type==='rest'){p.energy=clamp(p.energy+30,0,100);p.joy=clamp(p.joy+3,0,100)}
  else if(type==='talk'){p.bond=clamp(p.bond+12,0,100);p.joy=clamp(p.joy+6,0,100)}
  else return fail('Непозната грижа.');
+ globalThis.TrialumCognitiveMemory?.record(p,type,{day:s.lastDay,location:p.habitatId,food:type==='feed'?'biomass':null});
  p.actionsLeft--;log(s,`💞 ${p.name}: ${ {feed:'нахрането',play:'игра',wash:'чистење',rest:'одмор',talk:'разговор на измислен јазик'}[type]}. Преостанати акции: ${p.actionsLeft}.`,'care');return ok(`${p.name}: ${p.actionsLeft} лични акции останаа.`)}
 function transfer(s,petId,targetHabId){const p=s.pets.find(x=>x.id===petId),h=s.habitats.find(x=>x.id===targetHabId);if(!p||!h)return fail('Одбери миленик и завршено живеалиште.');if(p.habitatId===h.id)return fail('Веќе е во тоа живеалиште.');if(occupancy(s,h.id)+loadOf(p)>h.capacity)return fail('Нема доволно простор за неговата сегашна големина.');p.habitatId=h.id;s.activeHabitat=h.id;s.selectedPet=p.id;log(s,`🚚 ${p.name} е префрлено во ${h.name}.`,'care');return ok('Миленикот е безбедно преселен.');}
 function habitatCare(s,kind){const h=currentHabitat(s);if(!h)return fail('Одбери живеалиште.');if(h.dayActions<1)return fail('Нема дневни акции за ова живеалиште.');
