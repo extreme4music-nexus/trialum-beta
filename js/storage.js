@@ -16,6 +16,7 @@ function portableSnapshot(state){
  let copy;try{copy=JSON.parse(JSON.stringify(state));}catch(_){return null;}
  for(const pet of Array.isArray(copy?.pets)?copy.pets:[]){
   if(!pet||typeof pet!=='object')continue;
+  delete pet.cognitiveMemory;
   delete pet.chatHistory;
   delete pet.playgroundAiMemories;
   delete pet.playgroundAiBackgroundSeen;
