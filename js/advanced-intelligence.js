@@ -152,10 +152,19 @@ function handle(action,button,s,ctx){
   if(localChat.busy()){ctx.toast(tr('AI веќе размислува. Пробај по одговорот.','AI is already thinking. Try after the reply.'));return true;}
   if(status(m.tier)!=='installed'||!root.TrialumAndroid?.askPetAdvanced){ctx.toast(tr('Прво преземи го моделот.','Download the model first.'));return true}
   const history=Array.isArray(p.chatHistory)?p.chatHistory.slice(-6):[];
-  const context=JSON.stringify({language:root.TrialumI18n?.language?.()||'mk',species:'Mnemos',
+  const data={language:root.TrialumI18n?.language?.()||'mk',species:'Mnemos',
    traits:persona(p),emotion:mood(p).id,memories:m.memories,
    playground_memory:root.TrialumPlaygroundMemory?.recall?.(p,prompt)||null,
-   history:history.map(x=>({role:x.role,text:String(x.text||'').slice(0,190)}))}).slice(0,2200);
+   history:history.map(x=>({role:x.role,text:String(x.text||'').slice(0,190)}))};
+  const C=root.TrialumCognitiveMemory;
+  if(C){const map=C.worldMap(p,s),mem=C.ensure(p);data.cognitive={self:map.self,topics:Object.entries(mem.owner.topics).sort((a,b)=>b[1].lastAt-a[1].lastAt).slice(0,4).map(x=>x[0]),peers:Object.values(mem.social.peers).sort((a,b)=>b.lastAt-a.lastAt).slice(0,3).map(x=>({name:x.name,lastAt:x.lastAt,affinity:x.affinity})),world:{phases:map.phases,species:map.species}};}
+  while(JSON.stringify(data).length>2200&&data.history.length)data.history.shift();
+  while(JSON.stringify(data).length>2200&&data.memories.length)data.memories=data.memories.slice(1);
+  if(JSON.stringify(data).length>2200&&data.cognitive)delete data.cognitive.world;
+  if(JSON.stringify(data).length>2200&&data.cognitive)delete data.cognitive.peers;
+  if(JSON.stringify(data).length>2200)delete data.playground_memory;
+  const context=JSON.stringify(data);
+  if(context.length>2200){ctx.toast(tr('Контекстот е преголем.','Context is too large.'));return true;}
   if(!localChat.begin(p.id)){ctx.toast(tr('AI веќе размислува.','AI is already thinking.'));return true;}
   p.chatHistory=Array.isArray(p.chatHistory)?p.chatHistory:[];
   p.chatHistory.push({role:'user',text:prompt});p.chatHistory=p.chatHistory.slice(-12);
