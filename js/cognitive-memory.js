@@ -14,7 +14,7 @@ function record(p,kind,{day=null,at=Date.now(),food=null,location=null}={}){
  if(!kinds.has(kind)||!Number.isFinite(at))throw Error('invalid cognitive event');
  const m=ensure(p),s=m.self,key=String(Number.isFinite(day)?day:'unknown');
  const event={kind,at,day:Number.isFinite(day)?day:null,food:typeof food==='string'?food.slice(0,160):null,location:typeof location==='string'?location.slice(0,160):null};
- if(event.location)visit(p,event.location,at);
+ if(event.location&&['birth','transfer','encounter'].includes(kind))visit(p,event.location,at);
  const bucket=Object.hasOwn(s.days,key)?s.days[key]:(s.days[key]={counts:dict()});
  bucket.counts[kind]=(bucket.counts[kind]||0)+1;
  s.counts[kind]=(s.counts[kind]||0)+1;
@@ -34,5 +34,6 @@ function suggestion(p,now=Date.now()){const peers=Object.values(ensure(p).social
 function worldMap(p,s){const m=ensure(p);m.world??={visited:dict()};const e=root.TrialumEngine||{};return {self:awareness(p),phases:e.PHASES||[],species:(e.SPECIES||[]).map(x=>x.name),plants:(e.PLANTS||[]).map(x=>x.name),biomes:(e.BIOMES||[]).map(x=>x.name),locations:(s?.habitats||[]).map(x=>({id:x.id,name:x.name})),pets:(s?.pets||[]).map(x=>({id:x.id,name:x.name,species:x.species})),visited:m.world.visited};}
 function associate(p,ids,at=Date.now()){const m=ensure(p);const unique=[...new Set(ids)].sort();for(let i=0;i<unique.length;i++)for(let j=i+1;j<unique.length;j++){const key=safeKey(unique[i]+'|'+unique[j]);const edge=Object.hasOwn(m.associations,key)?m.associations[key]:{weight:0,lastAt:at};edge.weight++;edge.lastAt=Math.max(at,edge.lastAt);m.associations[key]=edge;}}
 function visit(p,location,at=Date.now()){const m=ensure(p);m.world??={visited:dict()};const key=safeKey(location);const v=Object.hasOwn(m.world.visited,key)?m.world.visited[key]:{count:0,firstAt:at,lastAt:at};v.count++;v.firstAt=Math.min(v.firstAt,at);v.lastAt=Math.max(v.lastAt,at);m.world.visited[key]=v;return v;}
-const api={VERSION,ensure,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+function recall(p,prompt,{privateScope=false}={}){const m=ensure(p),ids=themes(prompt),related=new Set(ids);for(const [key,edge] of Object.entries(m.associations).sort((a,b)=>b[1].weight-a[1].weight)){const labels=key.split('|');if(labels.some(x=>ids.includes(x)))labels.forEach(x=>related.add(x));}const topics=privateScope?Object.entries(m.owner.topics).sort((a,b)=>Number(related.has(b[0]))-Number(related.has(a[0]))||b[1].lastAt-a[1].lastAt).slice(0,5).map(([label,v])=>({label,count:v.count,lastAt:v.lastAt})):[];return {self:awareness(p),topics,peers:Object.entries(m.social.peers).sort((a,b)=>b[1].lastAt-a[1].lastAt).slice(0,3).map(([id,v])=>({id,name:v.name,lastAt:v.lastAt,activities:v.activities||{},topics:v.topics||{}})),locations:Object.entries(m.world?.visited||{}).sort((a,b)=>b[1].lastAt-a[1].lastAt).slice(0,3)};}
+const api={recall,VERSION,ensure,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
