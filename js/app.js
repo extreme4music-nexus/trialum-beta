@@ -547,7 +547,8 @@ async function importBackupState(backup,{confirmed=false,preservePrivate=true}={
    const localPets=new Map((s.pets||[]).map(p=>[p.id,p]));
    for(const pet of candidate.pets||[]){
     const prior=localPets.get(pet.id);if(!prior)continue;
-    if(!Array.isArray(pet.chatHistory)&&Array.isArray(prior.chatHistory))pet.chatHistory=JSON.parse(JSON.stringify(prior.chatHistory));
+    if(!pet.cognitiveMemory&&prior.cognitiveMemory)pet.cognitiveMemory=JSON.parse(JSON.stringify(prior.cognitiveMemory));
+     if(!Array.isArray(pet.chatHistory)&&Array.isArray(prior.chatHistory))pet.chatHistory=JSON.parse(JSON.stringify(prior.chatHistory));
     if(prior.mind&&typeof prior.mind==='object'){
      pet.mind=pet.mind&&typeof pet.mind==='object'?pet.mind:{};
      if(!Array.isArray(pet.mind.memories)&&Array.isArray(prior.mind.memories))pet.mind.memories=JSON.parse(JSON.stringify(prior.mind.memories));
