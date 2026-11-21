@@ -14,6 +14,7 @@ function record(p,kind,{day=null,at=Date.now(),food=null,location=null}={}){
  if(!kinds.has(kind)||!Number.isFinite(at))throw Error('invalid cognitive event');
  const m=ensure(p),s=m.self,key=String(Number.isFinite(day)?day:'unknown');
  const event={kind,at,day:Number.isFinite(day)?day:null,food:typeof food==='string'?food.slice(0,160):null,location:typeof location==='string'?location.slice(0,160):null};
+ if(event.location)visit(p,event.location,at);
  const bucket=Object.hasOwn(s.days,key)?s.days[key]:(s.days[key]={counts:dict()});
  bucket.counts[kind]=(bucket.counts[kind]||0)+1;
  s.counts[kind]=(s.counts[kind]||0)+1;
@@ -27,9 +28,11 @@ function awareness(p){const m=ensure(p);return {petId:p.id,name:p.name,ageDays:p
 // Controlled semantic labels: never retain another player's literal speech.
 const taxonomy={music:/music|song|guitar|музик|песн|гитар/iu,food:/food|hungry|eat|хран|глад|јад/iu,friendship:/friend|together|другар|пријател|заедно/iu,nature:/garden|plant|flower|градин|растен|цвет/iu,science:/science|research|laboratory|наук|истраж|лаборатор/iu,evolution:/evolut|level|еволуц|ниво/iu,play:/play|game|игр/iu,slide:/slide|лизгал/iu,swimming:/swim|pool|плива|базен/iu,jump:/jump|trampoline|скок|трамбол/iu,rest:/sleep|rest|спие|одмор/iu,emotion:/happy|sad|радос|таж/iu,space:/space|star|planet|вселен|ѕвезд|планет/iu,construction:/build|habitat|градб|живеалиш/iu};
 function themes(...texts){const input=texts.filter(x=>typeof x==='string').map(x=>x.slice(0,2000)).join(' ');return Object.entries(taxonomy).filter(([,re])=>re.test(input)).map(([id])=>id);}
-function summarize(p,user,reply,at=Date.now()){const ids=themes(user,reply);for(const id of ids)topic(p,id,at);return {topics:ids,kind:'topic-summary',at};}
+function summarize(p,user,reply,at=Date.now()){const ids=themes(user,reply);for(const id of ids)topic(p,id,at);associate(p,ids,at);return {topics:ids,kind:'topic-summary',at};}
 function socialMoment(p,peer,{at=Date.now(),location=null,heard='',said='',activity=null}={}){if(!peer||typeof peer.id!=='string'||!peer.id)return null;const r=encounter(p,peer,{at,location});if(!r)return null;r.topics??=dict();r.activities??=dict();for(const id of themes(heard,said))r.topics[id]=(r.topics[id]||0)+1;if(activity&&['play','slide','swimming','jump','talk'].includes(activity))r.activities[activity]=(r.activities[activity]||0)+1;r.affinity=Math.min(100,Math.round(100*(1-Math.exp(-r.count/12))));return r;}
 function suggestion(p,now=Date.now()){const peers=Object.values(ensure(p).social.peers);return peers.filter(r=>r.count>=3&&r.name&&now-r.lastAt>=86400000).sort((a,b)=>b.affinity-a.affinity||a.lastAt-b.lastAt)[0]||null;}
 function worldMap(p,s){const m=ensure(p);m.world??={visited:dict()};const e=root.TrialumEngine||{};return {self:awareness(p),phases:e.PHASES||[],species:(e.SPECIES||[]).map(x=>x.name),plants:(e.PLANTS||[]).map(x=>x.name),biomes:(e.BIOMES||[]).map(x=>x.name),locations:(s?.habitats||[]).map(x=>({id:x.id,name:x.name})),pets:(s?.pets||[]).map(x=>({id:x.id,name:x.name,species:x.species})),visited:m.world.visited};}
-const api={VERSION,ensure,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+function associate(p,ids,at=Date.now()){const m=ensure(p);const unique=[...new Set(ids)].sort();for(let i=0;i<unique.length;i++)for(let j=i+1;j<unique.length;j++){const key=safeKey(unique[i]+'|'+unique[j]);const edge=Object.hasOwn(m.associations,key)?m.associations[key]:{weight:0,lastAt:at};edge.weight++;edge.lastAt=Math.max(at,edge.lastAt);m.associations[key]=edge;}}
+function visit(p,location,at=Date.now()){const m=ensure(p);m.world??={visited:dict()};const key=safeKey(location);const v=Object.hasOwn(m.world.visited,key)?m.world.visited[key]:{count:0,firstAt:at,lastAt:at};v.count++;v.firstAt=Math.min(v.firstAt,at);v.lastAt=Math.max(v.lastAt,at);m.world.visited[key]=v;return v;}
+const api={VERSION,ensure,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
