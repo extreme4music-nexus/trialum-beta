@@ -42,7 +42,7 @@ function importBackground(s){
 }
 
 const Memory=()=>root.TrialumPlaygroundMemory;
-function storeMemory(p,data){if(data.peerId)root.TrialumCognitiveMemory?.socialMoment(p,{id:data.peerId,name:data.companion},{location:data.place,heard:data.heard,said:data.said,activity:'talk'});if(Memory()?.remember?.(p,data))saveMemory();}
+function storeMemory(p,data){if(data.peerId&&data.direct===true)root.TrialumCognitiveMemory?.socialMoment(p,{id:data.peerId,name:data.companion},{location:data.place,heard:data.heard,said:data.said,activity:'talk'});if(Memory()?.remember?.(p,data))saveMemory();}
 const lastAttempt=Object.create(null),lastSimulation=Object.create(null);
 function gate(s,p){
  const species=Number(p?.species),evolved=Number.isInteger(species)&&species>=4&&!!E()?.SPECIES?.[species];
@@ -445,7 +445,7 @@ function onModelEvent(event){
    if(job.replyToTurnId)Sessions()?.answered('shared',job.roomId,job.replyToTurnId);
    Sessions()?.start('shared',job.roomId);
    counted('shared',p,'ai');
-   storeMemory(p,{place:'shared',companion:job.companion,peerId:job.peerId,heard:job.heard,said:text});
+   storeMemory(p,{place:'shared',companion:job.companion,peerId:job.peerId,direct:!!job.replyToTurnId,heard:job.heard,said:text});
   }
   root.TrialumSharedScene?.refreshCaption?.(st.snapshot);
  }else{
@@ -458,7 +458,7 @@ function onModelEvent(event){
   if(job.replyToTurnId)Sessions()?.answered('playground',localSessionKey,job.replyToTurnId);
   Sessions()?.start('playground',localSessionKey);
   counted('playground',p,'ai');
-  storeMemory(p,{place:'local',companion:job.companion,peerId:job.peerId,heard:job.heard,said:text});
+  storeMemory(p,{place:'local',companion:job.companion,peerId:job.peerId,direct:!!job.replyToTurnId,heard:job.heard,said:text});
   root.TrialumPlayground?.refreshProgress?.(s);
  }
  return true;
