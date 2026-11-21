@@ -214,7 +214,7 @@ function render(){if(!s)return;Presence?.ensure(s);E.ensureResearch(s);W.setStat
  <div class="evo-panel"><div class="mini-row"><b>🧬 ${safe(E.evolutionProgress(p).epoch)} · Ниво ${E.evolutionProgress(p).level}</b><span class="pill">🧠 ${E.evolutionProgress(p).trained} учења</span></div>
  <p class="small subtle">${safe(E.evolutionProgress(p).description)} · ${E.evolutionProgress(p).limbs} екстремитети · ${E.evolutionProgress(p).feelers} сензори</p>
  ${fill(100*E.evolutionProgress(p).xp/E.evolutionProgress(p).next)}<p class="small subtle">XP ${E.evolutionProgress(p).xp}/${E.evolutionProgress(p).next} · наредно ниво најрано на возраст ${E.evolutionProgress(p).ageGate} дена · самостојно: ${safe(E.evolutionProgress(p).intent)}</p></div>
- ${meter('Ситост',p.satiety)}${meter('Радост',p.joy)}${meter('Енергија',p.energy)}${meter('Чистота',p.clean)}${meter('Блискост',p.bond)}<div class="btn-grid">${[['feed','🍽 Нахрани'],['play','🎾 Играј'],['wash','🫧 Измиј'],['rest','🌙 Одмори'],['talk','🗣 Разговарај']].map(([kind,title])=>btn(title,'petCare','','data-kind="'+kind+'"',(p.actionsLeft===0||away||(kind==='feed'&&reserveTotal<1)))).join('')}</div><button class="smallbtn" data-do="renamePet">✏️ Именувај</button>${globalThis.TrialumFoodHomeUI?.render?.(s,p,away,E)||''}`;
+ ${(()=>{const friend=globalThis.TrialumCognitiveMemory?.suggestion(p);return friend?'<p class="small subtle">💬 '+safe(en()?'I would like to play with '+friend.name+' again.':'Би сакал повторно да си играм со '+friend.name+'.')+'</p>':'';})()}${meter('Ситост',p.satiety)}${meter('Радост',p.joy)}${meter('Енергија',p.energy)}${meter('Чистота',p.clean)}${meter('Блискост',p.bond)}<div class="btn-grid">${[['feed','🍽 Нахрани'],['play','🎾 Играј'],['wash','🫧 Измиј'],['rest','🌙 Одмори'],['talk','🗣 Разговарај']].map(([kind,title])=>btn(title,'petCare','','data-kind="'+kind+'"',(p.actionsLeft===0||away||(kind==='feed'&&reserveTotal<1)))).join('')}</div><button class="smallbtn" data-do="renamePet">✏️ Именувај</button>${globalThis.TrialumFoodHomeUI?.render?.(s,p,away,E)||''}`;
  }else{el('careBadge').textContent='0/4 акции';el('petDetails').innerHTML='<p class="subtle">Нема избрано суштество во овој биосвет. Создај прво милениче во лабораторијата.</p>'}
  const msgs=E.alerts(s);if(el('alertsCount'))el('alertsCount').textContent=msgs.length;if(el('alerts'))el('alerts').innerHTML=msgs.length?msgs.slice(0,7).map(a=>`<div class="alert ${a.level==='high'?'high':''}">⚠ ${safe(a.text)}</div>`).join(''):'<div class="allgood">✓ Во моментов нема критични потреби.</div>';
  renderTab();globalThis.TrialumI18n?.translateDOM?.(document.querySelector('.shell'));}
@@ -589,6 +589,8 @@ globalThis.TrialumLLMEvent=(event)=>{
     globalThis.TrialumLocalChat?.finish?.(event.petId);
    const p=s.pets.find(x=>x.id===event.petId);if(!p)return;
    p.chatHistory=Array.isArray(p.chatHistory)?p.chatHistory:[];
+   const previousUser=p.chatHistory.slice().reverse().find(x=>x.role==='user');
+   if(previousUser&&text)globalThis.TrialumCognitiveMemory?.summarize(p,previousUser.text,text);
    p.chatHistory.push({role:'pet',text:text||'...'});
    p.chatHistory=p.chatHistory.slice(-12);if(kind==='advancedReply')M?.onReply(s,p,text);scheduleSave();if(tab==='pets')renderTab();toast('🧠 '+p.name+' одговори локално.');
  }else if(kind==='error'){
