@@ -42,7 +42,7 @@ function importBackground(s){
 }
 
 const Memory=()=>root.TrialumPlaygroundMemory;
-function storeMemory(p,data){if(Memory()?.remember?.(p,data))saveMemory();}
+function storeMemory(p,data){if(data.peerId)root.TrialumCognitiveMemory?.socialMoment(p,{id:data.peerId,name:data.companion},{location:data.place,heard:data.heard,said:data.said,activity:'talk'});if(Memory()?.remember?.(p,data))saveMemory();}
 const lastAttempt=Object.create(null),lastSimulation=Object.create(null);
 function gate(s,p){
  const species=Number(p?.species),evolved=Number.isInteger(species)&&species>=4&&!!E()?.SPECIES?.[species];
@@ -279,7 +279,7 @@ function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
  if(context.length>1450)throw Error('bounded_playground_context_exceeded');
  pending={petId:p.id,petName:String(p.name||'Милениче'),scope,roomId,sessionId,at:now,
   heard:String(meta.heard||'').slice(0,130),companion:String(meta.companion||'').slice(0,32),
-  replyToTurnId:String(meta.replyToTurnId||'')};
+  peerId:meta.peerId,replyToTurnId:String(meta.replyToTurnId||'')};
  try{
   root.TrialumAndroid.askPlaygroundAi(p.id,p.name,String(prompt).slice(0,320),context);
   return true;
@@ -313,7 +313,7 @@ function tick(s,tab){
     '". Continue this EXISTING conversation in one short sentence. Do not invent a new subject.';
    const scripted=shouldInject(tab,p);
    const success=scripted?injectScripted(s,p,tab,{...input,turnId:input.id},''):
-    attempt(s,p,tab,prompt,'','',{heard:input.text,companion:input.speaker,
+    attempt(s,p,tab,prompt,'','',{heard:input.text,companion:input.speaker,peerId:input.petId,
      replyToTurnId:input.id});
    if(success&&scripted)memory?.answered('playground',localSessionKey,input.id);
    return;
@@ -367,7 +367,7 @@ function tick(s,tab){
    const scripted=shouldInject(tab,p);
    const success=scripted?injectScripted(s,p,tab,{...input,turnId:input.id},room):
     attempt(s,p,tab,prompt,room,loc.sessionId,{heard:input.text,
-     companion:input.speaker,replyToTurnId:input.id});
+     companion:input.speaker,peerId:input.petId,replyToTurnId:input.id});
    if(success&&scripted)memory?.answered('shared',room,input.id);
    return;
   }
@@ -413,7 +413,7 @@ function onPeerSpeech(message){
   if(enabled(world,p,'shared')&&loc?.kind===Presence()?.SHARED&&
    loc.status==='active'&&loc.ref===state.selected&&
    state.presences?.some(x=>x.petId===p.id&&x.sessionId===loc.sessionId))
-   storeMemory(p,{place:'shared',companion:speaker,heard:modelText});
+   storeMemory(p,{place:'shared',companion:speaker,peerId:message.petId,heard:modelText});
  }
  root.TrialumSharedScene?.refreshCaption?.(state.snapshot);
  return true;
@@ -445,7 +445,7 @@ function onModelEvent(event){
    if(job.replyToTurnId)Sessions()?.answered('shared',job.roomId,job.replyToTurnId);
    Sessions()?.start('shared',job.roomId);
    counted('shared',p,'ai');
-   storeMemory(p,{place:'shared',companion:job.companion,heard:job.heard,said:text});
+   storeMemory(p,{place:'shared',companion:job.companion,peerId:job.peerId,heard:job.heard,said:text});
   }
   root.TrialumSharedScene?.refreshCaption?.(st.snapshot);
  }else{
@@ -458,7 +458,7 @@ function onModelEvent(event){
   if(job.replyToTurnId)Sessions()?.answered('playground',localSessionKey,job.replyToTurnId);
   Sessions()?.start('playground',localSessionKey);
   counted('playground',p,'ai');
-  storeMemory(p,{place:'local',companion:job.companion,heard:job.heard,said:text});
+  storeMemory(p,{place:'local',companion:job.companion,peerId:job.peerId,heard:job.heard,said:text});
   root.TrialumPlayground?.refreshProgress?.(s);
  }
  return true;
