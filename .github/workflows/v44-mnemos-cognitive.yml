@@ -1,0 +1,17 @@
+name: V44 Mnemos cognitive integration
+on:
+  push:
+    branches: [fix/v44-mnemos-cognitive-integration]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mnemos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check js/mnemos-context.js && node --check js/advanced-intelligence.js && node --check js/cognitive-memory.js
+      - run: node --test tests/mnemos-context.test.cjs tests/cognitive-memory.test.cjs
