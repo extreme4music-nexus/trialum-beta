@@ -533,11 +533,11 @@ private fun nativeText(macedonian: String, english: String): String =
         @JavascriptInterface fun nearbyStop() { runOnUiThread { nearby.stop() } }
         @JavascriptInterface fun socialApiUrl(): String = getString(R.string.trialum_social_api_url)
         @JavascriptInterface fun requestAgeSignals() {
-            if (!BuildConfig.BETA_TESTER_TOOLS) return
+            // Adult eligibility is distinct from tester/debug tools. User-triggered only.
             runOnUiThread { ageSignals.request(this@MainActivity) }
         }
         @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
-            BuildConfig.BETA_TESTER_TOOLS && ageSignals.isAdultEligible()
+            ageSignals.isAdultEligible()
         @JavascriptInterface fun qaSocialAgeBypass(): Boolean =
             BuildConfig.BETA_TESTER_TOOLS && BuildConfig.QA_SOCIAL_AGE_BYPASS
         @JavascriptInterface fun betaTesterToolsEnabled(): Boolean = BuildConfig.BETA_TESTER_TOOLS
