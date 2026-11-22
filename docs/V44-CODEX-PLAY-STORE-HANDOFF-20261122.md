@@ -41,7 +41,7 @@ Trialum 1.4 v44: Interactive HUD, instant action refills, and day-skip passes wi
 Trialum 1.4 v44: интерактивен HUD, дополнување акции и купони за прескокнување денови со вистински последици. Нов офлајн водич на македонски/англиски со контекстуална помош. Секое милениче добива асистент и без AI; подобрена доживотна меморија и локални модели. Подобрени храна, флора, игротека, преводи, батерија, бекап и приватност. Социјалните функции се изборни и со услов за полнолетност.
 
 ## GOOGLE PLAY — English short description (max 80)
-Evolve a living world, care for pets and plants, and explore science and habitats.
+Evolve a living world, care for pets, grow plants and explore habitats.
 
 ## GOOGLE PLAY — Macedonian short description (max 80)
 Создај жив свет, негувај миленичиња и растенија и истражувај екосистеми.
