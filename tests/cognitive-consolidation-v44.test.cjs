@@ -99,3 +99,34 @@ test('event payload compression retains milestones, lifetime counters and old re
  assert.equal(C.ensure(restored).self.counts.feed,1800);
 });
 function DAY(){return 86400000;}
+
+test('native daily to monthly to yearly archival is replay-safe and remains lifelong',()=>{
+ const p={id:'native-archive'},now=noon(2026,11,22),streamId='31ed2e76-25b6-4aba-acdb-6169530f4a28';
+ const base={petId:p.id,streamId,revision:1,
+  entries:[{day:'2026-11-22',place:'shared',topics:['music'],companions:['Moon'],moments:3}]};
+ assert(P.ingestBackground(p,base,now));
+ assert.equal(X.context(p).days['2026-11-22|shared'].moments,3);
+ const monthly={...base,revision:2,
+  months:[{month:'2026-11',place:'shared',topics:['music'],companions:['Moon'],moments:3}]};
+ assert(P.ingestBackground(p,monthly,now));
+ assert.equal(X.context(p).nativeStreams[streamId].months['2026-11'],3);
+ const more={...monthly,revision:3,entries:[],
+  months:[{...monthly.months[0],moments:5}]};
+ assert(P.ingestBackground(p,more,now));
+ assert.equal(X.context(p).months['2026-11|shared'].moments,2);
+ const old={...more,revision:4,months:[],years:[
+  {year:'2026',place:'shared',topics:['music'],companions:['Moon'],moments:5},
+  {year:'2017',place:'shared',topics:['stars'],companions:['Comet'],moments:20}
+ ]};
+ assert(P.ingestBackground(p,old,now));
+ assert.equal(X.context(p).years['2017|shared'].moments,20);
+ assert.equal(X.context(p).nativeStreams[streamId].years['2026'],5);
+ const copy=JSON.parse(JSON.stringify(p));
+ assert.equal(P.ingestBackground(copy,old,now),false);
+ X.consolidate(copy,{now:noon(2037,11,22),force:true});
+ assert.equal(X.context(copy).years['2026|shared'].moments,5);
+ assert.equal(X.recall(copy,'2017',noon(2037,11,22)).records[0].moments,20);
+ const malformed={...old,revision:5,months:[{month:'2026-00',moments:2}]};
+ assert.equal(P.ingestBackground(copy,malformed,now),false);
+ assert.equal(X.context(copy).years['2017|shared'].moments,20);
+});
