@@ -34,6 +34,9 @@ jobs:
           node --check js/playground-ai.js
           node --check js/shared-playground-art.js
           node --check js/shared-scene.js
+          node --check js/social.js
+          node --check js/messages.js
+          node --check js/shared-playground.js
           node --check js/ai-context.js
           node --check js/engine.js
           node --check js/longplay.js
@@ -46,6 +49,7 @@ jobs:
           node --check tests/v44-locked-billing.test.cjs
           node --check tests/v44-ai-lifecycle.test.cjs
           node --check tests/v44-shared-visual.test.cjs
+          node --check tests/v44-friends-age-signals.test.cjs
       - name: New engine and UI action purchase regressions
         run: |
           node tests/v44-action-economy.test.cjs
@@ -56,6 +60,7 @@ jobs:
           node tests/v44-locked-billing.test.cjs
           node tests/v44-ai-lifecycle.test.cjs
           node tests/v44-shared-visual.test.cjs
+          node --test tests/v44-friends-age-signals.test.cjs tests/social-ui.test.cjs tests/messages-client.test.cjs
           node --test tests/shared-client.test.cjs
           node --test tests/playground-ai.test.cjs
           # Existing suites are rerun only where the pet-chat and AI-context files changed.
