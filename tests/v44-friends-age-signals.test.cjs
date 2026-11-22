@@ -100,14 +100,16 @@ test('Friends, messages and playground have no beta allowlist hard gate',()=>{
   assert(s.includes('isSocialProfileActive')||s.includes('ageSignalsAdultEligible'),file);
  }
 });
-test('Android uses current Age Signals 0.0.6 and strict C/D adult sources',()=>{
+test('Android uses current Age Signals 0.0.6 and shared 18+ A/C/D sources',()=>{
  const gradle=source('android-template/app/build.gradle.kts');
  const age=source('android-template/app/src/main/java/com/trialum/ziivaiskra/TrialumAgeSignals.kt');
  const activity=source('android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt');
  assert(gradle.includes('com.google.android.play:age-signals:0.0.6'));
  assert(age.includes('AgeSignalsStatus.SHARED'));
  assert(age.includes('AgeRangeSource.TIER_C')&&age.includes('AgeRangeSource.TIER_D'));
- assert(!age.includes('result.ageRangeSource() == AgeRangeSource.TIER_A'));
+ assert(age.includes('result.ageRangeSource() == AgeRangeSource.TIER_A'));
+ assert(!age.includes('result.ageRangeSource() == AgeRangeSource.TIER_B'));
+ assert(age.includes('TIER_A is the normal opt-in age-range signal'));
  assert(age.includes('ageLower >= 18 && ageUpper == null'));
  assert(age.includes('deliver(JSONObject().put("status", status).put("adultEligible", eligible))'));
  const bridge=activity.split('@JavascriptInterface fun requestAgeSignals()')[1].split('@JavascriptInterface fun qaSocialAgeBypass()')[0];
