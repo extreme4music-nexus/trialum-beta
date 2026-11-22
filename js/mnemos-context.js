@@ -9,14 +9,18 @@ function assemble(p,s,prompt,{language='mk',traits={},emotion='curious',history=
   memoryScope:'private',history:[],cognitive:null,memories:[]};
  if(C){
   const r=C.recall(p,prompt,{privateScope:true});
-  base.cognitive={self:r.self,topics:r.topics,peers:r.peers,locations:r.locations};
+  const old=root.TrialumCognitiveContext?.recall?.(p,prompt,Date.now(),{publicScope:false});
+  base.cognitive={self:r.self,topics:r.topics,peers:r.peers,locations:r.locations,
+   playground:old?.found?{requested:old.requested,records:old.records.slice(0,2)}:null};
  }
  const entries=Array.isArray(history)?history.slice(-6):[];
  const notes=Array.isArray(legacy)?legacy.slice(-4):[];
  const fits=()=>JSON.stringify(base).length<=MAX;
  // Retain authoritative state first; trim optional context without cutting JSON.
  if(!fits()&&base.cognitive){
-  base.cognitive.peers=[];base.cognitive.locations=[];base.cognitive.topics=[];
+  base.cognitive.peers=[];base.cognitive.locations=[];
+  if(!fits())base.cognitive.topics=[];
+  if(!fits())base.cognitive.playground=null;
  }
  if(!fits()&&base.cognitive){
   const self=base.cognitive.self||{};
