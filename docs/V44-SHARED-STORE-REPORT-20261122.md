@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-22  
 **Branch:** `feature/v44-owner-hud-economy-guidance-20261122`  
-**Integration status:** client store + server patch are staged and new/integration client regressions have passed in GitHub Actions run [45066037274](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45066037274). Server migration, live deployment, DB-backed integration test and owner phone acceptance remain unverified.
+**Integration status:** client store + server patch are staged. Client regressions PASS [45066162990](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45066162990); **real disposable PostgreSQL new-store AND historical shared-playground integration both PASS [45066878322](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45066878322).** Live server migration/deployment and owner phone acceptance remain UNVERIFIED.
 
 ## Shipped client implementation
 - The existing **server-earned shared playground points** are now displayed as **Shared credits / Заеднички кредити**. This is one existing room wallet, NOT a new balance grant, separate from personal `s.longplay.credits` and future locked Play Billing.
@@ -25,5 +25,6 @@
 ## Quality gates and follow-up
 - Reuses previous v44 game/AI/security test evidence, plus new dedicated `tests/v44-shared-community-store.test.cjs`, original visual regression and relevant shared client tests.
 - CI pass: [45066037274](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45066037274). This is client and static server-contract verification, **not** proof of running PostgreSQL integration or remote server deployment.
-- Before releasing to Google Play: Codex must compare staged server source to the true live server version, run tested DB backup + migration, deploy server via owner-authorized path, run authoritative backend integration with two authenticated players and owner/guest negative cases, and confirm real device store transactions.
+- **Isolated DB-backed tests completed:** the staged schema was applied twice on a disposable PostgreSQL 17 instance (idempotence), source overlay was loaded without changing the original repo, shop test verified 14 items, shared-credit isolation, atomic purchases, replay rejection, owned/stored placements, owner/guest ACL and no stored-toy credit rewards. The previously existing `server/tests/shared.integration.mjs` also passed on the same disposable DB after independent server process restart (fresh in-memory rate limits). See [server integration run 45066878322](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45066878322).
+- Before releasing to Google Play: Codex must compare staged server source to the true live server version, run tested DB backup + migration, deploy server via owner-authorized path, verify live authenticated store API and WSS with two players, and confirm real device store transactions.
 - Then owner approves updated Android QA, **then** an explicitly reviewed sync against `main`, **then** unsigned APK/AAB for owner-local signing. Preserve the current Age Signals policy in any official build; age mock only in a temporary isolated QA APK.
