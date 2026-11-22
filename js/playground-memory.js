@@ -137,13 +137,15 @@ function ingestBackground(p,payload,now=Date.now()){
  if(!p||!payload||typeof payload!=='object'||payload.petId!==p.id||
    !/^[0-9a-f-]{36}$/i.test(payload.streamId||'')||
    !Number.isSafeInteger(payload.revision)||payload.revision<0||
-   !Array.isArray(payload.entries)||payload.entries.length>MAX_ENTRIES)return false;
+   !Array.isArray(payload.entries)||payload.entries.length>MAX_ENTRIES||
+   (Context()?.validateNativePeriods&&!Context().validateNativePeriods(payload)))return false;
  Context()?.migrateLegacy?.(p);
  const same=p.playgroundAiBackgroundStreamId===payload.streamId;
  const last=same?Math.max(0,Number(p.playgroundAiBackgroundRevision)||0):0;
  if(same&&payload.revision<=last)return false;
  const previous=same&&p.playgroundAiBackgroundSeen&&
     typeof p.playgroundAiBackgroundSeen==='object'?p.playgroundAiBackgroundSeen:{};
+ Context()?.seedNativeSeen?.(p,payload.streamId,same?previous:{});
  const seen={...previous},records=read(p,now);
  let changed=false;
  const incoming=payload.entries.map(safeEntry).filter(x=>x&&x.place==='shared');
@@ -157,9 +159,11 @@ function ingestBackground(p,payload,now=Date.now()){
   item.moments=Math.min(99,item.moments+delta);
   if(p.id)Context()?.remember?.(p,{day:entry.day,place:'shared',topics:entry.topics,
    companions:entry.companions,moments:delta});
+  Context()?.accountNativeDay?.(p,payload.streamId,entry.day,delta);
   seen[entry.day]=entry.moments;
   if(delta||entry.topics.some(x=>!item.topics.includes(x)))changed=true;
  }
+ const periodChanges=Context()?.ingestNativePeriods?.(p,payload)||false;
  p.playgroundAiMemories=records.sort((a,b)=>a.day.localeCompare(b.day)).slice(-MAX_ENTRIES);
  p.playgroundAiBackgroundSeen=Object.fromEntries(
   Object.entries(seen).filter(([day])=>/^\d{4}-\d\d-\d\d$/.test(day)&&
@@ -167,7 +171,7 @@ function ingestBackground(p,payload,now=Date.now()){
     .slice(-MAX_ENTRIES));
  p.playgroundAiBackgroundStreamId=payload.streamId;
  p.playgroundAiBackgroundRevision=payload.revision;
- return changed||!same||payload.revision>last;
+ return changed||periodChanges||!same||payload.revision>last;
 }
 
 const api={dayKey,yesterdayKey,topicsFrom,read,remember,recall,context,overview,clear,ingestBackground};
