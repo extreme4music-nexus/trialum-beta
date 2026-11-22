@@ -37,7 +37,11 @@ function refreshCaption(s,now=Date.now()){
  const caption=root.document?.getElementById?.('sharedAutoTalk');
  if(!caption)return;
  const item=dialogue(s,now);
+ const twoConfirmed=!!s?.presenceEnabled&&(s.occupants||[]).filter(x=>x?.pet?.id).length>=2;
  caption.textContent=item?'🐾 '+item.speaker+': '+item.text:
+  twoConfirmed?ui(
+   '🐾 Two pets are present. Waiting for a real Mini AI reply…',
+   '🐾 Двете миленичиња се присутни. Се чека вистински одговор од Mini AI…'):
   ui('🐾 Pets will talk when two friends have confirmed pets in the same playground.',
      '🐾 Миленичињата ќе комуницираат кога двајца пријатели ќе бидат потврдени во истата игротека.');
 }
