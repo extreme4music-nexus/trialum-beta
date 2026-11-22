@@ -5,7 +5,7 @@
  */
 (function(root){
 'use strict';
-const C=root.TrialumCognitiveMemory,DAY=86400000,COOLDOWN=7*DAY;
+const C=root.TrialumCognitiveMemory,DAY=86400000,COOLDOWN=7*DAY,MOMENT_LIMIT=1000000000;
 const tags=new Set(['slide','seesaw','sandbox','water','jump','obstacle','explore','music',
  'nature','riddle','stars','food','rest','emotion','toys','friendship']);
 const map=()=>Object.create(null);
@@ -36,14 +36,14 @@ function safeTopics(input){return [...new Set((Array.isArray(input)?input:[]).fi
 function safeNames(input){return [...new Set((Array.isArray(input)?input:[]).map(cleanName).filter(Boolean))].slice(0,3);}
 function add(store,key,{moments=0,topics=[],companions=[]}){
  const current=Object.hasOwn(store,key)?store[key]:{moments:0,topics:[],companions:[]};
- current.moments+=moments;
+ current.moments=Math.min(MOMENT_LIMIT,current.moments+moments);
  current.topics=[...new Set(current.topics.concat(topics))].slice(0,16);
  current.companions=[...new Set(current.companions.concat(companions))].slice(0,3);
  store[key]=current;return current;
 }
 function remember(p,{day,place,topics=[],companions=[],moments=1}={}){
  if(!validDay(day)||!['local','shared'].includes(place)||
-    !Number.isSafeInteger(moments)||moments<0||moments>99)throw Error('invalid contextual observation');
+    !Number.isSafeInteger(moments)||moments<0||moments>MOMENT_LIMIT)throw Error('invalid contextual observation');
  const t=safeTopics(topics),names=safeNames(companions);
  if(!moments&&!t.length&&!names.length)return false;
  const x=context(p);
@@ -119,7 +119,7 @@ function migrateLegacy(p){
  // A legacy rolling cache is partial evidence: never synthesize days it did not hold.
  for(const item of items.slice(-60)){
   if(!item||!validDay(item.day)||!['local','shared'].includes(item.place))continue;
-  const moments=Math.max(0,Math.min(99,Math.trunc(Number(item.moments)||0)));
+  const moments=Math.max(0,Math.min(MOMENT_LIMIT,Math.trunc(Number(item.moments)||0)));
   remember(p,{day:item.day,place:item.place,moments,topics:item.topics,companions:item.companions});
  }
  x.legacyImported=true;
