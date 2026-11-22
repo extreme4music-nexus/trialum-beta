@@ -29,6 +29,7 @@ jobs:
       PGHOST: 127.0.0.1
       PGPORT: '5432'
       PGUSER: trialum
+      PGDATABASE: trialum_social
       PGPASSWORD: local_test_pw
       POSTGRES_USER: trialum
       POSTGRES_DB: trialum_social
