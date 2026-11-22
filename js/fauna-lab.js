@@ -16,7 +16,7 @@ function register(s){
     eyes:3+(x.speciesIndex%3),weight:2+(x.speciesIndex%3),
     voice:1+(x.speciesIndex%4),icon:['🔷','🌠','🐉','✨'][x.speciesIndex%4],
     habitat:x.biome||'garden',labTier:x.tier,description:'Генетска форма откриена преку долгорочно истражување',
-    procedural:true};
+    procedural:true,parentSpecies:x.source};
   }
  }
 }
