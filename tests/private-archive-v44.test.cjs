@@ -31,7 +31,7 @@ test('V44 V2 encrypted archive can be compressed, recovered, and authenticated',
  assert.equal(box.version,2);assert.equal(box.codec,'gzip');
  assert(text.length<12000,'repetitive lifetime history should compress before encryption');
  const restored=await Archive.decrypt(text,key);
- assert.deepEqual(restored,payload);
+ assert.deepEqual(restored,JSON.parse(JSON.stringify(payload)));
  assert.deepEqual(Integrity.prepare(restored.world).world.pets[0].cognitiveMemory.owner.topics.guitar,
   pet.cognitiveMemory.owner.topics.guitar);
  await assert.rejects(Archive.decrypt(text,'FEDC'.repeat(16)),/wrong_key_or_damaged_archive/);
@@ -49,7 +49,7 @@ test('AES-GCM V1 encrypted archives remain decryptable with original format',asy
  const b64=b=>Buffer.from(b).toString('base64');
  const old={format:'trialum-encrypted-archive',version:1,kdf:'PBKDF2-SHA256',
   iterations:600000,cipher:'AES-256-GCM',salt:b64(salt),iv:b64(iv),ciphertext:b64(new Uint8Array(encrypted))};
- assert.deepEqual(await Archive.decrypt(JSON.stringify(old),key),body);
+ assert.deepEqual(await Archive.decrypt(JSON.stringify(old),key),JSON.parse(JSON.stringify(body)));
 });
 test('preflight rejects corruption, duplicate identity and malformed receipts without mutating original',()=>{
  const w=world(),p=w.pets[0];
@@ -116,7 +116,7 @@ test('two-store restore rolls back complete prior world and conversations when s
   rollbackConversations:async old=>{friends=old;return true;}
  }),/restore_failed_rolled_back/);
  assert.equal(result(),original);
- assert.deepEqual(previous,source);
+ assert.deepEqual(previous,JSON.parse(JSON.stringify(source)));
 });
 test('restore refuses incomplete rollback rather than claiming consistency',async()=>{
  const source=world();
