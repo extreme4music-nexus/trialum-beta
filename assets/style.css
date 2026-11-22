@@ -548,3 +548,23 @@
 :root[data-theme="light"] .pet-chat-bubble.outgoing{background:#cef2e6;border-color:#95c9bd}
 :root[data-theme="light"] .pet-chat-bubble p{color:#173a4a}
 :root[data-theme="light"] .pet-chat-config select,:root[data-theme="light"] .pet-chat-compose textarea{background:#fff;color:#12384d}
+
+/* v44 — in-context action refill: mobile-first, no changes to legacy Free Credits panel */
+.action-refill-trigger{min-height:38px;margin:5px 0 0;padding:8px 12px;background:linear-gradient(145deg,#246b66,#214769);border:1px solid #70dfd0;color:#e5fffa;font-size:.91rem;font-weight:700;border-radius:12px}
+.action-refill-trigger:focus-visible,.action-refill-modal button:focus-visible{outline:3px solid #f3d08a;outline-offset:2px}
+.action-refill-modal{background:#0d2235;color:#eaf7fb;width:min(94vw,480px);max-height:min(86dvh,700px);overflow-y:auto;border:1px solid #6bd3c7;border-radius:20px;padding:0;box-shadow:0 24px 70px #000b}
+.action-refill-modal::backdrop{background:#000b;backdrop-filter:blur(3px)}
+.action-refill-body{padding:18px 18px 20px}
+.action-refill-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.action-refill-head h2{margin:0;font-size:1.3rem}
+.action-refill-head button{min-width:40px;min-height:40px;font-size:1.6rem;padding:0 10px}
+.action-refill-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.action-refill-stats span{background:#17384b;border:1px solid #477487;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:3px}
+.action-refill-stats b{font-size:1.25rem;color:#d4f9ea;font-variant-numeric:tabular-nums}
+.action-refill-packs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}
+.action-refill-packs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:70px;padding:7px;background:#1a4553;border:1px solid #66d9c5;border-radius:12px;font-weight:700}
+.action-refill-packs button:disabled{opacity:.36;cursor:not-allowed}
+.action-refill-packs small{font-size:.8rem;font-weight:500}
+.action-refill-help{padding:12px;border-left:3px solid #f3c883;background:#263449;border-radius:8px;line-height:1.5}
+.action-refill-modal footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+@media(max-width:360px){.action-refill-body{padding:12px}.action-refill-packs{grid-template-columns:repeat(2,minmax(0,1fr))}}
