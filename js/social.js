@@ -79,6 +79,8 @@ async function init(){
   const deep=native()?.socialPendingInvite?.();
   if(deep)state.pending=parseCode(deep);
   if(!state.enabled){state.error='Онлајн пријателите ќе се активираат кога серверот ќе добие јавна HTTPS адреса.';emit();return;}
+  state.recoveryEnabled=!!(native()?.socialStoreCredential&&native()?.socialShowRecoveryKit&&
+    native()?.socialGenerateRecoveryKey&&native()?.socialConfirmPreparedRecovery);
   // Privacy invariant: no connection to the social server until a player opted in.
   if(!credential){emit();return;}
   try{const status=await request('status','GET',null,'');
