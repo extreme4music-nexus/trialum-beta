@@ -283,7 +283,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("dev.ffmpegkit-maintained:llama-android:0.1.1")
     implementation("com.google.android.gms:play-services-games-v2:22.1.0")
-    implementation("com.google.android.play:age-signals:0.0.4")
+    implementation("com.google.android.play:age-signals:0.0.6")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     implementation("com.google.firebase:firebase-messaging:25.1.3")
 }
