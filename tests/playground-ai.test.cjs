@@ -15,7 +15,7 @@ const state={active:true,online:true,aiRelayEnabled:true,speechTranslationEnable
  occupants:[{pet:{id:pet.id,name:pet.name}},{pet:{id:'other',name:'Другар'}}]},
  presences:[{petId:pet.id,sessionId:SESSION,kind:'shared',roomId:ROOM}]};
 globalThis.document={visibilityState:'visible',hidden:false,addEventListener(){}};
-globalThis.TrialumEngine={SPECIES:Array.from({length:16},(_,i)=>({name:'Species '+i})),
+globalThis.TrialumEngine={SPECIES:Array.from({length:16},(_,i)=>({name:'Species '+i,aiAbilities:i===4?{mini:{petLevel:22,labLevel:6}}:undefined})),
  currentPet:s=>s.pets.find(p=>p.id===s.selectedPet),
  evolutionProgress:()=>({level:22})};
 globalThis.TrialumPresence={LOCAL:'local_playground',SHARED:'shared_playground',
@@ -36,6 +36,7 @@ globalThis.TrialumShared={getWorld:()=>world,getState:()=>({...state,aiRelayEnab
  sendPetSpeech:(s,p,text)=>{sent.push({s,p,text});return true;}};
 globalThis.TrialumSharedScene={dialogue:()=>({ids:[pet.id,'other'],turn:0,text:'Сакаш да играме?'}),
  refreshCaption:()=>{}};
+globalThis.TrialumPetAI=require('../js/pet-ai-capabilities.js');
 globalThis.TrialumPlaygroundMemory=require('../js/playground-memory.js');
 globalThis.TrialumDialogueSessions=require('../js/playground-dialogue-session.js');
 require('../js/playground-ai.js');
