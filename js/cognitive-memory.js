@@ -87,12 +87,19 @@ function packOldReceipts(m){
     typeof run.hashes!=='string'||run.hashes.length===0||run.hashes.length>32768||
     run.hashes.length%16||!/^[a-f0-9]+$/.test(run.hashes))throw Error('corrupt cognitive receipt runs');
  }
+ const sorted=[...m.receiptRuns].sort((a,b)=>a.start-b.start);
+ for(let i=1;i<sorted.length;i++){
+  const previous=sorted[i-1];
+  if(previous.start+previous.hashes.length/16>sorted[i].start)
+   throw Error('overlapping cognitive receipt runs');
+ }
  const old=Object.entries(m.archivedReceipts).filter(([id])=>localSerial(id)!==null)
   .sort((a,b)=>localSerial(a[0])-localSerial(b[0]));
  for(const [id,digest] of old){
   if(!/^[a-f0-9]{16}$/.test(digest))throw Error('corrupt cognitive receipt');
-  putReceipt(m,id,digest);
   delete m.archivedReceipts[id];
+  try{putReceipt(m,id,digest);}
+  catch(error){m.archivedReceipts[id]=digest;throw error;}
  }
 }
 function archiveOld(p,beforeAt){
