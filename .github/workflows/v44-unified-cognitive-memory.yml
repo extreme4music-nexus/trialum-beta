@@ -22,13 +22,16 @@ jobs:
       - name: Check source syntax
         run: |
           node --check js/cognitive-memory.js
+          node --check js/cognitive-context.js
+          node --check js/playground-memory.js
+          node --check js/playground-ai.js
           node --check js/storage.js
           node --check js/engine.js
           node --check js/evolution.js
           node --check js/advanced-intelligence.js
           node --check js/mnemos-context.js
       - name: Cognitive and AI compatibility
-        run: node --test tests/cognitive-memory.test.cjs tests/mnemos-context.test.cjs tests/cognitive-events-v44.test.cjs tests/cognitive-integration-v44.test.cjs
+        run: node --test tests/cognitive-memory.test.cjs tests/mnemos-context.test.cjs tests/cognitive-events-v44.test.cjs tests/cognitive-integration-v44.test.cjs tests/cognitive-consolidation-v44.test.cjs tests/playground-memory.test.cjs tests/playground-ai.test.cjs
       - name: Existing engine and evolution regression
         run: |
           node tests/engine.test.cjs
