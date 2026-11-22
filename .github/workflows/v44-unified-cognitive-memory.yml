@@ -87,4 +87,4 @@ jobs:
           node-version: '22'
       - name: Long-horizon / large-roster / privacy / power-loss recovery
         run: |
-          node --max-old-space-size=768 --test tests/cognitive-stress-v44.test.cjs tests/restore-recovery-v44.test.cjs
+          node --max-old-space-size=768 --test tests/cognitive-stress-v44.test.cjs tests/restore-recovery-v44.test.cjs tests/private-conversations-v44.test.cjs
