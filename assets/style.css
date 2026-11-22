@@ -630,3 +630,21 @@
 .future-credit-pack strong{font-size:1.1rem;color:#dbeffb}
 .future-credit-pack button{width:100%;opacity:.53;cursor:not-allowed;font-size:.83rem}
 @media(max-width:480px){.future-credit-packs{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}}
+
+/* V44 shared equipment store and tap-to-manage scene action surface. */
+.shared-stage{position:relative}
+.shared-toy-popup{position:absolute;z-index:3;left:16px;right:16px;bottom:44px;
+ display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+ padding:9px 12px;border:1px solid rgba(137,240,218,.7);border-radius:13px;
+ background:rgba(8,37,54,.94);box-shadow:0 8px 24px rgba(0,0,0,.32);color:#edfff6}
+.shared-toy-popup b{flex:1;min-width:70px}
+.shared-toy-popup button{min-height:38px;white-space:normal}
+.shared-store{display:grid;gap:10px}
+.shared-store-catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.shared-shop-item{display:flex;flex-direction:column;gap:8px;min-width:0}
+.shared-shop-item button{margin-top:auto;min-height:44px}
+.shared-stage canvas[role="button"]{cursor:pointer;touch-action:manipulation;outline-offset:3px}
+.shared-stage canvas[role="button"]:focus-visible{outline:3px solid #70ddd0}
+@media(max-width:520px){.shared-toy-popup{left:7px;right:7px;bottom:42px;padding:6px;gap:5px}
+ .shared-toy-popup button{font-size:12px;padding:6px 10px}
+ .shared-store-catalog{grid-template-columns:1fr}}
