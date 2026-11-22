@@ -35,7 +35,7 @@ function render(snap,{owner=false,enabled=false,catalog=[],open=false,selectedTo
     '<button data-do="shToyRemove" data-toy="'+esc(selectedToy)+'">↩ '+
     t('Put in storage (no refund)','Врати во складиште (без враќање кредити)')+'</button></div>';
   }
-  html+='<div class="cards shared-store-catalog" role="list">'+Shop().ITEMS.filter(item=>item.cost>0)
+  html+='<div class="cards shared-store-catalog" role="list">'+Shop().ITEMS
    .map(item=>{
     const owned=inv.ownedSet.has(item.id),placed=inv.activeSet.has(item.id);
     const available=known.has(item.id),affordable=inv.credits>=item.cost;
@@ -44,7 +44,7 @@ function render(snap,{owner=false,enabled=false,catalog=[],open=false,selectedTo
       '>↩ '+t('Store','Складирај')+'</button>':
      owned?'<button data-do="shToyPlace" data-toy="'+item.id+'"'+(!canBuy||inv.active.length>=inv.capacity?' disabled':'')+
       '>➕ '+t('Place free','Постави бесплатно')+'</button>':
-     '<button data-do="shShopBuy" data-toy="'+item.id+'"'+(!canBuy||!available||!affordable?' disabled':'')+
+     '<button data-do="shShopBuy" data-toy="'+item.id+'"'+(!canBuy||!available||!affordable||item.cost===0?' disabled':'')+
       '>💠 '+t('Buy for','Купи за')+' '+item.cost+'</button>';
     return '<div class="card shared-shop-item" role="listitem"><div class="mini-row"><b>'+
      item.icon+' '+esc(Shop().localName(item.id,loc))+'</b><span>'+text+'</span></div>'+
