@@ -1,4 +1,4 @@
-/* TRIALUM 1.5.4 — Optional Play Games Services v2 integration.
+/* TRIALUM 1.4 v44 — Optional Play Games Services v2 integration.
    The local game remains authoritative until the player explicitly restores.
    There is no personal account, no game backend, and no billing. */
 (function(root) {
