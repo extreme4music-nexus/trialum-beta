@@ -70,7 +70,7 @@ test('server patch locks spend and placement to real room owner, authorizes stor
 test('owner can buy and store without touching local game credits, member cannot manage',async()=>{
  let owner=true,shop=true,requestCount=0;
  const own={pets:[],selectedPet:null,longplay:{credits:7777},resources:{biomass:800}};
- let credits=24,placed=['sandbox','seesaw'],owned=['sandbox','seesaw'];
+ let credits=24,placed=['sandbox','seesaw','slide'],owned=['sandbox','seesaw','slide'];
  const roomInfo=()=>({id:room,title:'Community garden',tier:1,role:owner?'owner':'member'});
  const snapshot=()=>({room:roomInfo(),members:[],toys:placed.slice(),ownedToys:owned.slice(),
   sharedCredits:credits,points:credits,events:[],visitors:[],occupants:[],presenceEnabled:true});
