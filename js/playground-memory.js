@@ -4,7 +4,7 @@
  */
 (function(root){
 'use strict';
-const MAX_DAYS=45,MAX_ENTRIES=60,MAX_TOPICS=6,MAX_COMPANIONS=3;
+const MAX_DAYS=45,MAX_ENTRIES=60,MAX_TOPICS=6,MAX_COMPANIONS=3,MOMENT_LIMIT=1000000000;
 // Legacy rolling summaries remain a bounded compatibility cache; cognitive context never expires.
 const Context=()=>root.TrialumCognitiveContext;
 const lexicon=[
@@ -63,7 +63,7 @@ function safeEntry(value){
   .filter(x=>topicSet.has(x)))].slice(0,MAX_TOPICS),
   companions:[...new Set((Array.isArray(value.companions)?value.companions:[])
    .map(cleanName).filter(Boolean))].slice(0,MAX_COMPANIONS),
-  moments:Math.max(1,Math.min(99,Math.trunc(Number(value.moments)||1)))};
+  moments:Math.max(1,Math.min(MOMENT_LIMIT,Math.trunc(Number(value.moments)||1)))};
 }
 function read(p,now=Date.now()){
  const cutoff=new Date(now);cutoff.setHours(12,0,0,0);cutoff.setDate(cutoff.getDate()-MAX_DAYS);
@@ -85,7 +85,7 @@ function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  const who=cleanName(companion);
  if(who&&!item.companions.includes(who))item.companions.push(who);
  item.companions=item.companions.slice(0,MAX_COMPANIONS);
- item.moments=Math.min(99,item.moments+1);
+ item.moments=Math.min(MOMENT_LIMIT,item.moments+1);
  p.playgroundAiMemories=memories.sort((a,b)=>a.day.localeCompare(b.day)).slice(-MAX_ENTRIES);
  if(p.id)Context()?.remember?.(p,{day,place,topics:themes,companions:who?[who]:[],moments:1});
  return true;
@@ -150,13 +150,13 @@ function ingestBackground(p,payload,now=Date.now()){
  let changed=false;
  const incoming=payload.entries.map(safeEntry).filter(x=>x&&x.place==='shared');
  for(const entry of incoming){
-  const seenCount=Math.max(0,Math.min(99,Number(seen[entry.day])||0));
+  const seenCount=Math.max(0,Math.min(MOMENT_LIMIT,Number(seen[entry.day])||0));
   const delta=same?Math.max(0,entry.moments-seenCount):entry.moments;
   let item=records.find(x=>x.day===entry.day&&x.place==='shared');
   if(!item){item={day:entry.day,place:'shared',topics:[],companions:[],moments:0};records.push(item);}
   item.topics=[...new Set(item.topics.concat(entry.topics))].slice(0,MAX_TOPICS);
   item.companions=[...new Set(item.companions.concat(entry.companions))].slice(0,MAX_COMPANIONS);
-  item.moments=Math.min(99,item.moments+delta);
+  item.moments=Math.min(MOMENT_LIMIT,item.moments+delta);
   if(p.id)Context()?.remember?.(p,{day:entry.day,place:'shared',topics:entry.topics,
    companions:entry.companions,moments:delta});
   Context()?.accountNativeDay?.(p,payload.streamId,entry.day,delta);
