@@ -335,6 +335,11 @@ function tick(s,tab){
  }else if(tab==='shared'){
   const state=root.TrialumShared?.getState?.(),room=state?.selected;
   if(!state?.online||!state.aiRelayEnabled||!state.snapshot?.presenceEnabled||!room)return;
+  // Do not spend a local GGUF generation when no authenticated, subscribed
+  // WebSocket can relay it to the other member. Diagnostics expose this gate.
+  if(!state.speechReady){status('shared',ui(
+    'Waiting for authenticated WebSocket room subscription.',
+    'Се чека потврдена WebSocket претплата за просторијата.'));return;}
   // Canonical English shared dialogue supports all client UI locales.
   memory?.ensure('shared',room);
   const occupants=(state.snapshot.occupants||[]).filter(x=>x?.pet?.id);
@@ -346,6 +351,7 @@ function tick(s,tab){
     memberIds.includes(p.id)&&state.presences?.some(x=>x.petId===p.id&&
     x.sessionId===loc.sessionId&&x.kind==='shared'&&x.roomId===room);
   });
+  if(present.length>=1&&state.speechReady)status('shared','');
   const ready=present.filter(p=>enabled(s,p,'shared')&&
    now-(lastAttempt['shared|'+p.id]||0)>=24000);
   const replies=ready.map(p=>({p,input:memory?.next('shared',room,p.id,memberIds,now)}))
@@ -367,7 +373,7 @@ function tick(s,tab){
   for(const p of present.filter(p=>!enabled(s,p,'shared'))){
    const key=room+'|'+p.id;
    if(sample?.ids?.[sample.turn%2]===p.id&&now-(lastSimulation[key]||0)>22000){
-    if(root.TrialumShared?.sendPetSpeech?.(s,p,sample.text))lastSimulation[key]=now;
+    if(root.TrialumShared?.sendPetSpeech?.(s,p,sample.englishText||sample.text))lastSimulation[key]=now;
     break;
    }
   }
