@@ -126,42 +126,10 @@ class TrialumBackgroundSpeechService : Service() {
         when (intent?.action) {
             STOP -> { stopSelf(); return START_NOT_STICKY }
             START -> {
-                val requestedRoom = intent.getStringExtra("roomId").orEmpty()
-                val requestedPet = intent.getStringExtra("petId").orEmpty()
-                val requestedSession = intent.getStringExtra("sessionId").orEmpty()
-                val requestedName = intent.getStringExtra("petName").orEmpty()
-                val configured = getString(R.string.trialum_social_api_url)
-                val key = SocialCredentialVault.read(applicationContext)
-                if (!uuid.matches(requestedRoom) || !uuid.matches(requestedSession) ||
-                    !petRef.matches(requestedPet) || requestedName.length !in 1..48 ||
-                    !configured.matches(Regex("^https://[A-Za-z0-9.-]+(?::443)?$")) ||
-                    !key.matches(Regex("^[A-Za-z0-9_-]{43}$")) || model.status() != "installed") {
-                    stopSelf(); return START_NOT_STICKY
-                }
-                // Reconfiguration while already armed cannot retain a socket
-                // authenticated for an earlier pet or private room.
-                if (running) {
-                    disconnect()
-                    model.cancelPlayground()
-                    lastAttempt = 0L
-                    deliveredModelLines = 0
-                    deliveredScriptLines = 0
-                    pendingMessages.clear()
-                    seenTurns.clear()
-                    answeredTurns.clear()
-                    conversation.clear()
-                    activeTurn = null
-                    modelBusy = false
-                }
-                room = requestedRoom; pet = requestedPet; session = requestedSession
-                petName = requestedName; server = configured; credential = key
-                paused = true // The visible WebView owns dialogue until onStop.
-                channel()
-                val notification = buildNotification()
-                if (Build.VERSION.SDK_INT >= 34) {
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-                } else startForeground(NOTIFICATION_ID, notification)
-                running = true
+                // Owner V44 beta policy: after leaving the UI, the engine simulates
+                // the living world. No background GGUF generator or WSS session.
+                stopSelf()
+                return START_NOT_STICKY
             }
             PAUSE -> {
                 paused = true
@@ -169,15 +137,9 @@ class TrialumBackgroundSpeechService : Service() {
                 model.cancelPlayground()
             }
             RESUME -> {
-                if (running) {
-                    paused = false
-                    if (!powerPermitsConversation()) {
-                        stopSelf(); return START_NOT_STICKY
-                    }
-                    connect()
-                    handler.removeCallbacks(renewer)
-                    handler.postDelayed(renewer, 25 * 60_000L)
-                }
+                // Legacy intents from older saved states must also fail closed.
+                stopSelf()
+                return START_NOT_STICKY
             }
         }
         return START_NOT_STICKY // Do not auto-resume after OS/process termination.
