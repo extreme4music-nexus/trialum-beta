@@ -28,6 +28,7 @@ jobs:
           node --check js/ai-context.js
           node --check js/memory-integrity.js
           node --check js/private-restore.js
+          node --check js/local-conversations.js
           node --check js/encrypted-archive.js
           node --check js/app.js
           node --check js/progression.js
@@ -72,3 +73,18 @@ jobs:
           gradle-version: '8.11.1'
       - name: Compile debug Kotlin only
         run: gradle -p android-template :app:compileDebugKotlin --no-daemon --stacktrace
+
+  longevity-and-recovery:
+    name: 20-year memory, 1000-pet stress and crash-recovery audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Long-horizon / large-roster / privacy / power-loss recovery
+        run: |
+          node --max-old-space-size=768 --test tests/cognitive-stress-v44.test.cjs tests/restore-recovery-v44.test.cjs
