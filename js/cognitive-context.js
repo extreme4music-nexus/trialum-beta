@@ -211,8 +211,8 @@ function recall(p,question='',now=Date.now(),{publicScope=false}={}){
 function clear(p){
  if(!p?.id)return;
  const x=context(p);
- x.days=map();x.months=map();x.years=map();x.legacyImported=true;
- x.lastCompactedAt=0;
+ x.days=map();x.months=map();x.years=map();x.nativeStreams=map();
+ x.legacyImported=true;x.lastCompactedAt=0;
 }
 const api={context,remember,migrateLegacy,consolidate,recall,clear,
  nativeStream,accountNativeDay,seedNativeSeen,validateNativePeriods,ingestNativePeriods};
