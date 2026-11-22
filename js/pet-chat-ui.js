@@ -12,8 +12,8 @@ const E=()=>root.TrialumEngine,models={
 const eligible=(s,p,t)=>root.TrialumPetAI?.unlocked?.(s,p,t==='mini'?'mini':'advanced')===true;
 function tier(p){
  const value=p?.chatModelTier;
- if(value==='mini'||value==='compact'||value==='deep')return value;
- return 'mini';
+ if(value==='helper'||value==='mini'||value==='compact'||value==='deep')return value;
+ return 'helper';
 }
 function status(t){
  try{
@@ -25,10 +25,12 @@ function status(t){
 }
 function consent(p,t){return t==='mini'?p?.localAiConsent===true:p?.mind?.enabled===true;}
 function choices(s,p){
- return Object.keys(models).filter(t=>eligible(s,p,t));
+ return ['helper',...Object.keys(models).filter(t=>eligible(s,p,t))];
 }
 function choose(s,p,value){
- if(!p||!models[value]||!eligible(s,p,value))return false;
+ if(!p)return false;
+ if(value==='helper'){p.chatModelTier=value;return true;}
+ if(!models[value]||!eligible(s,p,value))return false;
  p.chatModelTier=value;
  if(value!=='mini'){
   if(!p.mind||typeof p.mind!=='object')p.mind={enabled:false,tier:value,memories:[],turns:0};
@@ -40,16 +42,16 @@ function render(s,p){
  if(!p)return '';
  const available=choices(s,p);
  const t=available.includes(tier(p))?tier(p):available[0]||null;
- const can=!!t,st=t?status(t):'not-available',agreed=t?consent(p,t):false;
+ const helper=t==='helper',st=helper?'available':t?status(t):'not-available',agreed=helper||(t?consent(p,t):false);
  const busy=!!root.TrialumLocalChat?.busy?.();
  const messages=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-40);
  const history=messages.map((m,i)=>'<div class="pet-chat-bubble '+(m.role==='user'?'outgoing':'incoming')+
   '" data-chat-index="'+i+'"><span class="pet-chat-sender">'+(m.role==='user'?'You':esc(p.name))+
   '</span><p>'+esc(m.text||'')+'</p></div>').join('');
  const options=available.map(k=>'<option value="'+k+'"'+(k===t?' selected':'')+'>'+
-  esc(models[k].name)+' · '+models[k].size+'</option>').join('');
+  (k==='helper'?'Game assistant · no AI download':esc(models[k].name)+' · '+models[k].size)+'</option>').join('');
  const label=({
-  installed:'Installed · on-device',downloading:'Downloading…',generating:'Thinking…',
+  available:'Game assistant · offline',installed:'Installed · on-device',downloading:'Downloading…',generating:'Thinking…',
   'resume-available':'Download paused', 'not-installed':'Not downloaded',
   'not-available':'Android only'
  }[st]||st);
@@ -57,10 +59,20 @@ function render(s,p){
   '<header class="pet-chat-head"><div><span class="pet-chat-kicker">PRIVATE · ENGLISH · ON-DEVICE</span>'+
   '<h3>💬 Chat with '+esc(p.name)+'</h3><small>Lifetime memories stay with your pet, not the model.</small></div>'+
   '<span class="pet-chat-state">'+esc(label)+'</span></header>';
- if(!can)return text+'<div class="lock-hint">🔒 AI conversation unlocks through evolution and research. Memory is already active.</div></section>';
- let body='<div class="pet-chat-config"><label for="petChatModel">Language model</label>'+
-  '<select id="petChatModel" aria-label="Choose local language model">'+options+'</select>'+
-  '<span class="small subtle">One model at a time · '+esc(models[t].ram)+' RAM recommended</span></div>';
+ let body='<div class="pet-chat-config"><label for="petChatModel">Conversation mode / Local language model</label>'+
+  '<select id="petChatModel" aria-label="Choose conversation mode">'+options+'</select>'+
+  '<span class="small subtle">'+(helper?'Offline game assistant · no AI model required.':'One model at a time · '+esc(models[t].ram)+' RAM recommended')+'</span></div>';
+ if(helper){
+  body+='<p class="privacy-note">Game assistant (not an LLM). Beta pet interaction is English only; other languages may not work correctly. Answers use the offline Player Guide and live game state.</p>'+
+   '<div id="petChatMessages" class="pet-chat-messages" role="log" aria-live="polite" aria-label="Conversation with '+esc(p.name)+'">'+
+   (history||'<p class="pet-chat-empty">Ask: Where do I get food? How do I earn credits? What should I do next?</p>')+'</div>'+
+   '<div class="pet-chat-compose"><textarea id="petChatPrompt" rows="2" maxlength="340" placeholder="Ask in English…" aria-label="English game assistant question"></textarea>'+
+   '<div class="pet-chat-controls"><button type="button" data-do="petChatMic" aria-label="Android on-device English recognition"'+(!root.TrialumAndroid?.startPetVoiceInput?' disabled':'')+'>🎙️</button>'+
+   '<button type="button" data-do="petChatSpeak" aria-label="Read latest reply"'+(!root.TrialumAndroid?.speakPetChat?' disabled':'')+'>🔊</button>'+
+   '<button class="primary" data-do="petChatAsk">Send</button></div></div>'+
+   '<p class="small subtle" id="petChatVoiceStatus" role="status" aria-live="polite">Offline guidance; voice input/output require compatible Android speech services.</p>';
+  return text+body+'</section>';
+ }
  body+='<div class="pet-chat-consent"><button data-do="petChatConsent" class="'+(agreed?'':'primary')+
   '" type="button">'+(agreed?'Disable AI conversations':'Enable AI conversations')+'</button>'+
   '<small>Memory continues even if AI is disabled.</small></div>';
@@ -89,9 +101,33 @@ function latestReply(p){
  return (p?.chatHistory||[]).slice().reverse().find(x=>x.role==='pet'&&x.text)?.text||'';
 }
 function handle(action,s,p,ctx){
- if(!['petChatConsent','petChatDownload','petChatImport','petChatMic','petChatSpeak'].includes(action))return false;
- if(!p||!eligible(s,p,tier(p)))return true;
+ if(!['petChatAsk','petChatConsent','petChatDownload','petChatImport','petChatMic','petChatSpeak'].includes(action))return false;
+ if(!p)return true;
  const t=tier(p);
+ if(action==='petChatAsk'){
+  if(t!=='helper')return false; // Real Mini and Advanced handlers remain separate.
+  const prompt=String(root.document?.getElementById?.('petChatPrompt')?.value||'').trim().slice(0,340);
+  if(!prompt){ctx.toast('Ask a question in English.');return true;}
+  if(!validEnglish(prompt)){ctx.toast('Beta pet communication works in English only; other languages may not function correctly.');return true;}
+  const reply=root.TrialumPlayerGuide?.answer?.(prompt,s,p,{screen:'pets'})||
+   'I can help with food, credits, actions, and what to do next.';
+  p.chatHistory=Array.isArray(p.chatHistory)?p.chatHistory:[];
+  p.chatHistory.push({role:'user',text:prompt},{role:'pet',text:String(reply).slice(0,900)});
+  p.chatHistory=p.chatHistory.slice(-40);
+  ctx.scheduleSave();ctx.render();scroll();return true;
+ }
+ if(action==='petChatMic'){
+  if(!root.TrialumAndroid?.startPetVoiceInput){ctx.toast('On-device English recognition unavailable.');return true;}
+  root.TrialumAndroid.startPetVoiceInput(p.id);return true;
+ }
+ if(action==='petChatSpeak'){
+  const reply=latestReply(p);
+  if(reply&&root.TrialumAndroid?.speakPetChat)root.TrialumAndroid.speakPetChat(p.id,reply);
+  else ctx.toast('There is no reply to read yet.');
+  return true;
+ }
+ if(t==='helper')return true;
+ if(!eligible(s,p,t))return true;
  if(action==='petChatConsent'){
   if(t!=='mini')return root.TrialumMind?.handle?.('mindToggle',{dataset:{tier:t}},s,ctx)===true;
   if(!p.localAiConsent){
@@ -107,16 +143,6 @@ function handle(action,s,p,ctx){
   return true;
  }
  if(action==='petChatImport')return t!=='mini'&&root.TrialumMind?.handle?.('mindImport',{dataset:{tier:t}},s,ctx)===true;
- if(action==='petChatMic'){
-  if(!root.TrialumAndroid?.startPetVoiceInput){ctx.toast('On-device Android speech recognition unavailable.');return true;}
-  root.TrialumAndroid.startPetVoiceInput(p.id);return true;
- }
- if(action==='petChatSpeak'){
-  const reply=latestReply(p);
-  if(reply&&root.TrialumAndroid?.speakPetChat)root.TrialumAndroid.speakPetChat(p.id,reply);
-  else ctx.toast('There is no reply to read yet.');
-  return true;
- }
  return true;
 }
 function voiceEvent(event,s){
