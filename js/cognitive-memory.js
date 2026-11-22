@@ -48,6 +48,10 @@ function ingest(p,input){
  const source=input.source===undefined?'game':input.source;
  if(typeof source!=='string'||!/^[a-z][a-z0-9_-]{0,47}$/.test(source))throw Error('invalid cognitive source');
  const food=typeof input.food==='string'?input.food.slice(0,160):null;
+ const quantity=input.quantity===undefined||input.quantity===null?null:input.quantity;
+ if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0))throw Error('invalid cognitive quantity');
+ const level=input.level===undefined||input.level===null?null:input.level;
+ if(level!==null&&(!Number.isSafeInteger(level)||level<1))throw Error('invalid cognitive level');
  const location=typeof input.location==='string'?input.location.slice(0,160):null;
  if(location&&['birth','transfer','encounter'].includes(input.kind))safeKey(location);
  const supplied=input.eventId;
@@ -57,13 +61,13 @@ function ingest(p,input){
  if(supplied&&ids.has(supplied)){
   const prior=m.eventLedger.find(e=>e.eventId===supplied);
   if(prior.kind!==input.kind||prior.at!==at||prior.day!==day||prior.source!==source||
-     prior.food!==food||prior.location!==location)throw Error('cognitive event id collision');
+     prior.food!==food||prior.quantity!==quantity||prior.level!==level||prior.location!==location)throw Error('cognitive event id collision');
   return {event:prior,inserted:false,duplicate:true};
  }
  let eventId=supplied;
- if(!eventId){do{m.eventSerial++;eventId=p.id+':event:'+m.eventSerial;}while(ids.has(eventId));}
+ if(!eventId){do{m.eventSerial++;eventId='event:'+m.eventSerial;}while(ids.has(eventId));}
  else m.eventSerial++;
- const event={schemaVersion:VERSION,eventId,petId:p.id,kind:input.kind,source,at,day,food,location};
+ const event={schemaVersion:VERSION,eventId,petId:p.id,kind:input.kind,source,at,day,food,quantity,level,location};
  const key=day===null?'unknown':String(day),state=m.self;
  const bucket=Object.hasOwn(state.days,key)?state.days[key]:(state.days[key]={counts:dict()});
  // Validation above ensures replay/collision cannot affect graph, last values or counts.
