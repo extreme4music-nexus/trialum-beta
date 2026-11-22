@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: extreme4music-nexus/Trialum
-          ref: 8406050c24750358546b9e61f189d0391824609b
+          ref: e32e9189d20c002f5547bfe22775eae2752ee72d
           path: server-baseline
           persist-credentials: false
       - uses: actions/setup-node@v4
