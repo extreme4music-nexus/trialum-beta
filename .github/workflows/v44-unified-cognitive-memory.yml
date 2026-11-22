@@ -29,6 +29,7 @@ jobs:
           node --check js/progression.js
           node --check js/longplay.js
           node --check js/fauna-lab.js
+          node --check js/longplay-ui.js
           node --check js/playground-memory.js
           node --check js/playground-ai.js
           node --check js/storage.js
@@ -42,6 +43,7 @@ jobs:
         run: |
           node tests/engine.test.cjs
           node tests/evolution.test.cjs
+          node tests/longplay.test.cjs
 
   android-compile:
     name: Compile Android background memory Kotlin (no APK/signing)
