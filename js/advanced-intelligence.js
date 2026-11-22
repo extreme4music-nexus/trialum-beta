@@ -145,6 +145,9 @@ function handle(action,button,s,ctx){
  if(action==='mindAsk'){
   const prompt=(root.document?.getElementById('petChatPrompt')?.value||root.document?.getElementById('mindPrompt')?.value||'').trim().slice(0,340);
   if(!prompt)return true;
+  if(!root.TrialumPetChat?.validEnglish?.(prompt)){
+   ctx.toast('English-only chat in Trialum 1.4 v44. Translation arrives in a later release.');return true;
+  }
   if(localChat.busy()){ctx.toast(tr('AI веќе размислува. Пробај по одговорот.','AI is already thinking. Try after the reply.'));return true;}
   if(status(m.tier)!=='installed'||!root.TrialumAndroid?.askPetAdvanced){ctx.toast(tr('Прво преземи го моделот.','Download the model first.'));return true}
   let context;
