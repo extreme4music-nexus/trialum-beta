@@ -173,9 +173,7 @@ function onReply(s,p,text){
  if(!eligible(s,p)||!p?.mind?.enabled)return;
  const m=mind(p);
  const reply=String(text||'').slice(0,140);
- const lastUser=Array.isArray(p.chatHistory)?[...p.chatHistory].reverse().find(x=>x.role==='user')?.text||'':'';
- // Persist semantic themes only after a successful private model reply.
- if(lastUser&&reply)root.TrialumCognitiveMemory?.summarize(p,lastUser,reply);
+ // Semantic topic capture happens once in the LLM reply dispatcher (app.js).
  m.memories.push('Pet: '+reply);m.memories=m.memories.slice(-8);
  const emotion=mood(p).id;
  p.reactionAt=Date.now();p.reaction=emotion==='joyful'?'spin':'wave';
