@@ -7,7 +7,7 @@ const eventCache=new WeakMap();
 function emptyMemory(p){
  return {version:VERSION,schemaVersion:VERSION,petId:p.id,birthDay:Number.isFinite(p.birthDay)?p.birthDay:null,
   self:{last:dict(),days:dict(),counts:dict()},owner:{topics:dict()},social:{peers:dict()},
-  associations:dict(),eventLedger:[],eventSerial:0,archivedReceipts:dict(),
+  associations:dict(),eventLedger:[],eventSerial:0,archivedReceipts:dict(),receiptRuns:[],
   migrationMetadata:{origin:'created',historicalEventsReconstructed:false}};
 }
 function ensure(p){
@@ -21,10 +21,12 @@ function ensure(p){
   m.migrationMetadata={origin:'v1',historicalEventsReconstructed:false};
  }
  if(!m.archivedReceipts)m.archivedReceipts=dict();
+ if(!m.receiptRuns)m.receiptRuns=[];
  if(m.version!==VERSION||m.schemaVersion!==VERSION||!Array.isArray(m.eventLedger)||
     !Number.isSafeInteger(m.eventSerial)||m.eventSerial<0)throw Error('unsupported cognitive schema');
  if(!m.self||typeof m.self!=='object'||!m.self.last||!m.self.days||!m.self.counts||
     !m.owner||!m.owner.topics||!m.social||!m.social.peers)throw Error('invalid cognitive data');
+ packOldReceipts(m);
  eventIds(m); // Validate on hydration, not only when another game event occurs.
  return m;
 }
@@ -51,6 +53,48 @@ function receipt(event){
  for(let i=0;i<s.length;i++){const n=s.charCodeAt(i);a=Math.imul(a^n,16777619);b=Math.imul(b^n,2246822519);}
  return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');
 }
+// Local, automatically issued event:N receipts occupy contiguous digest runs
+// instead of an unbounded number of redundant JSON object keys.
+function localSerial(id){
+ const match=/^event:([1-9][0-9]*)$/.exec(id);
+ const n=match?Number(match[1]):0;
+ return Number.isSafeInteger(n)&&n>0?n:null;
+}
+function receiptHash(m,id){
+ if(Object.hasOwn(m.archivedReceipts,id))return m.archivedReceipts[id];
+ const serial=localSerial(id);
+ if(serial===null)return undefined;
+ for(const run of m.receiptRuns||[]){
+  const count=run.hashes.length/16,offset=serial-run.start;
+  if(Number.isInteger(offset)&&offset>=0&&offset<count)return run.hashes.slice(offset*16,offset*16+16);
+ }
+ return undefined;
+}
+function putReceipt(m,id,digest){
+ if(receiptHash(m,id)!==undefined)throw Error('duplicate archival receipt');
+ const serial=localSerial(id);
+ if(serial===null){m.archivedReceipts[id]=digest;return;}
+ const runs=m.receiptRuns;
+ const last=runs.at(-1);
+ if(last&&last.hashes.length<32768&&last.start+last.hashes.length/16===serial){
+  last.hashes+=digest;
+ }else runs.push({start:serial,hashes:digest});
+}
+function packOldReceipts(m){
+ if(!Array.isArray(m.receiptRuns))throw Error('corrupt cognitive receipt runs');
+ for(const run of m.receiptRuns){
+  if(!run||!Number.isSafeInteger(run.start)||run.start<1||
+    typeof run.hashes!=='string'||run.hashes.length===0||run.hashes.length>32768||
+    run.hashes.length%16||!/^[a-f0-9]+$/.test(run.hashes))throw Error('corrupt cognitive receipt runs');
+ }
+ const old=Object.entries(m.archivedReceipts).filter(([id])=>localSerial(id)!==null)
+  .sort((a,b)=>localSerial(a[0])-localSerial(b[0]));
+ for(const [id,digest] of old){
+  if(!/^[a-f0-9]{16}$/.test(digest))throw Error('corrupt cognitive receipt');
+  putReceipt(m,id,digest);
+  delete m.archivedReceipts[id];
+ }
+}
 function archiveOld(p,beforeAt){
  if(!Number.isFinite(beforeAt))throw Error('invalid archive cutoff');
  const m=ensure(p),keep=[];
@@ -58,8 +102,7 @@ function archiveOld(p,beforeAt){
  for(const event of m.eventLedger){
   // Birth and finite evolutionary milestones remain exact for the pet's entire life.
   if(event.at>=beforeAt||event.kind==='birth'||event.kind==='evolution'){keep.push(event);continue;}
-  if(Object.hasOwn(m.archivedReceipts,event.eventId))throw Error('duplicate archival receipt');
-  m.archivedReceipts[event.eventId]=receipt(event);
+  putReceipt(m,event.eventId,receipt(event));
   dropped++;
  }
  if(dropped){m.eventLedger=keep;eventCache.set(m,new Set(keep.map(e=>e.eventId)));}
@@ -84,9 +127,9 @@ function ingest(p,input){
  if(supplied!==undefined&&(typeof supplied!=='string'||!/^[A-Za-z0-9:_./-]{1,160}$/.test(supplied)||
     ['__proto__','constructor','prototype'].includes(supplied)))throw Error('invalid cognitive event id');
  const m=ensure(p),ids=eventIds(m);
- if(supplied&&Object.hasOwn(m.archivedReceipts,supplied)){
+ if(supplied&&receiptHash(m,supplied)!==undefined){
   const candidate={kind:input.kind,source,at,day,food,quantity,level,location};
-  if(m.archivedReceipts[supplied]!==receipt(candidate))throw Error('cognitive event id collision');
+  if(receiptHash(m,supplied)!==receipt(candidate))throw Error('cognitive event id collision');
   return {event:null,inserted:false,duplicate:true,archived:true};
  }
  if(supplied&&ids.has(supplied)){
@@ -96,7 +139,7 @@ function ingest(p,input){
   return {event:prior,inserted:false,duplicate:true};
  }
  let eventId=supplied;
- if(!eventId){do{m.eventSerial++;eventId='event:'+m.eventSerial;}while(ids.has(eventId));}
+ if(!eventId){do{m.eventSerial++;eventId='event:'+m.eventSerial;}while(ids.has(eventId)||receiptHash(m,eventId)!==undefined);}
  else m.eventSerial++;
  const event={schemaVersion:VERSION,eventId,petId:p.id,kind:input.kind,source,at,day,food,quantity,level,location};
  const key=day===null?'unknown':String(day),state=m.self;
