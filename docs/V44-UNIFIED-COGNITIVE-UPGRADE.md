@@ -10,6 +10,9 @@
 - Events are local and specific to one pet. Remote/replayed inputs must have stable event IDs; repeats are idempotent and conflicting uses of an ID are rejected.
 - Original observed timestamps, dates and provenance are retained. Do not fabricate missing historical conversations or events when migrating old worlds.
 - AI generation is never required to capture game events. Local cognitive data must not enter the normal cloud/plain JSON export.
+- **Memory is universal; conversational AI is an optional unlocked capability.** Every pet—primitive, evolved, current or future—records and consolidates its own memories without any LLM, account, installation or AI consent. Unlocking AI at the defined evolution/research gate grants *communication through a compatible LLM adapter*; it neither creates memory nor replaces the existing memory store.
+- **Model/provider agnostic cognition.** Mini, Advanced, Background and future supported LLM runtimes must use the same pet-owned memory retrieval interface, within their own context budgets and visibility permissions. Switching/removing an LLM must never reset, fork or erase the pet's memory. Model output is optional and must not be confused with verified game facts.
+- **Unlocked != installed != consented.** Evolution capability, actual model availability, and player consent are independent checks. No AI availability must be assumed merely because a pet is evolved.
 - The canonical memory may be read through bounded private/room-specific adapters, rather than letting each model maintain an incompatible source of truth.
 - No release signing, Play publication or merge into the V44 release branch without owner approval.
 
