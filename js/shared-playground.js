@@ -41,11 +41,15 @@ function config(){
  return st.enabled;
 }
 const errors={
+ toy_not_owned:'Справата не е купена во заедничката игротека.',
+ invalid_placement:'Невалидно поставување на справа.',
+ toy_already_unlocked:'Справата веќе е купена.',
+ room_max_tier:'Игротеката е на највисокото ниво.',
  shared_disabled:'Заедничката игротека сè уште не е овозможена на серверот.',pending_visit_limit:'Пријателот веќе има три покани за посета. Почекај одговор.',local_locked:'Прво отклучи ја локалната игротека.',
  friendship_required:'Потребно е активно пријателство.',room_access_denied:'Немаш пристап до овој простор.',
  owner_required:'Само сопственикот одобрува надградби.',room_limit:'Можеш да создадеш две заеднички игротеки.',
  room_full:'Групата има најмногу шест членови.',already_member:'Овој пријател веќе е член.',
- not_enough_shared_points:'Нема доволно заеднички поени.',expand_first:'Прво проширете го просторот.',
+ not_enough_shared_points:'Нема доволно заеднички кредити.',expand_first:'Прво проширете го просторот.',
  toy_locked:'Оваа играчка сè уште е заклучена.',play_cooldown:'Почекај осум секунди пред нова игра.',
  daily_play_limit:'Денес се искористени шесте заеднички игри.',invitation_expired:'Поканата е истечена.',
  visit_expired:'Посетата истекла.',pet_required:'Прво избери милениче.',
@@ -89,12 +93,14 @@ async function refresh(){
   st.presenceEnabled=true;st.aiRelayEnabled=!!status.playgroundAiEnabled;
   shopEnabled=false;serverCatalog=[];
   if(status.sharedShopEnabled===true&&status.sharedShopVersion===1){
-   const catalog=await req('catalog');
-   if(catalog.version===1&&catalog.currency==='sharedCredits'&&Array.isArray(catalog.items)){
-    serverCatalog=catalog.items.filter(x=>Shop()?.isSupported?.(x.id)&&
-     Number.isInteger(x.cost)&&x.cost===Shop()?.BY_ID?.[x.id]?.cost);
-    shopEnabled=serverCatalog.length>=6;
-   }
+   try{
+    const catalog=await req('catalog');
+    if(catalog.version===1&&catalog.currency==='sharedCredits'&&Array.isArray(catalog.items)){
+     serverCatalog=catalog.items.filter(x=>Shop()?.isSupported?.(x.id)&&
+      Number.isInteger(x.cost)&&x.cost===Shop()?.BY_ID?.[x.id]?.cost);
+     shopEnabled=serverCatalog.length>=6;
+    }
+   }catch(_){shopEnabled=false;serverCatalog=[];} // Existing social play remains usable.
   }
    st.speechTranslationEnabled=!!status.speechTranslationEnabled;
    st.speechTranslationLanguages=Array.isArray(status.speechTranslationLanguages)?status.speechTranslationLanguages:[];
@@ -340,7 +346,7 @@ function select(id){
  if(!st.rooms.some(r=>r.id===id))return false;
  if(st.selected&&st.selected!==id)stopNativeBackground(worldRef);
  root.TrialumPlaygroundAI?.stop?.();
- st.selected=id;st.snapshot=null;st.roomNoticeUntil=0;st.roomNoticeName='';st.roomNoticeKind='';
+ st.selected=id;st.snapshot=null;selectedToy='';storeOpen=false;st.roomNoticeUntil=0;st.roomNoticeName='';st.roomNoticeKind='';
  say();refresh().catch(()=>{});return true;
 }
 async function run(fn){
@@ -376,7 +382,7 @@ function selectToy(id){
 function toggleStore(){storeOpen=!storeOpen;selectedToy='';say();return true;}
 function purchaseToy(id){
  const item=Shop()?.BY_ID?.[id],inv=Shop()?.inventory?.(st.snapshot);
- if(!canManage()||!item||!serverCatalog.some(x=>x.id===id&&x.cost===item.cost)||
+ if(!canManage()||!item||!inv||!serverCatalog.some(x=>x.id===id&&x.cost===item.cost)||
   inv.ownedSet.has(id)||item.cost>inv.credits)return Promise.resolve(null);
  return run(()=>req('rooms/'+st.selected+'/upgrade','POST',
    {eventKey:uuid(),kind:'toy',toyId:id})).then(value=>{
@@ -385,7 +391,7 @@ function purchaseToy(id){
 }
 function placement(id,placed){
  const inv=Shop()?.inventory?.(st.snapshot);
- if(!canManage()||!Shop()?.isSupported?.(id)||!inv.ownedSet.has(id)||
+ if(!canManage()||!Shop()?.isSupported?.(id)||!inv?.ownedSet?.has(id)||
   (!!placed&&inv.active.length>=inv.capacity&&!inv.activeSet.has(id)))return Promise.resolve(null);
  return run(()=>req('rooms/'+st.selected+'/placement','POST',{toyId:id,placed})).then(value=>{
   if(value){storeOpen=true;selectedToy=placed?id:'';}return value;
