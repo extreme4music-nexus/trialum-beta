@@ -69,6 +69,38 @@ test('1000 pets keep separate lifelong memory identities through JSON save and c
  console.log('V44 roster profile',JSON.stringify({pets:1000,moments:1000*16*4,
   replayReceipts:info.receipts,bytes:info.bytes,bytesPerPet:Math.round(info.bytes/1000)}));
 });
+test('1000-pet private encrypted migration roundtrip preserves individual histories',async()=>{
+ const Aes=require('../js/encrypted-archive.js'),S=globalThis.TrialumStorage;
+ const w=E.newGame('demo',date(2026,11,22));
+ for(let i=0;i<1000;i++){
+  const p={id:'archive-pet-'+i,name:'Archive pet '+i,species:i%18,birthDay:1};
+  C.record(p,'birth',{day:1,at:date(2009,1,1)});
+  C.record(p,'feed',{day:4,at:date(2013,1,1),food:'biomass',quantity:3});
+  for(const year of [2010,2012,2014,2016,2018,2020,2022,2024])
+   X.remember(p,{day:year+'-07-01',place:i%3?'shared':'local',
+    topics:i%2?['stars']:['music'],moments:4});
+  w.pets.push(p);
+ }
+ C.ensureWorld(w);
+ const inspected=I.prepare(w);
+ assert.equal(inspected.report.pets,1000);
+ const payload={archiveType:'trialum-private-migration',version:1,
+  world:inspected.world,friendConversations:[]};
+ const key='ABCD'.repeat(16),encrypted=await Aes.encrypt(payload,key);
+ assert.equal(JSON.parse(encrypted).version,2);
+ const decoded=await Aes.decrypt(encrypted,key);
+ assert.equal(I.prepare(decoded.world).report.pets,1000);
+ for(const i of [0,100,501,999]){
+  const pet=decoded.world.pets[i];
+  assert.equal(C.ensure(pet).self.counts.feed,1);
+  assert(X.recall(pet,'2014',date(2026,11,22)).found);
+ }
+ const plain=S.portableSnapshot(decoded.world);
+ assert(plain.pets.every(p=>p.cognitiveMemory===undefined));
+ console.log('V44 encrypted roster profile',JSON.stringify({pets:1000,
+  plainBytes:Buffer.byteLength(JSON.stringify(payload)),
+  encryptedBytes:Buffer.byteLength(encrypted),codec:JSON.parse(encrypted).codec}));
+});
 test('30000 local gameplay events archive compactly and remain replay-safe',()=>{
  const p={id:'stress-ledger',species:0},first=date(2012,1,1),n=30000;
  const historical={kind:'feed',source:'game',at:first,day:12,food:'biomass',quantity:3};
