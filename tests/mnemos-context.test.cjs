@@ -23,3 +23,18 @@ test('serialization retains cognitive memory without model dependency',()=>{
  const copy=JSON.parse(JSON.stringify(p));
  assert.equal(C.ensure(copy).owner.topics.music.count,1);
 });
+
+test('future advanced species retains its own identity and private memories',()=>{
+ const oldEngine=globalThis.TrialumEngine;
+ globalThis.TrialumEngine={SPECIES:Array.from({length:14},(_,i)=>({name:i===13?'Future Nova':'Species '+i}))};
+ try{
+  const future={id:'future-13',name:'Nova',species:13,birthDay:1,ageDays:100};
+  const other={id:'future-12',name:'Other',species:12};
+  C.topic(future,'space',100);C.topic(other,'music',100);
+  const context=JSON.parse(M.assemble(future,{},'ѕвезда'));
+  assert.equal(context.speciesId,13);
+  assert.equal(context.speciesName,'Future Nova');
+  assert.ok(context.cognitive.topics.some(t=>t.label==='space'));
+  assert.ok(!context.cognitive.topics.some(t=>t.label==='music'));
+ }finally{globalThis.TrialumEngine=oldEngine;}
+});
