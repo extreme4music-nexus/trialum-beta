@@ -93,7 +93,7 @@ function draw(ctx,s,t){
    elapsed=(t+phaseOffset)%cycleSeconds,
    toys=(s.toys||[]).filter(id=>Object.prototype.hasOwnProperty.call(toySlots,id)),
    toyId=toys.length?toys[hash(id+'|toy|'+cycleIndex)%toys.length]:'seesaw',
-   slot=root.TrialumSharedArt?.slot?.(toyId),
+   slot=root.TrialumSharedArt?.slot?.(toyId,s.toys),
    phase=seed%628/100,
    moveSpeed=0.55+(seed%70)/100,
    offset=Math.sin(t*moveSpeed+phase)*21;
@@ -144,11 +144,30 @@ function paint(now){
  const ctx=active?.getContext?.('2d');if(snap&&ctx)draw(ctx,snap,now/1000);
  if(!root.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)scheduleFrame();
 }
+function ownerSelectAt(node,event){
+ const rect=node?.getBoundingClientRect?.();
+ if(!rect||rect.width<=0||rect.height<=0)return false;
+ const x=(event.clientX-rect.left)*node.width/rect.width;
+ const y=(event.clientY-rect.top)*node.height/rect.height;
+ const snap=root.TrialumShared?.getState?.()?.snapshot;
+ const id=root.TrialumSharedArt?.hitTest?.(x,y,snap?.toys||[]);
+ if(!id)return false;
+ return root.TrialumShared?.selectToy?.(id)===true;
+}
+function onCanvasClick(event){ownerSelectAt(event.currentTarget,event);}
+function onCanvasKey(event){
+ if(event.key!=='Enter'&&event.key!==' ')return;
+ const snap=root.TrialumShared?.getState?.()?.snapshot;
+ const first=(snap?.toys||[])[0];
+ if(first&&root.TrialumShared?.selectToy?.(first)){event.preventDefault();}
+}
 function mount(){
  const node=root.document?.getElementById('sharedScene');
  if(!node){stop();return;}
  if(active!==node){
   stop();active=node;
+  node.addEventListener?.('click',onCanvasClick);
+  node.addEventListener?.('keydown',onCanvasKey);
   if(typeof root.IntersectionObserver==='function'){
    viewportObserver=new root.IntersectionObserver(entries=>{
     inViewport=Boolean(entries[0]?.isIntersecting);
@@ -160,6 +179,8 @@ function mount(){
  scheduleFrame();
 }
 function stop(){
+ active?.removeEventListener?.('click',onCanvasClick);
+ active?.removeEventListener?.('keydown',onCanvasKey);
  if(frame!==null)root.cancelAnimationFrame?.(frame);
  frame=null;viewportObserver?.disconnect?.();viewportObserver=null;
  active=null;inViewport=true;
