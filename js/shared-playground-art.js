@@ -11,8 +11,33 @@ const POS=Object.freeze({
  slide:Object.freeze({x:241,y:353,s:.82}),
  pool:Object.freeze({x:823,y:459,s:.88}),
  obstacle:Object.freeze({x:514,y:352,s:.78}),
- trampoline:Object.freeze({x:783,y:348,s:.82})
+ trampoline:Object.freeze({x:783,y:348,s:.82}),
+ swing:Object.freeze({x:320,y:365,s:.75}),
+ carousel:Object.freeze({x:510,y:385,s:.75}),
+ tunnel:Object.freeze({x:740,y:430,s:.76}),
+ climbing:Object.freeze({x:200,y:360,s:.76}),
+ ballpit:Object.freeze({x:790,y:445,s:.76}),
+ puzzlewall:Object.freeze({x:575,y:380,s:.75}),
+ music:Object.freeze({x:345,y:420,s:.74}),
+ stargazer:Object.freeze({x:710,y:375,s:.75})
 });
+function layout(toys){
+ const ids=Array.isArray(toys)?toys.filter(id=>POS[id]).slice(0,6):[];
+ const top=[{x:173,y:365,s:.66},{x:500,y:366,s:.66},{x:827,y:365,s:.66}];
+ const bottom=[{x:173,y:459,s:.72},{x:500,y:458,s:.72},{x:827,y:458,s:.72}];
+ const spots=ids.length<=3?bottom:top.concat(bottom);
+ return Object.fromEntries(ids.map((id,i)=>[id,spots[i]]));
+}
+function hitTest(x,y,toys){
+ const positions=layout(toys);let found=null,best=Infinity;
+ for(const [id,pos] of Object.entries(positions)){
+  // Controls follow actual dynamic toy placements, not the legacy fixed slots.
+  const dx=x-pos.x,dy=y-(pos.y-42);
+  const score=(dx/125)**2+(dy/104)**2;
+  if(score<1.1&&score<best){best=score;found=id;}
+ }
+ return found;
+}
 let cached=null,cacheKey='';
 function path(ctx,points){ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.closePath();}
 function round(ctx,x,y,w,h,r=10){
@@ -179,6 +204,91 @@ function equipment(ctx,id,pos){
   ctx.fillStyle='#b0e6b6';ctx.beginPath();ctx.arc(89,-107,13,0,TAU);ctx.fill();
   ctx.fillStyle='#234a52';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 16px system-ui';ctx.fillText('?',89,-107);
   plaque(ctx,'✦ PUZZLE COURSE',0,30,160);
+ }else if(id==='swing'){
+  ctx.strokeStyle='#a8e4dc';ctx.lineWidth=10;ctx.lineCap='round';
+  for(const x of [-84,84]){ctx.beginPath();ctx.moveTo(x,-135);ctx.lineTo(x*1.3,5);ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(-94,-138);ctx.lineTo(94,-138);ctx.stroke();
+  ctx.strokeStyle='#fff2b5';ctx.lineWidth=3.6;
+  for(const x of [-38,38]){ctx.beginPath();ctx.moveTo(x,-132);ctx.lineTo(x,-32);ctx.stroke();}
+  ctx.fillStyle='#efb3ca';round(ctx,-55,-37,110,19,9);ctx.fill();
+  ctx.fillStyle='#fee4c4';round(ctx,-48,-38,96,8,4);ctx.fill();
+  plaque(ctx,'✦ MOON SWING',0,25,152);
+ }else if(id==='carousel'){
+  ctx.fillStyle='#7581c0';round(ctx,-7,-123,14,126,7);ctx.fill();
+  ctx.fillStyle='#ffe4a8';ctx.beginPath();ctx.arc(0,-128,16,0,TAU);ctx.fill();
+  ctx.fillStyle='#d5aff8';ctx.beginPath();ctx.ellipse(0,-51,108,45,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='#f9e7c4';ctx.lineWidth=8;ctx.stroke();
+  for(let i=0;i<6;i++){
+   const a=i*TAU/6,x=Math.cos(a)*82,y=-51+Math.sin(a)*29;
+   ctx.fillStyle=['#93e5c5','#ffb4ad','#b4ccf2'][i%3];
+   ctx.beginPath();ctx.arc(x,y,18,0,TAU);ctx.fill();
+   ctx.strokeStyle='#edfaff';ctx.lineWidth=3;ctx.stroke();
+  }
+  plaque(ctx,'✦ FLOWER CAROUSEL',0,27,184);
+ }else if(id==='tunnel'){
+  ctx.fillStyle='#274e70';round(ctx,-112,-90,224,107,17);ctx.fill();
+  ctx.fillStyle='#e3b4d4';round(ctx,-112,-97,224,104,19);ctx.fill();
+  for(let i=0;i<3;i++){
+   const x=-75+i*76;
+   ctx.fillStyle=['#6fe6ce','#fad5a0','#afe7fb'][i];
+   ctx.beginPath();ctx.ellipse(x,-51,30,47,0,0,TAU);ctx.fill();
+   ctx.fillStyle='#286c76';ctx.beginPath();ctx.ellipse(x,-50,21,39,0,0,TAU);ctx.fill();
+  }
+  plaque(ctx,'✦ EXPLORER TUNNEL',0,30,174);
+ }else if(id==='climbing'){
+  ctx.strokeStyle='#c8eaf0';ctx.lineWidth=10;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-97,0);ctx.lineTo(-57,-160);ctx.lineTo(62,-160);ctx.lineTo(104,0);ctx.stroke();
+  ctx.strokeStyle='#eca8b0';ctx.lineWidth=6;
+  for(let y=-135;y<=-20;y+=23){ctx.beginPath();ctx.moveTo(-67-(y+135)*.18,y);ctx.lineTo(69+(y+135)*.18,y);ctx.stroke();}
+  for(let i=0;i<5;i++){
+   const x=-31+i*17,y=-116+(i%2)*15;
+   ctx.fillStyle='#ffecac';ctx.beginPath();ctx.arc(x,y,8,0,TAU);ctx.fill();
+  }
+  plaque(ctx,'✦ CLIMBING TOWER',0,24,173);
+ }else if(id==='ballpit'){
+  ctx.fillStyle='#775881';round(ctx,-112,-68,224,86,22);ctx.fill();
+  ctx.fillStyle='#ddc2fa';round(ctx,-111,-80,222,72,18);ctx.fill();
+  ctx.fillStyle='#8256a5';round(ctx,-96,-76,192,57,15);ctx.fill();
+  for(let i=0;i<25;i++){
+   const x=-80+(i*79)%163,y=-72+(i*23)%47;
+   ctx.fillStyle=['#8ee0c9','#ffc28f','#b6b9ff','#f3a9cf','#e6e8a6'][i%5];
+   ctx.beginPath();ctx.arc(x,y,11,0,TAU);ctx.fill();
+  }
+  plaque(ctx,'✦ COLOR BALL PIT',0,31,169);
+ }else if(id==='puzzlewall'){
+  ctx.fillStyle='#4c6886';round(ctx,-112,-165,224,161,13);ctx.fill();
+  ctx.fillStyle='#bce7dd';round(ctx,-104,-162,208,147,10);ctx.fill();
+  for(let i=0;i<12;i++){
+   const col=i%4,row=Math.floor(i/4),x=-73+col*48,y=-132+row*45;
+   ctx.fillStyle=['#9d91d9','#dbac79','#72bfba','#e6a5b3'][i%4];
+   round(ctx,x-17,y-17,34,34,5);ctx.fill();
+   ctx.fillStyle='#203f61';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 14px system-ui';
+   ctx.fillText(['✦','△','◇','?'][i%4],x,y);
+  }
+  plaque(ctx,'✦ PUZZLE WALL',0,26,164);
+ }else if(id==='music'){
+  ctx.fillStyle='#c39064';round(ctx,-111,-46,222,55,16);ctx.fill();
+  ctx.fillStyle='#fbdeb2';round(ctx,-107,-57,214,53,16);ctx.fill();
+  for(let i=0;i<8;i++){
+   const x=-85+i*24,h=23+(i%4)*14;
+   ctx.fillStyle=['#a5d4f5','#ffd3a1','#dcabef','#91e2c4'][i%4];
+   round(ctx,x,-50-h,18,h+28,4);ctx.fill();
+  }
+  ctx.fillStyle='#f7efff';ctx.font='bold 28px system-ui';ctx.textAlign='center';
+  ctx.fillText('♫',0,-130);
+  plaque(ctx,'✦ MUSIC GARDEN',0,29,159);
+ }else if(id==='stargazer'){
+  ctx.fillStyle='#b3d8dd';round(ctx,-92,-128,183,16,8);ctx.fill();
+  ctx.strokeStyle='#98c2c9';ctx.lineWidth=7;
+  ctx.beginPath();ctx.moveTo(-48,-125);ctx.lineTo(-68,5);ctx.moveTo(48,-125);ctx.lineTo(65,5);ctx.stroke();
+  ctx.fillStyle='#314e79';ctx.beginPath();ctx.ellipse(0,-129,67,37,-.3,0,TAU);ctx.fill();
+  ctx.strokeStyle='#a6def4';ctx.lineWidth=9;ctx.stroke();
+  ctx.fillStyle='#ffe49b';ctx.beginPath();ctx.arc(0,-130,18,0,TAU);ctx.fill();
+  for(let i=0;i<8;i++){
+   const a=i*TAU/8,x=Math.cos(a)*75,y=-130+Math.sin(a)*54;
+   ctx.fillStyle='#fff3b4';ctx.beginPath();ctx.arc(x,y,3.2,0,TAU);ctx.fill();
+  }
+  plaque(ctx,'✦ STAR OBSERVATORY',0,30,180);
  }else if(id==='trampoline'){
   // Flexible mat, steel rim, legs, safety net arms and springs.
   ctx.strokeStyle='#c6e5ef';ctx.lineWidth=7;
@@ -199,10 +309,10 @@ function equipment(ctx,id,pos){
 }
 function staticScene(ctx,toys){
  terrain(ctx);
- const back=toys.filter(x=>['slide','obstacle','trampoline'].includes(x));
- const front=toys.filter(x=>['sandbox','seesaw','pool'].includes(x));
- for(const id of back)equipment(ctx,id,POS[id]);
- for(const id of front)equipment(ctx,id,POS[id]);
+ const positions=layout(toys);
+ // Paint rear row first and front row second for depth-correct occlusion.
+ for(const [id,pos] of Object.entries(positions).sort((a,b)=>a[1].y-b[1].y))
+  equipment(ctx,id,pos);
  // Small public-room legend (no personal data and no invented shared points).
  ctx.fillStyle='rgba(6,37,55,.68)';round(ctx,14,16,234,31,12);ctx.fill();
  ctx.fillStyle='#e9fffa';ctx.textAlign='left';ctx.textBaseline='middle';ctx.font='600 13px system-ui';
@@ -235,10 +345,11 @@ function paint(ctx,s,t=0){
  if(Number.isFinite(s?.points)){
   ctx.fillStyle='rgba(6,37,55,.83)';round(ctx,780,17,204,34,12);ctx.fill();
   ctx.fillStyle='#bdeee4';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 15px system-ui';
-  ctx.fillText('✦ Shared points: '+Math.max(0,Math.floor(s.points)),882,34);
+  const credits=Math.max(0,Math.floor(Number(s.sharedCredits??s.points)||0));
+  ctx.fillText('💠 '+credits+' '+(root.TrialumI18n?.language?.()==='mk'?'Заеднички кредити':'Shared credits'),882,34);
  }
 }
-function slot(id){return POS[id]||null;}
-root.TrialumSharedArt={paint,slot,TOYS:POS};
+function slot(id,toys){return toys?layout(toys)[id]||null:POS[id]||null;}
+root.TrialumSharedArt={paint,slot,layout,hitTest,TOYS:POS};
 if(typeof module==='object'&&module.exports)module.exports=root.TrialumSharedArt;
 })(typeof globalThis!=='undefined'?globalThis:this);
