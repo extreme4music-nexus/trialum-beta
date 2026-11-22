@@ -10,8 +10,17 @@ const invalid=reason=>{const e=Error(reason);e.code='INVALID_PRIVATE_MEMORY';thr
 const plain=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const safeId=s=>typeof s==='string'&&s.length>=1&&s.length<=160&&
  /^[A-Za-z0-9:_./-]+$/.test(s)&&!['__proto__','constructor','prototype'].includes(s);
-const safeBucket=s=>typeof s==='string'&&
- /^\d{4}(-\d{2}){0,2}\|(local|shared)$/.test(s);
+// Reject impossible calendar buckets before migration can repackage corrupt data.
+function safeBucket(key,granularity){
+ if(typeof key!=='string')return false;
+ const match=/^(\d{4}(?:-\d{2}){0,2})\|(local|shared)$/.exec(key);
+ if(!match)return false;
+ const period=match[1],expected=granularity==='days'?10:granularity==='months'?7:4;
+ if(period.length!==expected)return false;
+ if(expected===4)return Number(period)>=1;
+ const iso=period+(expected===7?'-01':'')+'T12:00:00Z',d=new Date(iso);
+ return Number.isFinite(d.getTime())&&d.toISOString().slice(0,expected)===period;
+}
 function validatePet(p){
  if(!plain(p)||typeof p.id!=='string'||!p.id||p.id.length>128)invalid('invalid pet id');
  const m=p.cognitiveMemory;
@@ -40,13 +49,26 @@ function validatePet(p){
    const rows=ctx[bucket];
    if(!plain(rows)||Object.keys(rows).length>MAX_CONTEXT_BUCKETS)invalid('invalid context buckets');
    for(const [key,entry] of Object.entries(rows)){
-    if(!safeBucket(key)||!plain(entry)||!Number.isSafeInteger(entry.moments)||
+    if(!safeBucket(key,bucket)||!plain(entry)||!Number.isSafeInteger(entry.moments)||
       entry.moments<0||!Array.isArray(entry.topics)||!Array.isArray(entry.companions)||
       entry.topics.length>16||entry.companions.length>3)invalid('invalid contextual record');
    }
   }
   if(!plain(ctx.nativeStreams)||Object.keys(ctx.nativeStreams).length>MAX_FRIENDS_PER_PET)
    invalid('invalid native stream watermark');
+  for(const [id,stream] of Object.entries(ctx.nativeStreams)){
+   if(!/^[0-9a-fA-F-]{36}$/.test(id)||!plain(stream)||!plain(stream.months)||
+      !plain(stream.years)||typeof stream.seeded!=='boolean')
+    invalid('invalid native watermark identity');
+   for(const [period,granularity] of [['months','months'],['years','years']]){
+    if(Object.keys(stream[period]).length>MAX_CONTEXT_BUCKETS)invalid('oversized native watermark');
+    for(const [date,value] of Object.entries(stream[period])){
+     const key=date+'|shared';
+     if(!safeBucket(key,granularity)||!Number.isSafeInteger(value)||
+        value<0||value>1_000_000_000)invalid('invalid native watermark value');
+    }
+   }
+  }
  }
  if(!plain(m.owner)||!plain(m.owner.topics)||!plain(m.social)||!plain(m.social.peers)||
    Object.keys(m.social.peers).length>MAX_FRIENDS_PER_PET)invalid('invalid social memory');
