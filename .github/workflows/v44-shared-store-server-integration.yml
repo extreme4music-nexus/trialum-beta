@@ -54,20 +54,31 @@ jobs:
           set -euo pipefail
           node --check server-patch/v44/src/shared.mjs
           node --check server-patch/v44/tests/store.integration.mjs
+          node --check server-patch/v44/src/social.mjs
+          node --check server-patch/v44/src/account-recovery.mjs
+          node --check server-patch/v44/src/live.mjs
+          node --check server-patch/v44/tests/account-recovery.integration.mjs
           psql -v ON_ERROR_STOP=1 -f server-baseline/server/sql/001_schema.sql
           sh server-baseline/server/sql/003_social_role.sh
           sh server-baseline/server/sql/004_shared_playgrounds.sh
           sh server-baseline/server/sql/006_pet_presence.sh
           sh server-patch/v44/sql/007_v44_shared_store.sh
-          # Migration must be safely repeatable without losing room rows.
+          sh server-patch/v44/sql/008_social_account_recovery.sh
+          # Both migrations must be repeatable and preserve stored balances.
           sh server-patch/v44/sql/007_v44_shared_store.sh
+          sh server-patch/v44/sql/008_social_account_recovery.sh
+          echo "SOCIAL_RECOVERY_PEPPER_B64=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64url'))")" >> "$GITHUB_ENV"
           psql -v ON_ERROR_STOP=1 -c "SELECT COUNT(*) AS toy_constraint_count FROM pg_constraint WHERE conname='playground_toys_toy_id_check';"
           psql -v ON_ERROR_STOP=1 -c "SELECT column_name FROM information_schema.columns WHERE table_name='playground_toys' AND column_name='placed';"
       - name: Install server dependencies and overlay ONLY the CI checkout
         run: |
           npm install --prefix server-baseline/server --ignore-scripts --no-audit --no-fund
           cp server-patch/v44/src/shared.mjs server-baseline/server/src/shared.mjs
+          cp server-patch/v44/src/social.mjs server-baseline/server/src/social.mjs
+          cp server-patch/v44/src/account-recovery.mjs server-baseline/server/src/account-recovery.mjs
+          cp server-patch/v44/src/live.mjs server-baseline/server/src/live.mjs
           cp server-patch/v44/tests/store.integration.mjs server-baseline/server/tests/v44-store.integration.mjs
+          cp server-patch/v44/tests/account-recovery.integration.mjs server-baseline/server/tests/v44-recovery.integration.mjs
       - name: Boot isolated server and verify healthy status
         env:
           HOST: 127.0.0.1
@@ -92,6 +103,9 @@ jobs:
       - name: New store PostgreSQL integration — owner ACL, 14 toys and no double charging
         run: |
           node server-baseline/server/tests/v44-store.integration.mjs
+      - name: Recover same account across installations; preserve ownership and revoke old credentials
+        run: |
+          node server-baseline/server/tests/v44-recovery.integration.mjs
       - name: Restart disposable server to isolate historical API rate-limit buckets
         env:
           HOST: 127.0.0.1
