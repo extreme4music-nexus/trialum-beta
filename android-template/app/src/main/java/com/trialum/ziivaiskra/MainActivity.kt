@@ -42,13 +42,14 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.Executors
 import org.json.JSONArray
 
-/** Android WebView wrapper for compiled Trialum 1.5.5 APK. */
+/** Android WebView wrapper for Trialum 1.4 v44. */
 class MainActivity : Activity() {
 private fun nativeText(macedonian: String, english: String): String =
         TrialumNativeText.get(this, macedonian, english)
 
     private lateinit var web: WebView
     private lateinit var modelRuntime: ModelRuntime
+    private lateinit var petVoice: TrialumPetVoice
     private lateinit var playGames: TrialumPlayGames
     private lateinit var ageSignals: TrialumAgeSignals
     private lateinit var nearby: TrialumNearby
@@ -340,6 +341,12 @@ private fun nativeText(macedonian: String, english: String): String =
                     )
             }
         }
+        petVoice = TrialumPetVoice(this) { event ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed)
+                    web.evaluateJavascript("window.TrialumPetVoiceEvent && window.TrialumPetVoiceEvent(" + event.toString() + ");", null)
+            }
+        }
         modelRuntime = ModelRuntime(this) { kind, petId, text ->
             val event = JSONObject().put("kind", kind).put("petId", petId).put("text", text)
             runOnUiThread {
@@ -465,6 +472,7 @@ private fun nativeText(macedonian: String, english: String): String =
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (::nearby.isInitialized) nearby.onPermissionsResult(requestCode, grantResults)
         if (::push.isInitialized) push.permissionResult(requestCode, grantResults)
+        if (::petVoice.isInitialized) petVoice.onPermissionResult(requestCode, grantResults)
     }
     private fun openExternalLegalUri(uri: Uri) {
         try {
@@ -479,6 +487,15 @@ private fun nativeText(macedonian: String, english: String): String =
     }
 
     inner class Bridge {
+        @JavascriptInterface fun startPetVoiceInput(petId: String) {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.start(petId) }
+        }
+        @JavascriptInterface fun speakPetChat(petId: String, text: String) {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.speak(petId, text) }
+        }
+        @JavascriptInterface fun stopPetVoice() {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.stop() }
+        }
         @JavascriptInterface fun openDeleteAccount() {
             runOnUiThread { openDeleteAccountPage() }
         }
@@ -995,6 +1012,7 @@ private fun nativeText(macedonian: String, english: String): String =
     }
     override fun onStop() {
         foregroundStarted = false
+        if (::petVoice.isInitialized) petVoice.stop()
         if (TrialumBackgroundSpeechService.running) {
             startService(Intent(this, TrialumBackgroundSpeechService::class.java)
                 .setAction(TrialumBackgroundSpeechService.RESUME))
@@ -1004,6 +1022,7 @@ private fun nativeText(macedonian: String, english: String): String =
         super.onStop()
     }
     override fun onDestroy() {
+        if (::petVoice.isInitialized) petVoice.destroy()
         if (::nearby.isInitialized) nearby.stop()
         if (::modelRuntime.isInitialized) modelRuntime.destroy()
         web.destroy()
