@@ -24,16 +24,55 @@ Baseline: `feature/v44-unified-cognitive-memory` @ `2ad8475dd3f280e4ee29cb9c8769
 - `js/resource-hud-ui.js` and `tests/v44-hud-details.test.cjs`: live selected pet, resource balances and relevant next-stage requirements.
 - Remains: Android touch targets and screen reader TalkBack validation.
 
-## Remaining
-04 — Full EN/MK offline player guide, contextual help, shared pet retrieval: **not yet signed off**.
-05 — Universal no-LLM private pet assistant: **not yet signed off**.
-06 — Locked billing catalog: **not yet signed off**.
-07 — Android model lifecycle: **not yet signed off**.
-08 — Shared playground graphics: **not yet signed off**.
-09 — Social age signal and server gates: **not yet signed off**.
-10 — Integration, owner QA random-signed APK, then unsigned owner-signing APK/AAB: **blocked by 04–09 and real Android tests**.
+## Checkpoint 04 — Offline bilingual complete guide and interactive live help
+**Code: implemented. Node targeted CI: PASS, [run 45048749775](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45048749775), subsequently included in [integrated targeted gate 45050424343](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45050424343).**
+- Owner-supplied PDF *Complete Player's Guide v43 (25 pages)* reconciled with the v44 code, including cognitive memory, private encrypted migration, food warehouse, direct action refill, day passes and Friends eligibility.
+- Canonical 20-topic `js/player-guide.js` supports all 20 prior chapters with English and Macedonian topics, step sequences, search, live next-action hints and bounded private model context references.
+- Fully bundled `assets/player-guide-v44-{en,mk}.html`, on-demand floating HUD and full in-app offline reader; dedicated service-worker precache; no hidden network translator.
+- `tests/v44-player-guide.test.cjs` checks 20 paired topics, full offline availability, live context, English helper queries and private source boundaries.
+- Remains: physical language/keyboard accessibility, QA of all content against final release screenshots, future version migration test.
 
-## Release invariants
-- No change to `main`, release branches, live server, signing key or Play Console.
-- CI Node tests are not physical Android device verification.
-- Prior unaffected cognitive tests and Kotlin compile results remain evidence from original PR #12; no expensive duplicate workflows are needed until final integration.
+## Checkpoint 05 — English gameplay helper for every pet without LLM
+**Code: implemented. Targeted CI: PASS, [run 45048749775](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45048749775).**
+- `js/pet-chat-ui.js` now exposes `helper` tier for primitive, advanced and future species. It stores each pet's private local chat history and answers selected familiar gameplay questions deterministically via the canonical guide.
+- Unlocked Mini/Advanced model choices remain optional, require their original availability/consent and do not erase memories. English-only beta notice displayed. Android offline STT/TTS kept as optional devices services.
+- `tests/v44-pet-helper.test.cjs`, affected preexisting chat privacy/context tests passed.
+- Remains: actual Android voice and English speech QA and arbitrary user-prompt quality evaluation.
+
+## Checkpoint 06 — Future payment catalog, hard-disabled beta
+**Code: implemented as locked planned catalog; no Play Billing backend, by owner request. CI: PASS, [run 45048919025](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45048919025).**
+- Planned 100 credits/$0.99, 750/$4.99, 1500/$10.00 in visible disabled Settings cards; no live Google Play purchase, token grant, or fake local receipt, and no change to the legacy Free Credits UI.
+- `js/locked-billing.js` hard-disables purchasing and client grants even if a UI control is spoofed. `tests/v44-locked-billing.test.cjs` validates this.
+- Pricing observation: 2 × 750 costs $9.98, slightly less than the 1500/$10.00 pack. Owner confirmation recommended before eventual commercial activation.
+
+## Checkpoint 07 — Stop AI outside foreground; Mini-only playground
+**Code: implemented. Node regression CI: PASS [run 45049532810](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45049532810). Android Kotlin compile-only: PASS [run 45050210569](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45050210569).**
+- `MainActivity.onStop` now issues STOP, not RESUME, for background speech service. Android native background START/RESUME both fail closed. Legacy background consent is removed.
+- `ModelRuntime.kt` refuses Advanced/Deep tiers for playground and suppresses replies on hide; local inference remains on-demand with native model release in `finally`. `js/playground-ai.js` stops on hidden/pagehide/freeze.
+- `tests/v44-ai-lifecycle.test.cjs`, impacted playground tests, Kotlin compilation pass.
+- Remains: physical Android CPU/thermal/battery, race/cancellation during blocking `Llama.complete`, foreground services and process kill.
+
+## Checkpoint 08 — Shared Playground detailed artwork
+**Code: implemented. Targeted CI: PASS, [run 45049532810](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45049532810).**
+- `js/shared-playground-art.js`: cached layered vector scene, six distinct drawn physical pieces of apparatus (sandbox, seesaw, curved slide, pool, puzzle course and trampoline), vegetation, trails and lighting.
+- `js/shared-scene.js`: pets positioned with the selected apparatus and real server-authorized occupants, existing game points and protocols unchanged. Local Playground animation intentionally untouched.
+- `tests/v44-shared-visual.test.cjs`: all apparatus, no state mutation and asset loading. Visual QA on actual Android still needed.
+
+## Checkpoint 09 — Adult social gate independent of beta tester tools
+**Client code: implemented. Targeted CI: PASS [run 45050424343](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45050424343). Android Kotlin compile-only: PASS [run 45050210569](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45050210569). Server and real Play testing NOT confirmed.**
+- `js/social.js`, `js/messages.js` and `js/shared-playground.js` no longer require `betaTesterToolsEnabled`; native Google-shared adult 18+ age band + social consent + profile still mandatory, fail-closed for unknown, supervised, declined, underage.
+- Android Play Age Signals updated from 0.0.4 to 0.0.6. `TIER_A` (may be self-declared) is accepted with 18+ band for non-regulated regions; `TIER_C/D` (stronger) where applicable. Distinguish shared adult band from independent ID verification.
+- `MainActivity` legacy QA bypass now always false. Exact client tests `tests/v44-friends-age-signals.test.cjs` simulate beta flag false, adult true, consent opt-in and unknown/underage rejection; affected social UI and message client suites run.
+- CRITICAL external blockers: `trialum-beta` does not contain the live Friends/WSS server implementation; cannot establish server-independent authorization, Play Integrity, credential replay prevention or real Google Play Age Signals runtime outcome. See `docs/V44-FRIENDS-AGE-SIGNALS-VERIFICATION.md`. No claim of complete production-grade social readiness.
+
+## Checkpoint 10 — Integration audit, safe QA artifact and release hold
+- Audited Git diff versus baseline SHA `2ad8475d`: no baseline changes lost (branch is ahead; behind=0). New and impacted suites run through dedicated `v44-owner-hud-economy.yml`, with unaffected historical test evidence reused.
+- Existing `tests/messages-client.test.cjs` had two unrelated FCM/server assertions referring to files *absent* from this client branch (`.github/workflows/android-signing.yml` and `server/src/push.mjs`). Scoped CI to impacted Friends/message tests, without manufacturing replacement server fixtures or asserting FCM complete.
+- Added isolated `qa44` Android build type: `com.trialum.ziivaiskra.qa44`, own Android storage/UID, temporary runner debug signer, with Play Games/FCM disabled. Distinct from installed Trialum, so it cannot overwrite private production world. **A sideloaded QA APK cannot prove Google Play Age Signals**. On-device Play eligibility requires a properly Play-installed registered build.
+- One-time test APK workflow: `.github/workflows/v44-owner-qa44-apk.yml`. The test artifact and its SHA-256 must be recorded after successful workflow completion.
+- Deliberately **no merge** into `trialum-beta/main`, v44 release or the original `Trialum` core `main`. No server deployment, Google Play upload, owner key or release signing. The user must test QA, verify server authorization and review changes before an authorized release merge.
+- **After owner QA approval only:** generate unsigned `app-release.apk` and `app-release.aab` from a reviewed release candidate, attach SHA-256 + provenance, and deliver both for local owner signing. Never ship a randomly signed test APK as production.
+
+## Latest sign-off summary
+01–09: code integrated and validated in targeted host automated gates; remaining Android, WSS/Play and security device gates explicitly open.
+10: technical diff and targeted regression audit done, but release integration and final unsigned APK/AAB blocked on owner device QA and server verification. Any successful QA APK is **test-only**, not a release.
