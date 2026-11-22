@@ -1,0 +1,59 @@
+name: Trialum v44 owner QA44 random-signed APK
+on:
+  push:
+    branches:
+      - feature/v44-owner-hud-economy-guidance-20261122
+    paths:
+      - .github/workflows/v44-owner-qa44-apk.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v44-owner-one-time-apk-${{ github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  build-isolated-owner-apk:
+    name: Build one disposable side-by-side Android QA APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android platform and signing tool
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build isolated random debug-signed com.trialum.ziivaiskra.qa44 APK
+        run: |
+          gradle -p android-template :app:assembleQa44 --no-daemon --stacktrace
+      - name: Verify test signature and produce integrity hash
+        run: |
+          set -euo pipefail
+          APK=android-template/app/build/outputs/apk/qa44/app-qa44.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$APK"
+          mkdir -p owner-qa44
+          cp "$APK" owner-qa44/Trialum-1.4-v44-owner-qa44-random-debug-signed.apk
+          ( cd owner-qa44 && sha256sum *.apk > SHA256SUMS.txt )
+          cat owner-qa44/SHA256SUMS.txt
+          printf '%s\n' \
+            'This is a disposable Android TEST certificate, not the Play upload/release signature.' \
+            'Package: com.trialum.ziivaiskra.qa44 (separate from installed Play app and its data).' \
+            'Play Age Signals, Play Games and FCM require correctly registered Google Play builds and are NOT validated by this sideloaded APK.' \
+            'Do not sign or upload this APK to the Play Console as a production build.' > owner-qa44/READ-ME-QA.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-v44-owner-qa44-random-signed-APK
+          path: owner-qa44/
+          if-no-files-found: error
+          retention-days: 14
