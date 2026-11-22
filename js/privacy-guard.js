@@ -42,7 +42,10 @@ function inspectPetSpeech(value,pet){
   let named;
   while((named=entity.exec(rawPrivate))){
    const value=normalize(named[1]).split(/\s+(?:and|but|because|at|on)\b/)[0].trim();
-   if(value.length>=4&&new RegExp('\\b'+value.replace(/[.*+?^${}()|[\]\\]/g,'\\  const words=normalize(row.text).split(' ').filter(x=>x.length>1);
+   if(value.length>=4&&(' '+normalized+' ').includes(' '+value+' '))
+    return {blocked:true,reason:'private_named_entity'};
+  }
+  const words=normalize(row.text).split(' ').filter(x=>x.length>1);
   for(let i=0;i+2<words.length;i++){')+'\\b','i').test(normalized))
     return {blocked:true,reason:'private_named_entity'};
   }
