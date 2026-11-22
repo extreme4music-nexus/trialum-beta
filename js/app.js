@@ -1,6 +1,6 @@
 /* TRIALUM 1.4 v44: working navigation, debug days and resource HUD */
 (()=>{'use strict';
-const E=TrialumEngine,S=TrialumStorage,A=TrialumAudio,W=TrialumWorld,P=globalThis.TrialumPeer,X=globalThis.TrialumExpansion,G=globalThis.TrialumPlayGames,M=globalThis.TrialumMind,O=globalThis.TrialumOnboarding,Theme=globalThis.TrialumTheme,Social=globalThis.TrialumSocial,PG=globalThis.TrialumPlayground,Shared=globalThis.TrialumShared,Messages=globalThis.TrialumMessages,Presence=globalThis.TrialumPresence,TopUp=globalThis.TrialumActionTopUp,DayPassUI=globalThis.TrialumDayPassUI,ResourceHUD=globalThis.TrialumResourceHUD,el=id=>document.getElementById(id);
+const E=TrialumEngine,S=TrialumStorage,A=TrialumAudio,W=TrialumWorld,P=globalThis.TrialumPeer,X=globalThis.TrialumExpansion,G=globalThis.TrialumPlayGames,M=globalThis.TrialumMind,O=globalThis.TrialumOnboarding,Theme=globalThis.TrialumTheme,Social=globalThis.TrialumSocial,PG=globalThis.TrialumPlayground,Shared=globalThis.TrialumShared,Messages=globalThis.TrialumMessages,Presence=globalThis.TrialumPresence,TopUp=globalThis.TrialumActionTopUp,DayPassUI=globalThis.TrialumDayPassUI,ResourceHUD=globalThis.TrialumResourceHUD,GuideUI=globalThis.TrialumGuideUI,el=id=>document.getElementById(id);
 let s=null,tab='lab',toastTimer,saveTimer,alertsSeen=new Set(),saving=false,restoring=false,restoreRecoveryBlocked=false,peerOutgoing='',peerIncoming='',peerMode='internet';
 // Scroll-intent state belongs to the home scene only, not other screens.
 let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
@@ -337,6 +337,7 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
  if(action==='actionRefillOpen'){TopUp?.open?.(s,button.dataset.scope,button.dataset.id||null,{notice,toast,scheduleSave,render});return;}
  if(action==='dayPassOpen'){DayPassUI?.open?.(s,{notice,toast,scheduleSave,render});return;}
  if(action==='hudDetails'){ResourceHUD?.open?.(s,button.dataset.hud,{toast,chooseTab});return;}
+ if(action==='guideOpen'){GuideUI?.open?.(s,tab,{toast,chooseTab});return;}
  const depleted=s&&TopUp?.depletedFor?.(s,button);
  if(depleted){TopUp.open(s,depleted.scope,depleted.id,{notice,toast,scheduleSave,render});return;}
  if(action?.startsWith('agro'))button.disabled=true;
