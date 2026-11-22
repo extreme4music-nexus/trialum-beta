@@ -1,6 +1,6 @@
 /* TRIALUM 1.4 v44: working navigation, debug days and resource HUD */
 (()=>{'use strict';
-const E=TrialumEngine,S=TrialumStorage,A=TrialumAudio,W=TrialumWorld,P=globalThis.TrialumPeer,X=globalThis.TrialumExpansion,G=globalThis.TrialumPlayGames,M=globalThis.TrialumMind,O=globalThis.TrialumOnboarding,Theme=globalThis.TrialumTheme,Social=globalThis.TrialumSocial,PG=globalThis.TrialumPlayground,Shared=globalThis.TrialumShared,Messages=globalThis.TrialumMessages,Presence=globalThis.TrialumPresence,el=id=>document.getElementById(id);
+const E=TrialumEngine,S=TrialumStorage,A=TrialumAudio,W=TrialumWorld,P=globalThis.TrialumPeer,X=globalThis.TrialumExpansion,G=globalThis.TrialumPlayGames,M=globalThis.TrialumMind,O=globalThis.TrialumOnboarding,Theme=globalThis.TrialumTheme,Social=globalThis.TrialumSocial,PG=globalThis.TrialumPlayground,Shared=globalThis.TrialumShared,Messages=globalThis.TrialumMessages,Presence=globalThis.TrialumPresence,TopUp=globalThis.TrialumActionTopUp,el=id=>document.getElementById(id);
 let s=null,tab='lab',toastTimer,saveTimer,alertsSeen=new Set(),saving=false,restoring=false,restoreRecoveryBlocked=false,peerOutgoing='',peerIncoming='',peerMode='internet';
 // Scroll-intent state belongs to the home scene only, not other screens.
 let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
@@ -205,6 +205,7 @@ function renderTab(){
  if(tab==='pets')globalThis.TrialumPetChat?.scroll?.();
  if(tab==='playground')PG?.mount(s,{onSelect:id=>{const r=PG.replay(s,id);if(r.ok)toast(r.message);},onNotice:toast,onRender:renderTab});
  if(tab==='shared')globalThis.TrialumSharedScene?.mount?.();
+ TopUp?.decorate?.(el('tabContent'),s);
 }
 function render(){if(!s)return;Presence?.ensure(s);E.ensureResearch(s);W.setState(s);
  el('dayPill').textContent='📅 Ден '+s.lastDay;if(el('modePill'))el('modePill').textContent='🕰 Долгорочна еволуција';
@@ -332,7 +333,11 @@ function exportBackup(){
  function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId||x.plantId)));
  for(const a of msgs){const id=a.type+'|'+(a.petId||a.habitatId||a.plantId);if(alertsSeen.has(id))continue;alertsSeen.add(id);if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){try{new Notification('ТРИАЛУМ · Потребна грижа',{body:a.text,tag:id,icon:'assets/icon.svg'})}catch(_){}}}
  alertsSeen=new Set([...alertsSeen].filter(x=>active.has(x)));}
-function doAction(button){if(restoring||restoreRecoveryBlocked)return;const action=button.dataset.do,kind=button.dataset.kind;if(button.disabled)return;if(action?.startsWith('agro'))button.disabled=true;
+function doAction(button){if(restoring||restoreRecoveryBlocked)return;const action=button.dataset.do,kind=button.dataset.kind;if(button.disabled)return;
+ if(action==='actionRefillOpen'){TopUp?.open?.(s,button.dataset.scope,button.dataset.id||null,{notice,toast,scheduleSave,render});return;}
+ const depleted=s&&TopUp?.depletedFor?.(s,button);
+ if(depleted){TopUp.open(s,depleted.scope,depleted.id,{notice,toast,scheduleSave,render});return;}
+ if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
  if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
