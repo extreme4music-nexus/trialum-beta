@@ -18,7 +18,8 @@ const ctx=new Proxy({createLinearGradient:()=>({addColorStop(){}}),
 const test=(name,fn)=>{fn();console.log('PASS',name)};
 const six=['sandbox','seesaw','slide','pool','obstacle','trampoline'];
 test('all six toy IDs have stable tangible equipment locations',()=>{
- assert.deepEqual(Object.keys(art.TOYS).sort(),six.slice().sort());
+ assert.equal(Object.keys(art.TOYS).length,14,'shop expands beyond the six original apparatus');
+ for(const id of six)assert(Object.prototype.hasOwnProperty.call(art.TOYS,id),id);
  for(const key of six){const p=art.slot(key);assert(p&&p.x>0&&p.x<1000&&p.y>200&&p.y<520);}
 });
 test('drawing all apparatus produces layered paths and semantic labels, not emoji',()=>{
@@ -27,7 +28,7 @@ test('drawing all apparatus produces layered paths and semantic labels, not emoj
  const tags=drawOps.filter(v=>v[0]==='text').map(v=>v[1]);
  for(const k of ['SYMBOL SANDBOX','BALANCE SEESAW','RAINBOW SLIDE','CRYSTAL POOL','PUZZLE COURSE','SKY TRAMPOLINE'])
   assert(tags.some(x=>x.includes(k)),k);
- assert(tags.some(x=>x.includes('Shared points: 27')));
+ assert(tags.some(x=>x.includes('Shared credits')));
 });
 test('drawing optional toys does not add game state or unlock them',()=>{
  const s={toys:['sandbox','seesaw'],points:9,snapshot:{id:'room-1'}};
