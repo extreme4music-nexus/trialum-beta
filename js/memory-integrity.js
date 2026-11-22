@@ -19,6 +19,18 @@ function validatePet(p){
  if(!Array.isArray(m.eventLedger)||m.eventLedger.length>MAX_EVENTS_PER_PET||!plain(m.archivedReceipts))
   invalid('invalid per-pet event indexes');
  if(Object.keys(m.archivedReceipts).length>MAX_RECEIPTS_PER_PET)invalid('too many archived event receipts');
+ if(!Array.isArray(m.receiptRuns)||m.receiptRuns.length>MAX_RECEIPTS_PER_PET)invalid('invalid packed receipt index');
+ let previousEnd=0,packed=0;
+ for(const run of [...m.receiptRuns].sort((a,b)=>a.start-b.start)){
+  if(!plain(run)||!Number.isSafeInteger(run.start)||run.start<=previousEnd||
+    typeof run.hashes!=='string'||run.hashes.length===0||run.hashes.length%16||
+    run.hashes.length>32768||!/^[a-f0-9]+$/.test(run.hashes))
+   invalid('overlapping or corrupt packed replay receipts');
+  packed+=run.hashes.length/16;
+  previousEnd=run.start+run.hashes.length/16-1;
+ }
+ if(packed+Object.keys(m.archivedReceipts).length>MAX_RECEIPTS_PER_PET)
+  invalid('too many lifetime event receipts');
  for(const [id,hash] of Object.entries(m.archivedReceipts))
   if(!safeId(id)||typeof hash!=='string'||!/^[a-f0-9]{16}$/.test(hash))invalid('invalid archived receipt');
  const ctx=m.contextual;
@@ -46,7 +58,8 @@ function inspect(world){
   validatePet(pet);
   if(ids.has(pet.id))invalid('duplicate pet identity');ids.add(pet.id);
   events+=pet.cognitiveMemory.eventLedger.length;
-  receipts+=Object.keys(pet.cognitiveMemory.archivedReceipts).length;
+  receipts+=Object.keys(pet.cognitiveMemory.archivedReceipts).length+
+   pet.cognitiveMemory.receiptRuns.reduce((n,run)=>n+run.hashes.length/16,0);
  }
  return {schema:2,pets:world.pets.length,events,receipts,
   bytes:bytes(world)};
