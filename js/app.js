@@ -304,7 +304,9 @@ function exportBackup(){
    rollbackWorld:async oldWorld=>{
     const saved=oldWorld?await S.save(oldWorld):await S.clear();
     if(!saved?.ok)return false;
-    s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();sendNative();
+    s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);
+    if(el('welcome'))el('welcome').hidden=!!s;
+    render();sendNative();
     return true;
    },
    rollbackConversations:old=>globalThis.TrialumLocalConversations.replaceAll(old)
