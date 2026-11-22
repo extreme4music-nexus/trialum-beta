@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {webcrypto}=require('node:crypto');
-globalThis.crypto=globalThis.crypto||webcrypto;
+const crypto=webcrypto; // Node 22 provides global WebCrypto through a read-only accessor.
 const C=require('../js/cognitive-memory.js');
 const X=require('../js/cognitive-context.js');
 const P=require('../js/playground-memory.js');
