@@ -568,3 +568,20 @@
 .action-refill-help{padding:12px;border-left:3px solid #f3c883;background:#263449;border-radius:8px;line-height:1.5}
 .action-refill-modal footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 @media(max-width:360px){.action-refill-body{padding:12px}.action-refill-packs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v44 — tapping the Day chip opens a separate saved day-pass economy */
+.day-interactive{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.2;border:1px solid #477a83;font:inherit;font-weight:700;cursor:pointer}
+.day-interactive:focus-visible{outline:3px solid #f4ce8c;outline-offset:2px}
+.day-pass-body{padding:18px}
+.day-pass-body h3{margin:16px 0 9px;font-size:1.08rem}
+.day-pass-pack-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 14px}
+.day-pass-pack-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:80px;padding:7px;border-radius:12px;background:linear-gradient(145deg,#24404e,#273a59);border:1px solid #7291bc;font-variant-numeric:tabular-nums}
+.day-pass-pack-grid button:disabled{opacity:.40;cursor:not-allowed}
+.day-pass-pack-grid strong{font-size:1rem}
+.day-pass-pack-grid span{font-size:.94rem;color:#ddf7fa;font-weight:700}
+.day-pass-pack-grid small{color:#a5f1ce}
+.day-pass-warning{padding:11px 12px;border-left:4px solid #eab779;border-radius:9px;background:#3b2f29;color:#ffe6c7;line-height:1.52}
+.day-pass-use-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.day-pass-use-grid button{min-height:46px;border:1px solid #75ccb9;background:#28505a;padding:8px;border-radius:10px}
+.day-pass-body footer{display:flex;justify-content:flex-end;margin-top:13px}
+@media(max-width:360px){.day-pass-body{padding:12px}.day-pass-pack-grid,.day-pass-use-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
