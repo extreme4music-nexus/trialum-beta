@@ -7,6 +7,10 @@ require('../js/progression.js');
 require('../js/longplay.js');
 require('../js/fauna-lab.js');
 require('../js/storage.js');
+require('../js/cognitive-memory.js');
+globalThis.TrialumPetAI=require('../js/pet-ai-capabilities.js');
+globalThis.TrialumGameKnowledge=require('../js/game-knowledge.js');
+globalThis.TrialumAIContext=require('../js/ai-context.js');
 let n=0;
 function test(name,fn){try{fn();n++;console.log('✓ '+name)}catch(e){console.error('✗ '+name);throw e}}
 function fixture(){
