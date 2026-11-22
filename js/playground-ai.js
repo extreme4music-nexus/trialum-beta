@@ -228,10 +228,10 @@ function injectScripted(s,p,scope,input,roomId){
  const key=scope+'|'+p.id,now=Date.now();
  if(pending||!active(scope)||!enabled(s,p,scope)||
    now-(lastAttempt[key]||0)<24000)return false;
- const translated=scope==='shared'&&!!root.TrialumShared?.getState?.()?.speechTranslationEnabled;
+ const translated=scope==='shared';
  const text=scriptedSeed(scope,input?.text,translated);
  if(scope==='shared'){
-  if(!root.TrialumShared?.sendPetSpeech?.(s,p,text,translated?'en':'mk',
+  if(!root.TrialumShared?.sendPetSpeech?.(s,p,text,'en',
     input?.turnId||''))return false;
  }else{
   latestLocal={speaker:String(p.name||'Милениче'),text,at:now,ai:false};
@@ -259,7 +259,7 @@ function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
  try{
   context=root.TrialumAIContext.assemble(p,s,prompt,{
    scope:scope==='shared'?'playground-shared':'playground-local',tier:'mini',
-   language:translated?'en':(root.TrialumI18n?.language?.()||'mk'),
+   language:'en',
    llmLanguage:translated?'en':null,
    roomTurns:Sessions()?.context?.(scope,scope==='shared'?roomId:localSessionKey,null,980)||[],
    maxChars:1450,now
@@ -331,8 +331,7 @@ function tick(s,tab){
  }else if(tab==='shared'){
   const state=root.TrialumShared?.getState?.(),room=state?.selected;
   if(!state?.online||!state.aiRelayEnabled||!state.snapshot?.presenceEnabled||!room)return;
-  if(state.speechTranslationEnabled&&
-   !state.speechTranslationLanguages?.includes(root.TrialumI18n?.language?.()||'mk'))return;
+  // Canonical English shared dialogue supports all client UI locales.
   memory?.ensure('shared',room);
   const occupants=(state.snapshot.occupants||[]).filter(x=>x?.pet?.id);
   if(occupants.length<2)return;
@@ -383,7 +382,7 @@ function onPeerSpeech(message){
  if(!(state.snapshot?.occupants||[]).some(x=>x.pet?.id===message.petId))return false;
  // The model consumes English ONLY after the server attests translation.
  if(state.speechTranslationEnabled&&message.translated!==true)return false;
- const displayText=sanitize(message.text);if(!displayText)return false;
+ const displayText=sanitize(root.TrialumI18n?.language?.()==='mk'?message.text:(message.englishText||message.text));if(!displayText)return false;
  const modelText=state.speechTranslationEnabled?sanitize(message.englishText):displayText;
  if(!modelText)return false;
  const speaker=String(message.speaker||'Милениче').slice(0,32);
@@ -429,7 +428,7 @@ function onModelEvent(event){
    latestShared=null;
   }else latestShared={speaker:job.petName,text,roomId:job.roomId,at:Date.now(),ai:true};
   if(root.TrialumShared?.sendPetSpeech?.(s,p,text,
-    st.speechTranslationEnabled?'en':'mk',job.replyToTurnId)){
+    'en',job.replyToTurnId)){
    if(job.replyToTurnId)Sessions()?.answered('shared',job.roomId,job.replyToTurnId);
    Sessions()?.start('shared',job.roomId);
    counted('shared',p,'ai');
