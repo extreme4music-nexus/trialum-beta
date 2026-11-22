@@ -144,7 +144,7 @@ private fun nativeText(macedonian: String, english: String): String =
                 if (length <= 32768) {
                     val prefix = String(output.toByteArray(), Charsets.UTF_8).take(1024)
                     secureArchive = secureArchive ||
-                        Regex("\\"format\\"\\s*:\\s*\\"trialum-encrypted-archive\\"").containsMatchIn(prefix)
+                        Regex("\"format\"\\s*:\\s*\"trialum-encrypted-archive\"").containsMatchIn(prefix)
                 }
                 if (!secureArchive && length > maxBackupBytes)
                     error(nativeText("Обичниот бекап е поголем од 20 MB.", "Plain backup exceeds 20 MB."))
