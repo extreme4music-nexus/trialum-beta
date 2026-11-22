@@ -75,6 +75,9 @@ function ensure(s){
  s.longplay={createdAt:s.createdAt||Date.now(),credits:0,earned:0,ledger:[],lastTick:Date.now(),invented:[],materials:{},habitatUpgrades:{},traits:{},training:{},storeEnabled:false,purchasesEnabled:false,modelInstalled:false};}
  const l=s.longplay;
  l.credits=num(l.credits,0,10000000);l.earned=num(l.earned,0,100000000);
+ // Redeemable skip-day passes are independent of early evolutionary wait-time bonuses.
+ l.dayPasses=Math.min(365,Math.max(0,Math.floor(Number(l.dayPasses)||0)));
+ l.paidDayOffset=Math.min(36500,Math.max(0,Math.floor(Number(l.paidDayOffset)||0)));
  l.ledger=Array.isArray(l.ledger)?l.ledger:[];
  l.invented=Array.isArray(l.invented)?l.invented:[];l.materials=l.materials||{};
  l.habitatUpgrades=l.habitatUpgrades||{};l.training=l.training||{};
