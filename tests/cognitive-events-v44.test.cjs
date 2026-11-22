@@ -85,3 +85,16 @@ test('invalid observations fail without mutating counters or event indexes',()=>
  assert.equal(M.awareness(p).lastMeal.quantity,3);
  assert.equal(M.ensure(p).eventLedger.length,1);
 });
+
+test('persisted invalid or duplicated ledger entries fail closed on hydration',()=>{
+ const p={id:'pet-a'};
+ M.record(p,'feed',{day:1,at:42,quantity:3});
+ const cloned=JSON.parse(JSON.stringify(p));
+ cloned.cognitiveMemory.eventLedger.push({...cloned.cognitiveMemory.eventLedger[0]});
+ assert.throws(()=>M.ensure(cloned),/corrupt cognitive event ledger/);
+ const wrong=JSON.parse(JSON.stringify(p));
+ wrong.cognitiveMemory.eventLedger[0].petId='another-pet';
+ assert.throws(()=>M.ensure(wrong),/corrupt cognitive event ledger/);
+ // Original remains valid and can continue recording.
+ assert.equal(M.ensure(p).eventLedger.length,1);
+});
