@@ -20,6 +20,12 @@
 - The future release must use the new service-worker cache identifier to invalidate outdated JS. Do not assume a single Galaxy phone + Samsung Secure Folder can keep two independent background Mini LLMs running while foreground-only lifecycle policy is active. Two separate active devices are needed to verify actual bi-directional conversation.
 - Preserve this scope and the tested code when syncing with main. A failed server-side speech relay or identity authorization must not be papered over by sending fake “AI” messages or granting the client a production age bypass.
 
+## Final v44 community playground store (owner's last feature)
+- New `docs/V44-SHARED-STORE-REPORT-20261122.md` explains the 14-item catalog, permanent room inventory, owner-only tap-to-store/place and **separate shared credits** (renamed existing server points; never convert personal credits).
+- Client files, tests, migration and server contract are in PR #13 development branch. **Private server is NOT updated yet**: staged backend `server-patch/v44/src/shared.mjs`, idempotent/manual SQL `server-patch/v44/sql/007_v44_shared_store.sh`, owner-safe instructions `server-patch/v44/README.md`.
+- CRITICAL prerequisite to calling release ready: owner-authorized server schema backup, migration, deployed backend matching real current server code, multi-client and owner-only purchase/store/capacity regression tests. A client-only test APK cannot validate live purchases while the old server is active. DO NOT remove this feature flag or grant/fake credits client-side.
+- After owner confirms server + Android QA, follow the original **sync with main before unsigned APK/AAB** order. Never overwrite `Trialum/main/server/src/shared.mjs` without diff/reconciliation.
+
 ## Non-negotiable release sequence for Codex on the desktop
 1. Read PR #12 and PR #13, both implementation logs, live current source, and the owner’s mobile QA observations. Confirm the latest protected main SHA and Play Console versionCode before changing anything. Do not treat old documents as proof of current release track.
 2. **First: owner installs and tests the isolated one-time social QA APK.** This side-loaded disposable package simulates an adult Age Signals response **only in its CI build workspace**, to test social UI/HTTPS flow without Play installation. It is not a model for any production security behavior, and must never be uploaded. Social consent and server-side controls must still be tested.
@@ -39,6 +45,8 @@
 - **Final owner QA fixes:** screen footer corrected from “Living World 1.0 Beta” to **“Living World 1.4 v44 Beta”**; offline licensing now includes model license terms plus a generated *exact build-time Android runtime dependency inventory*. The Licenses dialog no longer suppresses all notices when one asset is missing.
 
 ## Shipping gates / claims not allowed
+- The new shared playground store MUST NOT be advertised as live in Play Console until the authorized backend migration and live shop API have been deployed, tested and accepted on devices.
+
 - Never ship the temporary age-gate simulation in a release APK, AAB, release branch or `main`. Its isolated package is a manual QA tool only, not an end-user feature.
 - No remote/cloud AI claims. Downloadable inference is local and opt-in. Private chats are in English during beta.
 - Don't claim Play Billing is live. Do not show “buy credits now”; real-money purchase endpoints must stay disabled.
@@ -48,10 +56,10 @@
 - Privacy Policy, Data Safety, consent, child protection and license notice reports must match the ACTUAL production artifact.
 
 ## GOOGLE PLAY — What's new (English, under 500 characters)
-Trialum 1.4 v44: Interactive HUD, instant action refills, and day-skip passes with real ecosystem consequences. Updated offline EN/MK guide and contextual help. Every pet can answer gameplay questions without an AI model; optional on-device AI and lifelong pet memory are improved. Refined food warehouse, flora care, shared playground and translations. Better battery management, backups, privacy and optional adult social features.
+Trialum 1.4 v44: Interactive HUD, action refills and discounted day passes with real ecosystem consequences. New offline EN/MK guide and pet help without an AI model. Improved on-device Mini AI, lifelong pet memory, flora, food supply, backups and privacy. NEW shared playground store: earn separate shared credits, buy from 14 apparatus types, and freely place or store owned toys. Refreshed playground visuals and optional adult social play.
 
 ## GOOGLE PLAY — Што е ново (македонски, под 500 знаци)
-Trialum 1.4 v44: интерактивен HUD, дополнување акции и купони за прескокнување денови со вистински последици. Нов офлајн водич на македонски/англиски со контекстуална помош. Секое милениче добива асистент и без AI; подобрена доживотна меморија и локални модели. Подобрени храна, флора, игротека, преводи, батерија, бекап и приватност. Социјалните функции се изборни и со услов за полнолетност.
+Trialum 1.4 v44: интерактивен HUD, дополнување акции и пакети за прескокнување денови со последици. Нов офлајн водич и помош од секое милениче, и без AI. Подобрени Mini AI, меморија, растенија, храна, бекап и приватност. НОВА продавница во заедничката игротека: посебни заеднички кредити, 14 видови справи и бесплатно повторно поставување на купените играчки. Подобрена графика и изборни социјални функции за полнолетни.
 
 ## GOOGLE PLAY — English short description (max 80)
 Evolve a living world, care for pets, grow plants and explore habitats.
@@ -78,6 +86,7 @@ PLAY SMARTER IN 1.4 v44
 • Open contextual “What next?” help and a complete offline player guide in English or Macedonian.
 • Ask any pet simple gameplay questions in English, even without an AI model. Compatible pets can optionally use locally downloaded on-device language models with consent.
 • Enjoy refreshed shared-playground scenery and equipment.
+• Earn room-only shared credits by playing with friends. The owner can buy 14 equipment types, tap a toy on the scene to store it, and place purchased toys again for free. All members contribute, but only the room owner controls purchases and placements.
 
 BUILT FOR PLAYER CONTROL
 • The main world works offline; local saves, manual backup and encrypted migration archives help protect your progress.
@@ -106,6 +115,7 @@ TRIALUM — LIVING WORLD | 1.4 v44
 • Користи интерактивна помош „Што понатаму?“ и целосен офлајн водич на македонски и англиски.
 • Поставувај едноставни прашања на секое милениче на англиски, и без AI модел. За соодветно развиени миленичиња изборно се достапни локални јазични модели со согласност.
 • Истражувај ја обновената заедничка игротека со попрегледни справи и сцена.
+• Заработувајте заеднички кредити преку потврдена игра со пријатели. Сопственикот може да купува 14 видови справи, да ги складира со допир на сцената и повторно бесплатно да ги поставува. Сите придонесуваат, но само сопственикот купува и распоредува.
 
 ТИ ОДЛУЧУВАШ
 • Основната игра работи офлајн. Локалните зачувувања, бекап и шифрираната архива го штитат напредокот.
