@@ -214,8 +214,8 @@ android {
             resValue("string", "trialum_firebase_sender_id", "")
         }
     }
-    // Owner-only server smoke test. The age gate is bypassed only for this
-    // isolated package; the official and internal-beta variants remain fail-closed.
+    // Legacy owner-only server smoke package. Age Signals is never bypassed,
+    // including this isolated package; Play registration is still required.
     // Friends still require explicit profile creation and nickname confirmation.
     buildTypes {
         create("qa39social") {
@@ -224,7 +224,7 @@ android {
             versionNameSuffix = "-qa39social"
             isDebuggable = false
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
-            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "true")
+            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
             manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39social"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
