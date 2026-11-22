@@ -160,6 +160,57 @@ internal object BackgroundPetMemory {
             .edit().putString("pet_" + petId, state.toString()).commit()
     }
 
+    /**
+     * Background AI uses the same public semantic observation contract as the
+     * WebView context assembler. Never owner notes, transcripts or room IDs.
+     */
+    @Synchronized
+    fun contextForModel(context: Context, petId: String, prompt: String): JSONArray {
+        if (!safePet.matches(petId)) return JSONArray()
+        val state = runCatching { JSONObject(snapshot(context, petId)) }.getOrNull()
+            ?: return JSONArray()
+        val acceptedTopics = topics.map { it.first }.toSet()
+        val rows = mutableListOf<Pair<String, JSONObject>>()
+        for ((key, period, length) in listOf(
+            Triple("entries", "day", 10), Triple("months", "month", 7),
+            Triple("years", "year", 4))) {
+            val list = state.optJSONArray(key) ?: continue
+            for (i in 0 until list.length()) {
+                val entry = list.optJSONObject(i) ?: continue
+                if (entry.optString("place", "shared") != "shared") continue
+                val date = entry.optString(period)
+                if (date.length != length || date.any { it !in '0'..'9' && it != '-' }) continue
+                val cleanTopics = JSONArray()
+                val input = entry.optJSONArray("topics") ?: JSONArray()
+                for (j in 0 until input.length()) {
+                    val id = input.optString(j)
+                    if (id in acceptedTopics && cleanTopics.length() < 6) cleanTopics.put(id)
+                }
+                val cleanNames = JSONArray()
+                val names = entry.optJSONArray("companions") ?: JSONArray()
+                for (j in 0 until names.length()) {
+                    val name = names.optString(j)
+                    if (safeName.matches(name) && !name.contains("@") &&
+                        !name.contains(Regex("(?i)https?://|www\\.")) &&
+                        cleanNames.length() < 2) cleanNames.put(name)
+                }
+                val row = JSONObject().put("day", date).put("period", period)
+                    .put("place", "shared").put("themes", cleanTopics)
+                    .put("with", cleanNames)
+                    .put("moments", entry.optLong("moments", 0).coerceIn(0L, 1_000_000L))
+                val matchCount = (0 until cleanTopics.length())
+                    .count { prompt.contains(cleanTopics.optString(it), ignoreCase = true) }
+                val score = matchCount.toString() + "|" + date
+                rows.add(score to row)
+            }
+        }
+        val result = JSONArray()
+        for ((_, row) in rows.sortedWith(
+            compareByDescending<Pair<String, JSONObject>> { it.first.substringBefore("|").toIntOrNull() ?: 0 }
+                .thenByDescending { it.first.substringAfter("|") }).take(3)) result.put(row)
+        return result
+    }
+
     @Synchronized
     fun clear(context: Context, petId: String) {
         if (!safePet.matches(petId)) return
