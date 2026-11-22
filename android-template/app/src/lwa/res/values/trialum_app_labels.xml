@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="trialum_app_label">Trialum LW-A Test</string>
+    <string name="trialum_invite_scheme">trialum-lwa</string>
+</resources>
