@@ -16,9 +16,12 @@ function tier(p){
  return 'mini';
 }
 function status(t){
- try{return t==='mini'?(root.TrialumAndroid?.modelStatusTier?.('mini')||root.TrialumAndroid?.modelStatus?.()||'not-available'):
-  (root.TrialumAndroid?.modelStatusTier?.(t)||'not-available')}
- catch(_){return 'not-available';}
+ try{
+  // The native modelStatusTier bridge supports compact/deep ONLY.
+  // Its value "not-available" is truthy and would hide an installed Mini.
+  return t==='mini'?(root.TrialumAndroid?.modelStatus?.()||'not-available'):
+   (root.TrialumAndroid?.modelStatusTier?.(t)||'not-available');
+ }catch(_){return 'not-available';}
 }
 function consent(p,t){return t==='mini'?p?.localAiConsent===true:p?.mind?.enabled===true;}
 function choices(s,p){
@@ -39,7 +42,7 @@ function render(s,p){
  const t=available.includes(tier(p))?tier(p):available[0]||null;
  const can=!!t,st=t?status(t):'not-available',agreed=t?consent(p,t):false;
  const busy=!!root.TrialumLocalChat?.busy?.();
- const messages=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-12);
+ const messages=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-40);
  const history=messages.map((m,i)=>'<div class="pet-chat-bubble '+(m.role==='user'?'outgoing':'incoming')+
   '" data-chat-index="'+i+'"><span class="pet-chat-sender">'+(m.role==='user'?'You':esc(p.name))+
   '</span><p>'+esc(m.text||'')+'</p></div>').join('');
