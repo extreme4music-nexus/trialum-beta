@@ -533,5 +533,5 @@ function render(world){
  return out+visitsView(world)+'</div>';
 }
 root.TrialumShared={activate,deactivate,refresh,reconcileAway,bindWorld(world){worldRef=world;},select,create,invite,decision,remove,drop,upgrade,enterRoom,leaveRoom,play,sendVisit,changeVisit,
- render,profile,sendPetSpeech,onChange(fn){changed=fn;},onPresenceChange(fn){presenceChanged=fn;},getWorld(){return worldRef;},getState(){return {...st,rooms:st.rooms.slice(),visits:st.visits.slice()}}};
+ render,profile,sendPetSpeech,onChange(fn){changed=fn;},onPresenceChange(fn){presenceChanged=fn;},getWorld(){return worldRef;},getState(){return {...st,speechReady:!!(wsReady&&ws&&ws.readyState===1&&subscribed===st.selected),rooms:st.rooms.slice(),visits:st.visits.slice()}}};
 })(typeof globalThis!=='undefined'?globalThis:this);
