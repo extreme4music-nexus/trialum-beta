@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f1f7fc">
+<title>Trialum theme comparison — representative fixture only</title>
+<script>
+document.documentElement.dataset.theme = new URLSearchParams(location.search).get('mode')==='dark'?'dark':'light';
+</script>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+/* Layout only: presentation fixture, not a production screenshot or gameplay simulation. */
+body{padding:16px 20px}
+.preview-shell{max-width:1200px;margin:auto}
+.preview-caption{margin:0 0 14px;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted)}
+.theme-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px}
+.hero-art{height:185px;border-radius:16px;position:relative;display:flex;align-items:flex-end;
+background:radial-gradient(circle at 70% 25%,#59a9ad 0,transparent 30%),linear-gradient(155deg,#0a5264,#1d244e 65%,#352e75);
+color:#e8fffa;padding:18px}
+.hero-orb{position:absolute;left:35%;top:20%;font-size:63px;filter:drop-shadow(0 5px 9px #0008)}
+.theme-grid section{min-width:0}.block-space{display:grid;gap:11px}
+.fake-bars{display:flex;gap:8px;flex-wrap:wrap}.fake-bars>*{flex:1}
+.preview-shell h2{font-size:18px}
+@media(max-width:700px){body{padding:7px}.theme-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="preview-shell">
+<p class="preview-caption">TRIALUM THEME QA • REPRESENTATIVE UI FIXTURE (not a real game screenshot)</p>
+<header class="mast">
+ <div class="mark"><div class="emblem">✺</div><div><div class="microcap">INTERACTIVE BIOSPHERE</div><h1>Trialum <span>Living Spark</span></h1><p>Create the world. Life grows on its own.</p></div></div>
+ <div class="head-tools">
+  <div class="resource-hud">
+   <div class="hud-stat"><span>Experience</span><strong>2,540 XP</strong></div>
+   <div class="hud-stat hud-tokens"><span>Tokens</span><strong>390</strong></div>
+   <div class="hud-stat hud-xp"><span>Research</span><strong>120</strong></div>
+  </div>
+ </div>
+</header>
+<nav class="primary-game-nav" style="position:static!important;border-radius:16px;margin:0 0 14px;padding:9px">
+<button class="tab active">⌂ <span>Home</span></button><button class="tab">♡ <span>Pets</span></button><button class="tab">◈ <span>Playground</span></button><button class="tab">♧ <span>Friends</span></button><button class="tab">⚙ <span>Settings</span></button>
+</nav>
+<div class="theme-grid">
+ <section class="panel block-space pad">
+  <div class="panel-heading"><h2>Home habitat</h2><span class="tag">Level 15</span></div>
+  <div class="hero-art"><div class="hero-orb">✺</div><span>Original creature artwork stays vibrant in both modes</span></div>
+  <div class="fake-bars">
+   <div class="hud-stat"><span>Energy</span><strong>85%</strong></div>
+   <div class="hud-stat"><span>Comfort</span><strong>96%</strong></div>
+   <div class="hud-stat"><span>Skills</span><strong>6</strong></div>
+  </div>
+  <div class="card"><h3>Your pet has learned to wave</h3><p>Every creature develops at its own pace.</p><div class="progress"><div style="width:65%"></div></div></div>
+  <div class="btn-line"><button class="primary">Play together</button><button>View progress</button><button class="button-gold">Discover</button></div>
+ </section>
+ <section class="block-space">
+  <div class="panel pad"><div class="panel-heading"><h2>Living world</h2><span class="tag">Offline ready</span></div>
+   <div class="cards"><div class="card"><h3>Daily discovery</h3><p>Unlock a new skill through play.</p><button>Explore</button></div>
+   <div class="card activated"><h3>Shared moments</h3><p>Your world, your pace.</p><button class="primary">Visit</button></div></div>
+  </div>
+  <div class="panel pad"><h2>Preferences</h2>
+   <div class="settings-group"><label for="language">Language</label><select id="language" class="preference-select"><option>English</option></select>
+   <label for="mode">Appearance</label><select id="mode" class="preference-select"><option>System / Light / Dark</option></select></div>
+   <div class="fake-bars"><span class="chip">✺ Original visuals</span><span class="chip">✓ Private play</span></div>
+  </div>
+  <div class="notice">Your progress stays on this device until you choose to back it up.</div>
+ </section>
+</div>
+</div>
+</body>
+</html>
