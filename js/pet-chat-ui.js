@@ -79,6 +79,12 @@ function render(s,p){
   'Voice input requires an installed English on-device recognizer; voice output uses Android TTS.</p>';
  return text+body+'</section>';
 }
+// Chat is English-only in v44; a later release will add the direct translator.
+function validEnglish(text){
+ const value=String(text??'').trim();
+ return !!value&&value.length<=340&&
+  !/[\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Han}\p{Script=Greek}\p{Script=Devanagari}]/u.test(value);
+}
 function latestReply(p){
  return (p?.chatHistory||[]).slice().reverse().find(x=>x.role==='pet'&&x.text)?.text||'';
 }
@@ -127,6 +133,6 @@ function scroll(){
  const box=root.document?.getElementById?.('petChatMessages');
  if(box)box.scrollTop=box.scrollHeight;
 }
-root.TrialumPetChat={render,tier,choose,consent,handle,voiceEvent,scroll,latestReply,models,status};
+root.TrialumPetChat={render,tier,choose,consent,handle,voiceEvent,scroll,latestReply,validEnglish,models,status};
 if(typeof module==='object'&&module.exports)module.exports=root.TrialumPetChat;
 })(globalThis);
