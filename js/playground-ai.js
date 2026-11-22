@@ -468,5 +468,6 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  else {lastBackgroundImport=0;importBackground(root.TrialumShared?.getWorld?.());}
 });
 root.TrialumPlaygroundAI={gate,modelAvailable,enabled,suppressSimulation,diagnostics,control,toggle,toggleBackground,forget,stop,setTab,tick,speech,onPeerSpeech,onModelEvent,
+ syncBackgroundMemory:importBackground,
  setSave(fn){saveMemory=typeof fn==='function'?fn:()=>{};}};
 })(typeof globalThis!=='undefined'?globalThis:this);
