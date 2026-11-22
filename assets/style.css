@@ -585,3 +585,16 @@
 .day-pass-use-grid button{min-height:46px;border:1px solid #75ccb9;background:#28505a;padding:8px;border-radius:10px}
 .day-pass-body footer{display:flex;justify-content:flex-end;margin-top:13px}
 @media(max-width:360px){.day-pass-body{padding:12px}.day-pass-pack-grid,.day-pass-use-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v44 — interactive top resource indicators, same compact HUD footprint */
+.resource-hud .hud-stat{appearance:none;text-align:inherit;font:inherit;cursor:pointer;min-height:44px}
+.resource-hud .hud-stat:focus-visible{outline:3px solid #f4ce8c;outline-offset:2px}
+.resource-hud .hud-stat:hover{filter:brightness(1.13)}
+.resource-hud-details{padding:18px}
+.resource-hud-details h2{font-size:1.25rem;margin:0}
+.resource-hud-value{font-size:1.9rem;font-weight:800;color:#c6fae8;margin:9px 0;font-variant-numeric:tabular-nums}
+.resource-hud-value span{font-size:.85rem;font-weight:400}
+.resource-hud-details ul{padding-left:22px;line-height:1.7;overflow-wrap:anywhere}
+.resource-hud-details li{margin:7px 0}
+.resource-hud-details footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:360px){.resource-hud-details{padding:12px}.resource-hud-details footer button{flex:1 1 120px}}
