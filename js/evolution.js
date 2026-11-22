@@ -44,6 +44,7 @@ function learn(p,kind,reward,quality=80){const v=ensure(p),b=v.brain,z=forward(p
 function gain(s,p,amount,reason){const v=ensure(p);v.xp+=Math.max(0,amount);v.earned+=Math.max(0,amount);let ups=0;
  while(v.level<250&&v.xp>=threshold(v.level)&&p.ageDays>=minAge(v.level+1)){
  v.xp-=threshold(v.level);v.level++;ups++;
+ root.TrialumCognitiveMemory?.record(p,'evolution',{day:s.lastDay,level:v.level,source:'game'});
  const e=epoch(p);v.epoch=e.label;
  if(EPOCHS.some(k=>k.level===v.level))E.log(s,'🧬 '+p.name+' еволуираше: '+e.label+' (ниво '+v.level+').','milestone');
  }
