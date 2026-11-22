@@ -208,7 +208,7 @@ function sanitize(text){
 function choose(options){return options[Math.floor(Math.random()*options.length)];}
 function scriptedSeed(scope,heard,translation){
  const text=String(heard||'').toLowerCase();
- if(scope==='shared'&&translation){
+ if(scope==='shared'){
   if(/garden|plant|flower|tree|nature/.test(text))
    return choose(['What else might we discover in the garden?',
     'Shall we look for another plant together?']);
@@ -422,6 +422,8 @@ function onModelEvent(event){
  if(kind==='error'||!active(job.scope))return true;
  const text=sanitize(event.text),s=root.TrialumShared?.getWorld?.();
  if(!text)return true;
+ // A model may disregard its English-only instruction; never relay foreign scripts.
+ if(job.scope==='shared'&&/[^\x20-\x7e]/.test(text))return true;
  if(job.scope==='shared'){
   const st=root.TrialumShared?.getState?.(),p=s?.pets?.find(x=>x.id===job.petId);
   const loc=p&&Presence()?.get?.(s,p.id);
