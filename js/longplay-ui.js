@@ -312,6 +312,7 @@ root.TrialumExpansion={
  handle(action,b,s,ctx){
  if(!actions.has(action))return previous.handle(action,b,s,ctx);
  const pet=E.currentPet(s);
+ if(action==='petChatAsk'&&root.TrialumPetChat?.handle?.('petChatAsk',s,pet,ctx))return;
  if(action==='petChatAsk')action=root.TrialumPetChat?.tier?.(pet)==='mini'?'llmAsk':'mindAsk';
  if(root.TrialumPetChat?.handle?.(action,s,pet,ctx))return;
  if(root.TrialumMind?.handle(action,b,s,ctx))return;
