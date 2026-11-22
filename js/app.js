@@ -1,4 +1,4 @@
-/* TRIALUM 1.4.1: working navigation, debug days and resource HUD */
+/* TRIALUM 1.4 v44: working navigation, debug days and resource HUD */
 (()=>{'use strict';
 const E=TrialumEngine,S=TrialumStorage,A=TrialumAudio,W=TrialumWorld,P=globalThis.TrialumPeer,X=globalThis.TrialumExpansion,G=globalThis.TrialumPlayGames,M=globalThis.TrialumMind,O=globalThis.TrialumOnboarding,Theme=globalThis.TrialumTheme,Social=globalThis.TrialumSocial,PG=globalThis.TrialumPlayground,Shared=globalThis.TrialumShared,Messages=globalThis.TrialumMessages,Presence=globalThis.TrialumPresence,el=id=>document.getElementById(id);
 let s=null,tab='lab',toastTimer,saveTimer,alertsSeen=new Set(),saving=false,restoring=false,restoreRecoveryBlocked=false,peerOutgoing='',peerIncoming='',peerMode='internet';
@@ -230,7 +230,7 @@ function exportBackup(){
  const portable=S.portableSnapshot(s);
  if(!portable){toast('Не можам да подготвам пренослив бекап.');return;}
  const contents=JSON.stringify({backupFormat:'trialum',exportedAt:new Date().toISOString(),...portable},null,2);
- const base='TRIALUM_v'+(E.VERSION||'1.5.1')+'_day_'+s.lastDay;
+ const base='TRIALUM_1.4-v44_day_'+s.lastDay;
  if(globalThis.TrialumAndroid?.saveBackup){
   globalThis.TrialumAndroid.saveBackup(contents,base+'.json');
   toast('Се зачувува нов проверен бекап. Резултатот ќе се прикаже по проверката.');
