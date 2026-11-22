@@ -131,7 +131,7 @@ function petCare(s,id,type){const p=s.pets.find(x=>x.id===id);if(!p)return fail(
  else if(type==='rest'){p.energy=clamp(p.energy+30,0,100);p.joy=clamp(p.joy+3,0,100)}
  else if(type==='talk'){p.bond=clamp(p.bond+12,0,100);p.joy=clamp(p.joy+6,0,100)}
  else return fail('Непозната грижа.');
- globalThis.TrialumCognitiveMemory?.record(p,type,{day:s.lastDay,location:p.habitatId,food:type==='feed'?'biomass':null});
+ globalThis.TrialumCognitiveMemory?.record(p,type,{day:s.lastDay,location:p.habitatId,food:type==='feed'?'biomass':null,quantity:type==='feed'?3:null,source:'game'});
  p.actionsLeft--;log(s,`💞 ${p.name}: ${ {feed:'нахрането',play:'игра',wash:'чистење',rest:'одмор',talk:'разговор на измислен јазик'}[type]}. Преостанати акции: ${p.actionsLeft}.`,'care');return ok(`${p.name}: ${p.actionsLeft} лични акции останаа.`)}
 function transfer(s,petId,targetHabId){const p=s.pets.find(x=>x.id===petId),h=s.habitats.find(x=>x.id===targetHabId);if(!p||!h)return fail('Одбери миленик и завршено живеалиште.');if(p.habitatId===h.id)return fail('Веќе е во тоа живеалиште.');if(occupancy(s,h.id)+loadOf(p)>h.capacity)return fail('Нема доволно простор за неговата сегашна големина.');p.habitatId=h.id;globalThis.TrialumCognitiveMemory?.record(p,'transfer',{day:s.lastDay,location:h.id});s.activeHabitat=h.id;s.selectedPet=p.id;log(s,`🚚 ${p.name} е префрлено во ${h.name}.`,'care');return ok('Миленикот е безбедно преселен.');}
 function habitatCare(s,kind){const h=currentHabitat(s);if(!h)return fail('Одбери живеалиште.');if(h.dayActions<1)return fail('Нема дневни акции за ова живеалиште.');
