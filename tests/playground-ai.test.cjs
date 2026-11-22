@@ -9,6 +9,9 @@ const sent=[],generated=[],cancelled=[];
 let saves=0;
 let modelStatus='installed',sharedEnabled=true,bgOn=false;
 const backgroundCalls=[];
+// Locale is explicit: server Macedonian captions are shown only for mk.
+let uiLanguage='mk';
+globalThis.TrialumI18n={language:()=>uiLanguage,t:text=>text};
 const state={active:true,online:true,aiRelayEnabled:true,speechTranslationEnabled:false,
  speechTranslationLanguages:['mk','sq','en'],selected:ROOM,
  snapshot:{presenceEnabled:true,room:{id:ROOM},
@@ -129,7 +132,19 @@ test('translated room captions use local language, but AI hears only canonical E
   text:'Здраво, другарче!',englishText:'Hello, friend!',language:'mk',translated:true,
   turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b61'}),true);
  assert.equal(AI.speech('shared',ROOM).text,'Здраво, другарче!',
-  'player sees only the chosen display language');
+  'Macedonian UI sees the server-provided Macedonian caption');
+ uiLanguage='fr';
+ assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',
+  text:'Здраво, другарче!',englishText:'Hello, friend!',language:'fr',translated:true,
+  turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b62'}),true);
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, friend!',
+  'every non-Macedonian locale sees English captions');
+ uiLanguage='en';
+ assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',
+  text:'Здраво, другарче!',englishText:'Hello, friend!',language:'en',translated:true,
+  turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b63'}),true);
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, friend!');
+ uiLanguage='mk';
  state.speechTranslationEnabled=false;
  AI.stop();
 });
