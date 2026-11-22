@@ -153,7 +153,7 @@ internal object BackgroundPetMemory {
             (0 until names.length()).none { names.optString(it) == name } && names.length() < 3)
             names.put(name)
         item.put("companions", names)
-        item.put("moments", (item.optInt("moments") + 1).coerceAtMost(99))
+        item.put("moments", (item.optLong("moments", 0L) + 1L).coerceAtMost(1_000_000_000L))
         state.put("entries", retained)
         state.put("revision", state.optLong("revision", 0L) + 1L)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
