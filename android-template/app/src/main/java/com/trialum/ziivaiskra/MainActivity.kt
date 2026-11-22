@@ -610,8 +610,16 @@ private fun nativeText(macedonian: String, english: String): String =
         @JavascriptInterface fun askPlaygroundAi(
             petId: String, petName: String, text: String, context: String
         ) {
-            if (petId.length <= 70 && petName.length <= 64 && text.length <= 360 && context.length <= 700) {
+            // Match TrialumAIContext's 1,450-character playground budget.
+            // The old 700-character guard silently discarded real room requests.
+            if (petId.length <= 70 && petName.length <= 64 && text.length <= 360 &&
+                context.length <= 1450 && context.length >= 2
+            ) {
                 modelRuntime.ask(petId, petName, text, "mini", context, true)
+            } else {
+                // Never leave the JS conversation queue waiting for a reply that
+                // was never started: return an explicit model error to the UI.
+                modelRuntime.rejectPlaygroundRequest(petId, "Playground request exceeded its validated size limits.")
             }
         }
         @JavascriptInterface fun cancelPlaygroundAi() { modelRuntime.cancelPlayground() }
