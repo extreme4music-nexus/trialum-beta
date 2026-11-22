@@ -85,7 +85,11 @@ function ingest(p,input){
 function record(p,kind,options={}){return ingest(p,{...options,kind}).event;}
 function ensureWorld(world){
  if(!world||!Array.isArray(world.pets))throw Error('invalid cognitive world');
- for(const pet of world.pets)ensure(pet);
+ for(const pet of world.pets){
+  const isLegacy=!pet.cognitiveMemory;
+  const memory=ensure(pet);
+  if(isLegacy)memory.migrationMetadata.origin='legacy-world';
+ }
  return world;
 }
 function safeKey(value){const k=String(value).trim().slice(0,160);if(!k||['__proto__','constructor','prototype'].includes(k))throw Error('invalid key');return k;}
