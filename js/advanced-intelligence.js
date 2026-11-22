@@ -30,11 +30,7 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document?.visibilityState==='hidden')localChat.reset();
 });
 function eligible(s,p){
- if(!s||!p)return false;
- // Mnemos and subsequent evolved/researched species (not early creatures).
- const species=Number(p.species);
- return Number.isInteger(species)&&species>=9&&!!E()?.SPECIES?.[species]&&
-  E()?.evolutionProgress?.(p)?.level>=165&&(s.research?.level||0)>=20;
+ return root.TrialumPetAI?.unlocked?.(s,p,'advanced')===true;
 }
 function downloadEvent(kind,key,message){
  if(!MODELS[key])return false;
@@ -75,7 +71,7 @@ function render(s,p){
  const ok=eligible(s,p),traits=persona(p),emotion=mood(p);
  const intro='<section class="intelligence-panel"><h3>🧠 '+tr('Напредна интелигенција','Advanced intelligence')+' · '+esc(p.name)+'</h3>'+ 
  '<p class="small">'+tr('Личност и емоции се симулирани игровни состојби, не вистински чувства.','Personality and emotions are simulated game states, not real feelings.')+'</p>';
- if(!ok)return intro+'<p class="lock-hint">🔒 '+tr('Напредна интелигенција: вид од Мнемос наваму, ниво 165 и лабораторија 20.','Advanced intelligence: Mnemos or later species, level 165 and laboratory 20.')+'</p></section>';
+ if(!ok)return intro+'<p class="lock-hint">🔒 '+tr('AI комуникацијата се отклучува со развојот и истражувањата. Меморијата работи и без AI.','AI conversation unlocks through evolution and research. Memory works without AI.')+'</p></section>';
  const m=p.mind&&typeof p.mind==='object'?p.mind:{enabled:false,tier:'compact',memories:[]};
  const tier=MODELS[m.tier]||MODELS.compact;
  let html=intro+'<div class="emotion-meter"><span>💫 '+tr('Расположение','Mood')+': '+emotion.emoji+' '+esc(emotion.label)+'</span>'+
@@ -83,7 +79,7 @@ function render(s,p){
  '<span>💞 '+tr('Топлина','Warmth')+' '+traits.warmth+'</span>'+
  '<span>🦁 '+tr('Храброст','Bravery')+' '+traits.bravery+'</span></div>';
  html+='<p class="privacy-note">'+tr('Разговорите и меморијата на миленикот се чуваат локално. Не се испраќаат на Trialum серверот, не се вклучуваат во обичен JSON или Google Cloud Save. За пренос меѓу уреди користи ја шифрираната архива во Поставки; recovery-кодот чувај го одделно.','Pet chats and memory are stored locally. They are not sent to the Trialum server or included in plain JSON or Google Cloud Save. To move them between devices, use the encrypted archive in Settings and keep its recovery code separate.')+'</p>';
- html+=button(m.enabled?'🔐 '+tr('Исклучи AI меморија','Disable AI memory'):'✅ '+tr('Се согласувам за локален AI','Allow local AI'),'mindToggle');
+ html+=button(m.enabled?'🔐 '+tr('Исклучи AI разговори','Disable AI conversations'):'✅ '+tr('Овозможи AI комуникација','Enable AI communication'),'mindToggle');
  if(!m.enabled)return html+'<p class="small">'+tr('Модел не се презема пред согласност. Не е потребен за играње.','No model is downloaded without consent. It is never required for gameplay.')+'</p></section>';
  html+='<div class="llm-choices">'+Object.values(MODELS).map(model=>
  button((m.tier===model.key?'✓ ':'')+esc(model.name)+' · '+model.size,'mindTier','data-tier="'+model.key+'"'+(m.tier===model.key?' class="primary"':''))).join('')+'</div>';
@@ -120,7 +116,7 @@ function handle(action,button,s,ctx){
  const m=mind(p);
  if(action==='mindToggle'){
   if(!m.enabled){
-   const accepted=root.confirm?.(tr('Да овозможам локална AI меморија за овој Мнемос? Разговорите се зачувуваат во приватниот простор на апликацијата и не одат на Trialum серверот. За пренос на друг уред создај шифрирана архива во Поставки. Моделот е изборен и се презема одделно.','Enable local AI memory for this Mnemos? Chats stay in the app’s private storage and are not sent to the Trialum server. Create an encrypted archive in Settings to move them to another device. The model is optional and downloaded separately.'));
+   const accepted=root.confirm?.(tr('Да овозможам AI комуникација за миленичето? Доживотната меморија е независна од моделот, а разговорите остануваат локални. Моделот се презема одделно.','Enable AI communication for this pet? Its lifelong memory is model-independent, and chats stay local. A model is downloaded separately.'));
    if(!accepted)return true;
   }
   m.enabled=!m.enabled;ctx.scheduleSave();ctx.render();return true;
