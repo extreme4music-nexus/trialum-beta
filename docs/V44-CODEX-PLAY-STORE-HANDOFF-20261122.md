@@ -7,6 +7,12 @@
 **Authoritative implementation report:** `docs/V44-OWNER-IMPLEMENTATION-REPORT.md`  
 **Previous baseline:** `feature/v44-unified-cognitive-memory` / draft PR #12, baseline SHA `2ad8475dd3f280e4ee29cb9c876973c751f4a700`.
 
+## One-time owner social QA — finished and cleanup verified
+- **APK:** [Trialum 1.4 v44 Owner Social QA artifact](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45056845930/artifacts/14768160768); package `com.trialum.ziivaiskra.qa44social`; CI run [45056845930](https://github.com/extreme4music-nexus/trialum-beta/actions/runs/45056845930) **PASS**, temporary Android test signature verified.
+- **APK SHA-256:** `7103984ae9c47137cc24c82e2f37b75fadcdfdf5f0db40b7786088fd4e4653d3`. The APK includes 96 runtime license-inventory entries, optional model notices and the corrected footer.
+- The Google Age Signals bypass existed **only in the CI checkout** for this one-time QA test; no permanent source bridge was modified. The one-time workflow was **deleted after successful artifact**. This APK is not Play eligible and must never be distributed to users; keep standard Age Signals mandatory in all regular APK/AAB builds.
+- Owner's social acceptance test is still required; **test build PASS is not owner gameplay PASS**. Do not sync main, build unsigned official AAB/APK or upload until owner approves.
+
 ## Non-negotiable release sequence for Codex on the desktop
 1. Read PR #12 and PR #13, both implementation logs, live current source, and the owner’s mobile QA observations. Confirm the latest protected main SHA and Play Console versionCode before changing anything. Do not treat old documents as proof of current release track.
 2. **First: owner installs and tests the isolated one-time social QA APK.** This side-loaded disposable package simulates an adult Age Signals response **only in its CI build workspace**, to test social UI/HTTPS flow without Play installation. It is not a model for any production security behavior, and must never be uploaded. Social consent and server-side controls must still be tested.
