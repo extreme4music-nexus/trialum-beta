@@ -119,7 +119,7 @@ function pets(s){
  const list=s.pets.map(q=>'<button data-do="selectPet" data-id="'+esc(q.id)+'" class="pet-option '+(s.selectedPet===q.id?'active':'')+'"><span class="emoji">'+E.SPECIES[q.species].icon+'</span><span><b>'+esc(q.name)+'</b><small>'+
  esc(E.SPECIES[q.species].name)+' · ниво '+E.evolutionProgress(q).level+' · '+q.actionsLeft+'/'+E.petActionLimit(s)+' акции · '+(q.lineage?.length||1)+' генерации</small></span></button>').join('');
  return '<div class="tab-main"><h2>🐾 Миленици · независна еволуција</h2><p class="desc">Секое милениче има свои акции, меморија, нивоа, трансформации и тренинзи.</p><div class="pet-list">'+(list||'<p>Прво одгледај ќелија и изгради живеалиште.</p>')+'</div><div id="selectedPetMount"></div><details class="game-accordion"><summary>🎓 Обука за избраниот миленик</summary><p class="desc">Вештините се отклучуваат постепено — поради сè потешките епохи, високите тренинзи бараат месеци развој.</p><div class="cards">'+training+'</div></details>'+
- (p?chatPanel(s,p)+(root.TrialumMind?.render(s,p)||''):'')+
+ (p?(root.TrialumPetChat?.render?.(s,p)||''):'')+
  '<h3>🚚 Преселба меѓу биосветови</h3><div class="btn-line">'+s.habitats.map(h=>b('↔ '+esc(h.name),'transfer','data-id="'+esc(h.id)+'"',!p||p.habitatId===h.id)).join('')+'</div>'+
  b('✏️ Преименувај','renamePet','',!p)+'</div>';
 }
@@ -305,12 +305,15 @@ function more(){
  '<span><b>'+name+'</b><small>'+note+'</small></span><span aria-hidden="true">›</span></button>').join('')+'</div></div>';
 }
 const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants:s=>root.TrialumPlantUI?.render(s)||plants(s),settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
-const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
+const actions=new Set(['petChatAsk','petChatConsent','petChatDownload','petChatImport','petChatMic','petChatSpeak','mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
 root.TrialumExpansion={
  render(page,s){if(!s)return '';E.ensureLongplay(s);if(views[page])return (['lab','habitats','pets','research','more'].includes(page)?'':'<button class="section-back" data-tab="more">‹ Повеќе</button>')+views[page](s);return previous.render(page,s);},
  can(action){return actions.has(action)||previous.can(action);},
  handle(action,b,s,ctx){
  if(!actions.has(action))return previous.handle(action,b,s,ctx);
+ const pet=E.currentPet(s);
+ if(action==='petChatAsk')action=root.TrialumPetChat?.tier?.(pet)==='mini'?'llmAsk':'mindAsk';
+ if(root.TrialumPetChat?.handle?.(action,s,pet,ctx))return;
  if(root.TrialumMind?.handle(action,b,s,ctx))return;
  let result=null;
  switch(action){
@@ -327,7 +330,8 @@ root.TrialumExpansion={
    root.TrialumAndroid.downloadModel();ctx.toast('Почна преземање на мини моделот.');return;
  }
  case 'llmAsk':{
-   const p=E.currentPet(s),prompt=(document.getElementById('llmPrompt')?.value||'').trim().slice(0,360);
+   const p=E.currentPet(s),prompt=(document.getElementById('petChatPrompt')?.value||document.getElementById('llmPrompt')?.value||'').trim().slice(0,340);
+  if(p?.localAiConsent!==true){ctx.toast('Enable AI conversations first.');return;}
    if(!miniGate(s,p).ok){ctx.toast('AI разговорот сè уште не е отклучен за овој вид. Меморијата останува активна.');return;}
    if(!root.TrialumAndroid?.askPet){ctx.toast('Локалниот LLM е достапен само во Android апликацијата.');return;}
     const modelState=root.TrialumAndroid?.modelStatus?.();
@@ -339,7 +343,7 @@ root.TrialumExpansion={
    try{
     context=root.TrialumAIContext.assemble(p,s,prompt,{
      scope:'private',tier:'mini',maxChars:700,
-     language:root.TrialumI18n?.language?.()||'mk',
+     language:'en',
      history:Array.isArray(p.chatHistory)?p.chatHistory.slice(-4):[]
     });
    }catch(_){ctx.toast('Не може безбедно да се состави AI контекст.');return;}
