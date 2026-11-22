@@ -32,9 +32,9 @@ const FAMILIES=[
  {id:10,lab:25,source:9,sourceLevel:165,field:'genomics',points:800,day:710,biome:'crystal',description:'Долгогодишна специјализирана генетска форма.'}
 ];
 const CUSTOM=[
- {name:'Астралис',shape:'leaf',hue:202,eyes:4,weight:3,voice:2,icon:'🌠',habitat:'garden',labTier:16,description:'Висока групна интелигенција и адаптивни способности'},
- {name:'Мнемос',shape:'jelly',hue:32,eyes:5,weight:3,voice:1,icon:'🔮',habitat:'lagoon',labTier:20,description:'Напредна индивидуална меморија'},
- {name:'Етерон',shape:'crystal',hue:286,eyes:5,weight:4,voice:3,icon:'✨',habitat:'crystal',labTier:25,description:'Долгогодишна синтетичка фантастична цивилизација'}
+ {name:'Астралис',shape:'leaf',hue:202,eyes:4,weight:3,voice:2,icon:'🌠',habitat:'garden',labTier:16,description:'Висока групна интелигенција и адаптивни способности',aiAbilities:{mini:{petLevel:22,labLevel:6}}},
+ {name:'Мнемос',shape:'jelly',hue:32,eyes:5,weight:3,voice:1,icon:'🔮',habitat:'lagoon',labTier:20,description:'Напредна индивидуална меморија',aiAbilities:{mini:{petLevel:22,labLevel:6},advanced:{petLevel:165,labLevel:20}}},
+ {name:'Етерон',shape:'crystal',hue:286,eyes:5,weight:4,voice:3,icon:'✨',habitat:'crystal',labTier:25,description:'Долгогодишна синтетичка фантастична цивилизација',aiAbilities:{mini:{petLevel:22,labLevel:6},advanced:{petLevel:165,labLevel:20}}}
 ];
 while(E.SPECIES.length<11)E.SPECIES.push(CUSTOM[E.SPECIES.length-8]);
 const STARTERS=['Лумира','Кристел','Нубела','Флорикс'];
