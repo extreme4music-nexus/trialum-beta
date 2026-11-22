@@ -46,10 +46,6 @@ function inspectPetSpeech(value,pet){
     return {blocked:true,reason:'private_named_entity'};
   }
   const words=normalize(row.text).split(' ').filter(x=>x.length>1);
-  for(let i=0;i+2<words.length;i++){')+'\\b','i').test(normalized))
-    return {blocked:true,reason:'private_named_entity'};
-  }
-  const words=normalize(row.text).split(' ').filter(x=>x.length>1);
   for(let i=0;i+2<words.length;i++){
    const phrase=words.slice(i,i+3).join(' ');
    if(phrase.length>=9&&normalized.includes(phrase))
