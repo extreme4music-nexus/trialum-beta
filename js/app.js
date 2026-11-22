@@ -41,7 +41,11 @@ let compact=false,scrollIntent=0,gesturePixels=0,lastFingerY=null;
    unsupported_archive:en()?'This encrypted archive version is not supported.':'Оваа верзија на шифрираната архива не е поддржана.',
    invalid_archive:en()?'The encrypted archive is invalid or incomplete.':'Шифрираната архива е невалидна или нецелосна.',
    invalid_conversation_archive:en()?'The friend conversation history is invalid or incomplete.':'Историјата со пријателите е невалидна или нецелосна.',
-   archive_too_large:en()?'The encrypted archive exceeds the 20 MB limit.':'Шифрираната архива го надминува лимитот од 20 MB.'
+   archive_too_large:en()?'The encrypted archive exceeds its safe size limit.':'Шифрираната архива го надминува безбедниот лимит.',
+   archive_codec_unavailable:en()?'This device cannot decompress the archive.':'Овој уред не може да ја декомпресира архивата.',
+   INVALID_PRIVATE_MEMORY:en()?'Private pet memories failed validation. Existing data was not replaced.':'Приватната меморија не помина проверка. Постојните податоци не се заменети.',
+   restore_failed_rolled_back:en()?'Restore failed, but earlier world and conversations were restored.':'Враќањето не успеа, но претходниот свет и разговори се вратени.',
+   restore_rollback_failed:en()?'Restore rollback failed. Do not close the app; export any accessible data.':'Неуспешно враќање на претходните податоци. Не ја затворај апликацијата; извези ги достапните податоци.'
   };
   if(archiveErrors[code])return archiveErrors[code];
   if(en()){
@@ -255,7 +259,7 @@ function exportBackup(){
    const saved=await S.save(s);
    if(!saved.ok)throw Error('private_memory_save_failed');
    const payload={archiveType:'trialum-private-migration',version:1,createdAt:new Date().toISOString(),
-    world:JSON.parse(JSON.stringify(s)),friendConversations:await globalThis.TrialumLocalConversations?.exportAll?.()||[]};
+    world:globalThis.TrialumMemoryIntegrity.prepare(s).world,friendConversations:await globalThis.TrialumLocalConversations?.exportAll?.()||[]};
    const recovery=globalThis.TrialumEncryptedArchive.randomRecoveryCode();
    const contents=await globalThis.TrialumEncryptedArchive.encrypt(payload,recovery);
    const body='<p>'+safe(en()?'This archive contains your complete world, private AI memories and this device’s locally saved friend-message history. Encryption happens on this device. Trialum’s server does not receive the archive.':'Оваа архива ги содржи целиот свет, приватната AI-меморија и локално зачуваната историја со пријателите. Шифрирањето се врши на овој уред. Серверот на Trialum не ја прима архивата.')+'</p><p><b>'+safe(en()?'Save this recovery code separately from the archive. It is shown only now. If it is lost, nobody can decrypt the archive.':'Зачувај го recovery-кодот одделно од архивата. Се прикажува само сега. Ако се изгуби, никој нема да може да ја дешифрира архивата.')+'</b></p><pre style="white-space:normal;overflow-wrap:anywhere;background:#071725;padding:14px;border-radius:10px;font-size:1.05rem;user-select:all">'+recovery+'</pre><label style="display:flex;gap:10px;align-items:flex-start"><input id="vaultKeySaved" type="checkbox" style="margin-top:5px">'+safe(en()?'I have saved the recovery code outside this phone.':'Го зачував recovery-кодот надвор од овој телефон.')+'</label>';
@@ -271,7 +275,14 @@ function exportBackup(){
   const input=box.querySelector('#vaultRecoveryInput');box.querySelector('#vaultCancel').addEventListener('click',()=>box.remove());input.focus();
   box.querySelector('#vaultUnlock').addEventListener('click',async()=>{
    const key=input.value;input.value='';
-   try{const payload=await globalThis.TrialumEncryptedArchive.decrypt(text,key);if(payload?.archiveType!=='trialum-private-migration'||payload.version!==1||!E.validate(payload.world))throw Error('invalid_archive');const archive=globalThis.TrialumLocalConversations.validateArchive(payload.friendConversations||[]);box.remove();await restoreEncryptedArchive(payload.world,archive);}
+   try{
+    const payload=await globalThis.TrialumEncryptedArchive.decrypt(text,key);
+    if(payload?.archiveType!=='trialum-private-migration'||payload.version!==1||!E.validate(payload.world))throw Error('invalid_archive');
+    const prepared=globalThis.TrialumMemoryIntegrity.prepare(payload.world);
+    const archive=globalThis.TrialumLocalConversations.validateArchive(payload.friendConversations||[]);
+    const restored=await restoreEncryptedArchive(prepared.world,archive);
+    if(restored)box.remove();
+   }
    catch(error){backupFeedback((en()?'Archive could not be opened: ':'Архивата не може да се отвори: ')+restoreError(error));input.value='';if(document.body.contains(box))input.focus();}
   });
  }
@@ -280,16 +291,33 @@ function exportBackup(){
   const backup=S.parseImport(String(text).replace(/^\uFEFF/,''));await importBackupState(backup);
  }
  async function restoreEncryptedArchive(world,archive){
-  if(restoring)return;
+  if(restoring)return false;
+  const prepared=globalThis.TrialumMemoryIntegrity.prepare(world);
   const approve=confirm(en()?'Restore the encrypted archive? It will replace the world, AI memories and local friend conversation history on this device. Save an encrypted backup of the current device first if needed.':'Да ја вратам шифрираната архива? Таа ќе ги замени светот, AI-меморијата и локалната историја со пријателите на овој уред. Ако ти требаат тековните податоци, прво зачувај шифрирана архива.');
-  if(!approve)return;
-  const oldWorld=s?JSON.parse(JSON.stringify(s)):null,oldConversations=await globalThis.TrialumLocalConversations.exportAll();
-  await importBackupState(world,{confirmed:true,preservePrivate:false});
-  if(!await globalThis.TrialumLocalConversations.replaceAll(archive)){
-   if(oldWorld){try{await S.save(oldWorld);s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();await globalThis.TrialumLocalConversations.replaceAll(oldConversations);}catch(_){}}
-   throw Error(en()?'Could not restore friend history; previous data was restored where possible.':'Не можев да ја вратам историјата со пријателите; претходните податоци се вратени каде што беше можно.');
+  if(!approve)return false;
+  const oldWorld=s?JSON.parse(JSON.stringify(s)):null;
+  const oldConversations=await globalThis.TrialumLocalConversations.exportAll();
+  try{
+   const applied=await importBackupState(prepared.world,{confirmed:true,preservePrivate:false});
+   if(!applied)throw Error('restore_world_write_failed');
+   if(!await globalThis.TrialumLocalConversations.replaceAll(archive))
+    throw Error('restore_conversations_write_failed');
+  }catch(error){
+   let rolledWorld=false,rolledConversations=false;
+   try{
+    const saved=oldWorld?await S.save(oldWorld):await S.clear();
+    rolledWorld=!!saved?.ok;
+    if(rolledWorld){
+     s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();sendNative();
+    }
+   }catch(_){}
+   try{rolledConversations=!!(await globalThis.TrialumLocalConversations.replaceAll(oldConversations));}
+   catch(_){}
+   if(!rolledWorld||!rolledConversations)throw Error('restore_rollback_failed');
+   throw Error('restore_failed_rolled_back');
   }
   backupFeedback(en()?'Encrypted archive restored, including local friend history and AI memories.':'Шифрираната архива е вратена, вклучувајќи ја локалната историја со пријателите и AI-меморијата.',true);
+  return true;
  }
  function activeSignals(){if(!s?.settings.alerts)return;const msgs=E.alerts(s),active=new Set(msgs.map(x=>x.type+'|'+(x.petId||x.habitatId||x.plantId)));
  for(const a of msgs){const id=a.type+'|'+(a.petId||a.habitatId||a.plantId);if(alertsSeen.has(id))continue;alertsSeen.add(id);if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){try{new Notification('ТРИАЛУМ · Потребна грижа',{body:a.text,tag:id,icon:'assets/icon.svg'})}catch(_){}}}
