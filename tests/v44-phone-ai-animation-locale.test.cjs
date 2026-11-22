@@ -81,6 +81,7 @@ test('English canonical turn is not discarded when server translation is not ret
  state.speechTranslationEnabled=false;language='en';AI.stop();
 });
 test('shared room captions use selected locale, scripted network seed stays English',()=>{
+ AI.setTab('pets'); // Disable active foreground Mini simulation for visual fallback inspection.
  const rendered=[];
  globalThis.TrialumCreatureArt={draw(ctx,p,at,t,selected,progress,action){
   rendered.push({name:p.name,x:at.x,y:at.y,skill:action?.skill||null,start:action?.start||null,
