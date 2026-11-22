@@ -5,6 +5,11 @@
 'use strict';
 const E=()=>root.TrialumEngine, Presence=()=>root.TrialumPresence;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ui=(en,mk)=>root.TrialumI18n?.language?.()==='mk'?mk:en;
+// Only transient diagnostic information. Never persist prompts, owner text or model output.
+const diagnosticsStatus=Object.create(null);
+function status(scope,text){diagnosticsStatus[scope]=String(text||'').slice(0,140);}
+
 let currentTab='',pending=null,latestLocal=null,latestShared=null,localSessionKey='';
 const Sessions=()=>root.TrialumDialogueSessions;
 // Only completed local-model outputs count as AI; scripted topic nudges are
@@ -88,33 +93,54 @@ function control(s,p,scope,present){
  if(!p||!present)return '';
  const ok=gate(s,p),installed=modelAvailable(),
   on=!!p[scope==='shared'?'playgroundAiShared':'playgroundAiLocal'];
- // No background model is armed in this beta; world simulation continues without LLM.
- if(!ok)return '<p class="small subtle">🔒 AI комуникацијата во игротека се отклучува со развојот на видот. Меморијата постои и без AI.</p>';
- const permitted=scope!=='shared'||root.TrialumShared?.getState?.()?.aiRelayEnabled;
- let html='<div class="card"><h3>🧠 Изборен локален AI во игротеката</h3>'+
- '<p class="small">Мини AI разговара само додека екранот е видлив и има активен разговор. При излез AI се гаси, а симулацијата во engine продолжува без модел. Нема AI XP.</p>';
- if(scope==='shared')html+='<p class="small">Кога е вклучен, кратките реплики се испраќаат до присутните членови на оваа приватна игротека. Не се приватни или шифрирани пораки.</p>';
- if(!permitted)html+='<p class="small">Серверската поддршка за AI разговори сè уште не е активирана. Симулираниот разговор работи.</p>';
- if(!installed)html+='<p class="small">Прво преземи го бесплатниот SmolLM2-135M во панелот на миленичето.</p>';
- if(scope==='shared'){
-  const state=root.TrialumShared?.getState?.();
-  const translated=!!state?.speechTranslationEnabled&&
-   state.speechTranslationLanguages?.includes(root.TrialumI18n?.language?.()||'mk');
-  if(state?.speechTranslationEnabled&&!translated)
-   html+='<p class="small">🌍 Преводите во оваа фаза се достапни само на македонски, албански и англиски.</p>';
-  if(!translated)html+='<p class="small">🌍 За background AI прво е потребен приватен серверски преведувач на англиски.</p>';
-  if(on)html+='<p class="small subtle">🔋 AI во заднина е исклучен во оваа бета. Mini работи само за разговори додека играта е видлива.</p>';
- }
+ const t=ui;
+ if(!ok)return '<p class="small subtle">'+t(
+  '🔒 Playground AI unlocks through pet evolution; memory works without an AI model.',
+  '🔒 AI во игротеката се отклучува со еволуцијата на миленичето; меморијата работи и без AI.')+'</p>';
+ const state=scope==='shared'?root.TrialumShared?.getState?.():null;
+ const permitted=scope!=='shared'||!!state?.aiRelayEnabled;
+ let html='<div class="card playground-ai-card" data-no-translate>'+
+  '<h3>🧠 '+t('Optional on-device playground AI','Изборна локална AI во игротеката')+'</h3>'+
+  '<p class="small">'+t(
+   'Mini runs on your device only while the game is visible and a conversation is active. The engine continues the simulation without any AI when the game is hidden. No AI XP.',
+   'Mini работи локално само додека играта е видлива и има активен разговор. Кога играта е скриена, симулацијата продолжува без AI. Нема AI XP.')+'</p>';
+ if(scope==='shared')html+='<p class="small">'+t(
+  'Short pet replies are relayed to members present in this private playground. They are NOT private or encrypted messages.',
+  'Кратките реплики се пренесуваат до присутните членови на приватната игротека. Тие НЕ се приватни или шифрирани пораки.')+'</p>';
+ if(!permitted)html+='<p class="small social-warning">'+t(
+  '⚠ This server has not enabled shared AI relay. Real pet-to-pet AI speech is unavailable until the server enables it.',
+  '⚠ Серверот не дозволува AI пренос во заедничката игротека. Вистинскиот AI разговор нема да работи додека серверот не го овозможи.')+'</p>';
+ if(!installed)html+='<p class="small">'+t(
+  'Download the SmolLM2-135M Mini model from the pet panel first.',
+  'Прво преземи го Mini моделот SmolLM2-135M од панелот на миленичето.')+'</p>';
+ if(scope==='shared'&&on)html+='<p class="small subtle">🔋 '+t(
+  'Background AI is disabled in this beta. Mini speaks only while the game is open.',
+  'AI во заднина е исклучена во оваа бета. Mini зборува само додека играта е отворена.')+'</p>';
  if(on){
   const mix=diagnostics(scope,p);
-  const t=label=>root.TrialumI18n?.t?.(label)||label;
-  html+='<p class="small subtle">'+t('🧪 QA · вистински локални LLM реплики:')+' '+mix.llm+
-   t(' · контролирани симулирани:')+' '+mix.scripted+
-   t(' (цел 90/10; без скриени транскрипти)')+'</p>';
+  html+='<p class="small subtle" data-playground-ai-diagnostics>🧪 '+t(
+    'Real local LLM replies: ','Вистински локални LLM реплики: ')+mix.llm+
+   t(' · scripted turns: ',' · симулирани реплики: ')+mix.scripted+
+   t(' (target 90/10; no hidden transcripts)',' (цел 90/10; без скриени транскрипти)')+'</p>';
+  const connection=scope==='shared'
+   ?(state?.online&&state?.aiRelayEnabled&&state?.snapshot?.presenceEnabled
+     ?t('Room is online; speech requires two separately confirmed pets and an active WebSocket.',
+        'Просторијата е онлајн; говорот бара две посебно потврдени миленичиња и активен WebSocket.')
+     :t('Waiting for room status / AI relay / presence confirmation.',
+        'Се чека потврда на просторија, AI пренос или присуство.'))
+   :t('Local playground AI is ready for a conversation.','Локалната AI е подготвена за разговор.');
+  html+='<p class="small subtle" role="status">'+connection+'</p>';
+  if(diagnosticsStatus[scope])html+='<p class="small social-warning" role="status">'+
+   esc(diagnosticsStatus[scope])+'</p>';
  }
- html+='<button data-do="pgAiToggle" data-scope="'+scope+'"'+(!permitted||(!installed&&!on)?' disabled':'')+'>'+
- (on?'🔕 Исклучи AI за ова милениче':'🧠 Вклучи мини AI за ова милениче')+'</button>'+
- (Memory()?.read?.(p)?.length?'<p class="small">🧠 '+esc(Memory()?.overview?.(p)||'')+'</p><button data-do="pgAiForget">🗑 Избриши контекстуални сеќавања</button>':'')+'</div>';
+ html+='<button data-do="pgAiToggle" data-scope="'+scope+'"'+
+  (!permitted||(!installed&&!on)?' disabled':'')+'>'+
+  (on?t('🔕 Turn off AI for this pet','🔕 Исклучи AI за ова милениче'):
+      t('🧠 Turn on Mini AI for this pet','🧠 Вклучи Mini AI за ова милениче'))+'</button>'+
+  (Memory()?.read?.(p)?.length?
+    '<p class="small">🧠 '+esc(Memory()?.overview?.(p)||'')+'</p>'+
+    '<button data-do="pgAiForget">'+t('🗑 Clear playground topic memories','🗑 Избриши тематски сеќавања од игротеката')+'</button>':'')+
+  '</div>';
  return html;
 }
 function toggle(s,scope,notify,save,render){
@@ -130,6 +156,7 @@ function toggle(s,scope,notify,save,render){
   }
  }
  p[field]=!p[field];
+ status(scope,'');
  if(!p[field]){
   if(scope==='shared'&&p.playgroundAiBackgroundShared){
    root.TrialumAndroid?.setPlaygroundBackgroundAi?.(false,'','','','');
@@ -225,6 +252,7 @@ function injectScripted(s,p,scope,input,roomId){
 function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
  const now=Date.now(),key=scope+'|'+p.id;
  if(pending||!enabled(s,p,scope)||now-(lastAttempt[key]||0)<24000||!active(scope))return false;
+ status(scope,'');
  if(root.TrialumLocalChat?.busy?.()||!root.TrialumAndroid?.askPlaygroundAi)return false;
  if(!root.TrialumLocalChat?.begin?.(p.id))return false;
  lastAttempt[key]=now;
@@ -240,14 +268,14 @@ function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
    roomTurns:Sessions()?.context?.(scope,scope==='shared'?roomId:localSessionKey,null,980)||[],
    maxChars:1450,now
   });
- }catch(_){root.TrialumLocalChat?.finish?.(p.id);return false;}
+ }catch(error){status(scope,'AI context could not be prepared: '+String(error?.message||'unknown error'));root.TrialumLocalChat?.finish?.(p.id);return false;}
  pending={petId:p.id,petName:String(p.name||'Милениче'),scope,roomId,sessionId,at:now,
   heard:String(meta.heard||'').slice(0,130),companion:String(meta.companion||'').slice(0,32),
   peerId:meta.peerId,replyToTurnId:String(meta.replyToTurnId||'')};
  try{
   root.TrialumAndroid.askPlaygroundAi(p.id,p.name,String(prompt).slice(0,320),context);
   return true;
- }catch(_){root.TrialumLocalChat?.finish?.(p.id);pending=null;return false;}
+ }catch(error){status(scope,'Android Mini bridge unavailable: '+String(error?.message||'unknown error'));root.TrialumLocalChat?.finish?.(p.id);pending=null;return false;}
 }
 function tick(s,tab){
  if(tab!==currentTab)setTab(tab);
@@ -362,7 +390,9 @@ function onPeerSpeech(message){
  const modelText=sanitize(message.englishText||
   (message.language==='en'?message.text:''));
  if(!modelText)return false;
- if(uiMk&&state.speechTranslationEnabled&&message.translated!==true)return false;
+ // A missing optional translation must NOT suppress the canonical English
+ // server turn, or both Mini clients deadlock waiting for a non-existent reply.
+ // Use English as display fallback and keep the model context English-only.
  const displayText=sanitize(uiMk&&message.translated===true&&
   message.language==='mk'?message.text:modelText);
  if(!displayText)return false;
@@ -395,21 +425,22 @@ function onModelEvent(event){
   return true;
  }
  const job=pending;pending=null;root.TrialumLocalChat?.finish?.(job.petId);
- if(kind==='error'||!active(job.scope))return true;
+ if(kind==='error'){status(job.scope,'Mini model error: '+String(event.text||'unknown').slice(0,115));return true;}
+ if(!active(job.scope))return true;
+ status(job.scope,'');
  const text=sanitize(event.text),s=root.TrialumShared?.getWorld?.();
- if(!text)return true;
+ if(!text){status(job.scope,'Mini returned an empty or unsafe sentence; no message sent.');return true;}
  // A model may disregard its English-only instruction; never relay foreign scripts.
- if(job.scope==='shared'&&/[^\x20-\x7e]/.test(text))return true;
+ if(job.scope==='shared'&&/[^\x20-\x7e]/.test(text)){status('shared','Mini reply was not English ASCII; blocked by room language policy.');return true;}
  if(job.scope==='shared'){
   const st=root.TrialumShared?.getState?.(),p=s?.pets?.find(x=>x.id===job.petId);
   const loc=p&&Presence()?.get?.(s,p.id);
   if(!p||!enabled(s,p,'shared')||!st?.online||!st.aiRelayEnabled||job.roomId!==st.selected||
    !st.presences.some(x=>x.petId===p.id&&x.sessionId===job.sessionId&&x.roomId===job.roomId)||
    loc?.sessionId!==job.sessionId)return true;
-  if(st.speechTranslationEnabled){
-   // Wait for the server's localized echo before displaying this English output.
-   latestShared=null;
-  }else latestShared={speaker:job.petName,text,roomId:job.roomId,at:Date.now(),ai:true};
+  // Show the canonical English reply immediately, even when translation is
+  // enabled: the server-localized echo may arrive later or not be available.
+  latestShared={speaker:job.petName,text,roomId:job.roomId,at:Date.now(),ai:true};
   if(root.TrialumShared?.sendPetSpeech?.(s,p,text,
     'en',job.replyToTurnId)){
    if(job.replyToTurnId)Sessions()?.answered('shared',job.roomId,job.replyToTurnId);
