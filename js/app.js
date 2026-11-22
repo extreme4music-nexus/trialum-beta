@@ -633,7 +633,7 @@ globalThis.TrialumLLMEvent=(event)=>{
    const previousUser=p.chatHistory.slice().reverse().find(x=>x.role==='user');
    if(previousUser&&text)globalThis.TrialumCognitiveMemory?.summarize(p,previousUser.text,text);
    p.chatHistory.push({role:'pet',text:text||'...'});
-   p.chatHistory=p.chatHistory.slice(-12);if(kind==='advancedReply')M?.onReply(s,p,text);scheduleSave();if(tab==='pets')renderTab();toast('🧠 '+p.name+' одговори локално.');
+   p.chatHistory=p.chatHistory.slice(-12);if(kind==='advancedReply')M?.onReply(s,p,text);scheduleSave();if(tab==='pets'){renderTab();globalThis.TrialumPetChat?.scroll?.();}toast('🧠 '+p.name+' одговори локално.');
  }else if(kind==='error'){
    globalThis.TrialumLocalChat?.finish?.(event.petId);
   M?.downloadEvent?.(kind,event.petId,text);
@@ -688,6 +688,12 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
  P?.onVisit((guest,data)=>{if(!s)return;const p=E.currentPet(s)||s.pets[0];if(p){const r=E.socialize(s,p.id,guest.id);if(r.ok){A.sfx('play');scheduleSave();render();toast('🤝 '+p.name+' се дружеше со '+guest.pet.name);}}});
  document.addEventListener('input',ev=>{if(ev.target?.id==='peerCodeIn')peerIncoming=ev.target.value;if(ev.target?.id==='diarySearch')filterDiary();});
  document.addEventListener('change',ev=>{
+  if(ev.target?.id==='petChatModel'){
+   const p=E.currentPet(s);
+   if(globalThis.TrialumPetChat?.choose?.(s,p,ev.target.value)){
+    scheduleSave();renderTab();globalThis.TrialumPetChat?.scroll?.();
+   }return;
+  }
   if(ev.target?.id==='languagePicker'){
     const next=ev.target.value,valid=['auto',...(globalThis.TrialumI18n?.languages||[])];
     if(!s||!valid.includes(next))return;
@@ -716,6 +722,7 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
    await processBackupFile(contents);
   }catch(error){backupFeedback((en()?'Restore failed: ':'Враќањето не успеа: ')+restoreError(error));}
  });
+ globalThis.TrialumPetVoiceEvent=event=>globalThis.TrialumPetChat?.voiceEvent?.(event,s);
  globalThis.TrialumNativeBackupReceived=async function(json){
   try{await processBackupFile(String(json));}
   catch(error){backupFeedback((en()?'Restore failed: ':'Враќањето не успеа: ')+restoreError(error));}
