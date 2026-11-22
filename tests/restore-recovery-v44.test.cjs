@@ -59,6 +59,7 @@ test('boot detects journal after simulated crash between two separate store writ
  assert.equal((await S.save(initial)).ok,true);
  const originalFriends=await globalThis.TrialumLocalConversations.exportAll();
  assert.equal(await S.beginPrivateRestore(initial,originalFriends),true);
+ assert.equal(local.get('trialum_private_restore_pending_v1'),'1');
  assert.equal((await S.save(world('AFTER_CRASH'))).ok,true);
  friends.rows=[{peerRef:'22222222-2222-4222-8222-222222222222',items:[]}];
  assert.equal(dbRows.has(JOURNAL),true);
@@ -67,6 +68,7 @@ test('boot detects journal after simulated crash between two separate store writ
  assert.equal(loaded.testRestoreMarker,'BEFORE');
  assert.deepEqual(friends.rows,originalFriends);
  assert.equal(dbRows.has(JOURNAL),false);
+ assert.equal(local.has('trialum_private_restore_pending_v1'),false);
  assert.deepEqual(await S.recoverPrivateRestore(),{recovered:false});
 });
 test('boot fails closed if conversation store unavailable, and retries after recovery',async()=>{
@@ -125,4 +127,17 @@ test('journal is removed on complete restore and retained on incomplete rollback
   applyConversations:async()=>false,rollbackWorld:async()=>false
  }),/restore_rollback_failed/);
  assert(journal,'recovery journal must survive failed compensating rollback');
+});
+ 
+test('temporary loss of IndexedDB during pending restore blocks all local fallback writes',async()=>{
+ reset();const original=world('BEFORE');await S.save(original);
+ await S.beginPrivateRestore(original,await globalThis.TrialumLocalConversations.exportAll());
+ await S.save(world('AFTER_CRASH'));
+ const existing=globalThis.indexedDB;
+ delete globalThis.indexedDB;
+ try{await assert.rejects(S.load(),/restore_recovery_incomplete/);}
+ finally{globalThis.indexedDB=existing;}
+ assert.equal(dbRows.has(JOURNAL),true);
+ assert.equal((await S.load()).testRestoreMarker,'BEFORE');
+ assert.equal(local.has('trialum_private_restore_pending_v1'),false);
 });
