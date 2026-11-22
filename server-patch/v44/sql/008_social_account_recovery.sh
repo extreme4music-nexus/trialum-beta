@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS social_account_recovery (
 DO $$ BEGIN
  IF EXISTS(SELECT FROM pg_roles WHERE rolname='trialum_app') THEN
   GRANT SELECT, INSERT, UPDATE, DELETE ON social_account_recovery TO trialum_app;
+  -- Recovery explicitly revokes old device push delivery. No INSERT or UPDATE grant.
+  GRANT DELETE ON push_registrations TO trialum_app;
  END IF;
 END $$;
 COMMIT;
