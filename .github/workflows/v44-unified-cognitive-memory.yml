@@ -7,6 +7,11 @@ on:
     branches:
       - fix/v44-mnemos-cognitive-integration
   workflow_dispatch:
+concurrency:
+  # A push and its pull_request event validate the same feature head.
+  # Cancel stale duplicate runs; keep only the latest commit's gate.
+  group: v44-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -35,6 +40,7 @@ jobs:
           node --check js/longplay.js
           node --check js/fauna-lab.js
           node --check js/longplay-ui.js
+          node --check js/pet-chat-ui.js
           node --check js/playground-memory.js
           node --check js/playground-ai.js
           node --check js/storage.js
