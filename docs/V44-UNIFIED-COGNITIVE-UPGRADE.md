@@ -103,3 +103,18 @@ Each checkpoint ends with a commit diff, tests and explicit open findings. No im
 - Multiple independently stored raw owner conversations, friend messages and privacy consent need a final security pass in checkpoint 05.
 
 **Next checkpoint, owner-controlled:** multiyear/large-roster stress and memory-size profiles, Android device smoke and model inference, cross-storage process death/recovery, permissions/security audit, version-gate review and release handoff. No V44 release merge or Android signed build without explicit approval.
+
+## Checkpoint 05 — Final host audit, stress simulation and crash-recovery gates
+
+**Implemented in the same coordinated feature branch:**
+
+1. New durable IndexedDB **write-ahead journal** in `js/storage.js` snapshots prior world and friend-message history before any cross-store private restore. A synchronous local pending flag blocks unsafe fallback if IndexedDB temporarily disappears. The journal is replayed at startup; invalid/incomplete recovery halts writes rather than silently creating a new world.
+2. `js/private-restore.js` now requires successful journal creation before mutating either store. It clears the journal only after both stores commit or both rollback operations succeed. `js/app.js` freezes saves and new-game actions if recovery fails.
+3. `js/local-conversations.js` refuses to claim a successful complete restore when IndexedDB or stale legacy fallback cleanup fails. `js/ai-context.js` excludes private owner bond, private location identifiers and private social-peer identities from shared/public conversation context. `js/memory-integrity.js` validates historically valid calendar dates, stream watermarks and pet IDs.
+4. `tests/cognitive-stress-v44.test.cjs` covers 20 years (7,306 observations), 1,000 independent pets, 30,000 exact replayable events, the **encrypted roundtrip of 1,000 pets**, corrupt source data and public privacy boundaries.
+5. `tests/restore-recovery-v44.test.cjs` uses persistent fake IndexedDB across simulated process restarts to verify repair/rollback of interrupted two-store restores, including temporary IndexedDB loss and a corrupt journal. `tests/private-conversations-v44.test.cjs` rejects stale fallback resurrections and primary-store failure. A separate CI job records numerical size profiles.
+6. Detailed evidence, test metrics and the **device-only release gate** are in [Checkpoint 05 validation and device playbook](V44-CHECKPOINT05-VALIDATION.md).
+
+**Host CI observations (Node 22):** 20-year JSON reduced from 583,539 to 12,384 bytes (~97.88%); 1,000-pet roster ~3.19 MiB serialized (3,185,035 bytes); 30,000 events from 5,540,003 to 481,521 bytes (~91.31%); encrypted migration of a separate 1,000-pet roster from 2,545,182 to 80,728 bytes under this test's repeated thematic content. These are example workloads, not guaranteed memory ratios for arbitrary players.
+
+**Explicitly not signed off:** real Android on-device local GGUF inference, battery/thermal measurement, WSS traffic inspection and actual OS-level power-kill during a cross-store restore. Host simulations and compile-only CI do not replace physical device evidence. The release branch is untouched; an owner-approved, isolated test package and device QA remain necessary before merge or release.
