@@ -22,7 +22,7 @@ function safeBucket(key,granularity){
  return Number.isFinite(d.getTime())&&d.toISOString().slice(0,expected)===period;
 }
 function validatePet(p){
- if(!plain(p)||typeof p.id!=='string'||!p.id||p.id.length>128)invalid('invalid pet id');
+ if(!plain(p)||typeof p.id!=='string'||p.id.length>128||!safeId(p.id))invalid('invalid pet id');
  const m=p.cognitiveMemory;
  if(!plain(m)||m.petId!==p.id||m.version!==2||m.schemaVersion!==2)invalid('invalid pet cognitive schema or id');
  if(!Array.isArray(m.eventLedger)||m.eventLedger.length>MAX_EVENTS_PER_PET||!plain(m.archivedReceipts))
