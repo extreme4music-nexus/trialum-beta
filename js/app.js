@@ -393,10 +393,29 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
   if(confirm('Трајно да го избришеме овој заеднички простор и групните податоци?'))Shared?.drop();
   return;
  }
- case 'shUpgrade':Shared?.upgrade(button.dataset.kind,button.dataset.toy).then(v=>{if(v)toast('🌳 Надградбата е потврдена од серверот.');});return;
+ case 'shShopToggle':Shared?.toggleStore();return;
+ case 'shToySelect':Shared?.selectToy(button.dataset.toy);return;
+ case 'shShopBuy':Shared?.purchaseToy(button.dataset.toy).then(v=>{
+  if(v)toast('💠 Справата е купена со заеднички кредити и зачувана во игротеката.');
+ });return;
+ case 'shToyPlace':Shared?.placement(button.dataset.toy,true).then(v=>{
+  if(v)toast('✅ Справата е поставена без повторно плаќање.');
+ });return;
+ case 'shToyRemove':{
+  if(confirm(globalThis.TrialumI18n?.language?.()==='mk'?
+    'Да ја вратиме справата во складиште? Останува купена и не се враќаат кредити.':
+    'Put this toy into storage? You keep ownership; no shared credits are refunded.')){
+   Shared?.placement(button.dataset.toy,false).then(v=>{
+    if(v)toast('↩ Справата е зачувана во складиштето.');
+   });
+  }return;
+ }
+ case 'shUpgrade':Shared?.upgrade(button.dataset.kind,button.dataset.toy).then(v=>{
+  if(v)toast('🌳 Надградбата е потврдена од серверот.');
+ });return;
  case 'shEnter':Shared?.enterRoom(s).then(v=>{if(v){render();scheduleSave();toast('🐾 Миленичето е во заедничката игротека.');}});return;
  case 'shReturn':Shared?.leaveRoom(s).then(v=>{if(v?.ok)notice(v,'select');else if(v?.queued){render();scheduleSave();toast(v.message);}});return;
- case 'shPlay':Shared?.play(button.dataset.toy,s).then(v=>{if(v)toast(v.duplicate?'Активноста веќе е регистрирана.':'🐾 +1 групен поен');});return;
+ case 'shPlay':Shared?.play(button.dataset.toy,s).then(v=>{if(v)toast(v.duplicate?'Активноста веќе е регистрирана.' :'🐾 +1 заеднички кредит');});return;
  case 'shVisit':{
   const target=el('sharedFriendToVisit')?.value,dest=el('sharedDestination')?.value;
   if(target&&dest)Shared?.sendVisit(target,dest,s).then(v=>{if(v)toast('Посетата е испратена на одобрување.');});
