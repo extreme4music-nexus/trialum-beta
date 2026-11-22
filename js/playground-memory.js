@@ -5,6 +5,8 @@
 (function(root){
 'use strict';
 const MAX_DAYS=45,MAX_ENTRIES=60,MAX_TOPICS=6,MAX_COMPANIONS=3;
+// Legacy rolling summaries remain a bounded compatibility cache; cognitive context never expires.
+const Context=()=>root.TrialumCognitiveContext;
 const lexicon=[
  ['slide',/лизгал|slide/i],['seesaw',/клацкал|seesaw/i],
  ['sandbox',/песок|песоч|sandbox|sand/i],['water',/базен|плива|вода|pool|swim|water/i],
@@ -71,6 +73,7 @@ function read(p,now=Date.now()){
 }
 function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  if(!p||(place!=='local'&&place!=='shared'))return false;
+ Context()?.migrateLegacy?.(p);
  const day=dayKey(now);if(!day)return false;
  const memories=read(p,now);
  const key=day+'|'+place;
@@ -84,9 +87,12 @@ function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  item.companions=item.companions.slice(0,MAX_COMPANIONS);
  item.moments=Math.min(99,item.moments+1);
  p.playgroundAiMemories=memories.sort((a,b)=>a.day.localeCompare(b.day)).slice(-MAX_ENTRIES);
+ if(p.id)Context()?.remember?.(p,{day,place,topics:themes,companions:who?[who]:[],moments:1});
  return true;
 }
 function recall(p,question='',now=Date.now()){
+ // Canonical semantic timeline supersedes the old 45-day display cache.
+ if(p?.id&&Context()?.recall)return Context().recall(p,question,now);
  const ask=String(question||'').slice(0,360);
  const yesterday=/вчера|вчераш|yesterday/i.test(ask);
  const today=/денес|today/i.test(ask);
@@ -122,7 +128,7 @@ function overview(p,question='',now=Date.now()){
     (withNames?' ('+withNames+')':'')+' — '+(words||'playing together')+'.';
  }).join(' ');
 }
-function clear(p){if(p)p.playgroundAiMemories=[];}
+function clear(p){if(p){Context()?.clear?.(p);p.playgroundAiMemories=[];}}
 
 /** Idempotent import of the native background service's coarse daily counters.
  * A device reinstall creates a new stream ID. Already imported moments may not
@@ -132,6 +138,7 @@ function ingestBackground(p,payload,now=Date.now()){
    !/^[0-9a-f-]{36}$/i.test(payload.streamId||'')||
    !Number.isSafeInteger(payload.revision)||payload.revision<0||
    !Array.isArray(payload.entries)||payload.entries.length>MAX_ENTRIES)return false;
+ Context()?.migrateLegacy?.(p);
  const same=p.playgroundAiBackgroundStreamId===payload.streamId;
  const last=same?Math.max(0,Number(p.playgroundAiBackgroundRevision)||0):0;
  if(same&&payload.revision<=last)return false;
@@ -148,6 +155,8 @@ function ingestBackground(p,payload,now=Date.now()){
   item.topics=[...new Set(item.topics.concat(entry.topics))].slice(0,MAX_TOPICS);
   item.companions=[...new Set(item.companions.concat(entry.companions))].slice(0,MAX_COMPANIONS);
   item.moments=Math.min(99,item.moments+delta);
+  if(p.id)Context()?.remember?.(p,{day:entry.day,place:'shared',topics:entry.topics,
+   companions:entry.companions,moments:delta});
   seen[entry.day]=entry.moments;
   if(delta||entry.topics.some(x=>!item.topics.includes(x)))changed=true;
  }
