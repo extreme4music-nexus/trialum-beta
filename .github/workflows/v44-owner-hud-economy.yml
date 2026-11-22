@@ -1,0 +1,29 @@
+name: V44 Owner HUD Economy - new action-refill gate
+on:
+  push:
+    branches:
+      - feature/v44-owner-hud-economy-guidance-20261122
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: owner-v44-economy-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  action-refill:
+    name: One-credit action refill and mobile HUD checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax of changed JavaScript only
+        run: |
+          node --check js/action-economy.js
+          node --check js/action-topup-ui.js
+          node --check js/app.js
+          node --check tests/v44-action-economy.test.cjs
+      - name: New engine and UI action purchase regressions
+        run: node tests/v44-action-economy.test.cjs
