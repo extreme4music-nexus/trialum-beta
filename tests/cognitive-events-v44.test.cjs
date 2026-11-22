@@ -62,6 +62,7 @@ test('world migration preserves unknown histories and does not invent a birth ev
  const s={pets:[{id:'pet-1',species:0,birthDay:2},{id:'pet-2',species:999,birthDay:3}]};
  M.ensureWorld(s);
  assert.equal(s.pets[1].cognitiveMemory.birthDay,3);
+ assert.equal(s.pets[1].cognitiveMemory.migrationMetadata.origin,'legacy-world');
  assert.equal(s.pets[0].cognitiveMemory.eventLedger.length,0);
  assert.notEqual(s.pets[0].cognitiveMemory,s.pets[1].cognitiveMemory);
  assert.throws(()=>M.ensureWorld({pets:[{id:'x',cognitiveMemory:{version:2,petId:'other'}}]}),/identity/);
