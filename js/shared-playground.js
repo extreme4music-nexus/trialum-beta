@@ -460,7 +460,7 @@ function offlineReturnPanel(world){
 function render(world){
  worldRef=world;
  const me=self(),own=root.TrialumPlayground?.eligible(world)?.ok,snap=st.snapshot,room=snap?.room;
- let out='<div class="tab-main shared-hub"><div class="shared-heading"><div><p class="microcap">1.6-LW · ПРИВАТЕН СЕРВЕР</p><h2>🌳 Заедничка игротека</h2><p class="desc">Покани за членство, посети со согласност и вистинска синхронизација. Без реклами и продажба на податоци.</p></div><span class="tag">🔐 Доброволно</span></div>';
+ let out='<div class="tab-main shared-hub"><div class="shared-heading"><div><p class="microcap">1.4 v44 · ПРИВАТЕН СЕРВЕР</p><h2>🌳 Заедничка игротека</h2><p class="desc">Покани за членство, посети со согласност и вистинска синхронизација. Без реклами и продажба на податоци.</p></div><span class="tag">🔐 Доброволно</span></div>';
  if(st.error)out+='<div class="notice social-warning" role="status">'+escape(st.error)+'</div>';
  if(st.roomNoticeUntil>Date.now()){
   const name=escape(st.roomNoticeName||'Играч');
