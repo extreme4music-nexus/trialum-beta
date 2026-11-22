@@ -45,8 +45,7 @@ const Memory=()=>root.TrialumPlaygroundMemory;
 function storeMemory(p,data){if(data.peerId&&data.direct===true)root.TrialumCognitiveMemory?.socialMoment(p,{id:data.peerId,name:data.companion},{location:data.place,heard:data.heard,said:data.said,activity:'talk'});if(Memory()?.remember?.(p,data))saveMemory();}
 const lastAttempt=Object.create(null),lastSimulation=Object.create(null);
 function gate(s,p){
- const species=Number(p?.species),evolved=Number.isInteger(species)&&species>=4&&!!E()?.SPECIES?.[species];
- return !!(evolved&&E()?.evolutionProgress?.(p)?.level>=22&&(s?.research?.level||0)>=6);
+ return root.TrialumPetAI?.unlocked?.(s,p,'mini')===true;
 }
 function modelAvailable(){
  try{return root.TrialumAndroid?.modelStatus?.()==='installed';}catch(_){return false;}
@@ -90,7 +89,7 @@ function control(s,p,scope,present){
  const ok=gate(s,p),installed=modelAvailable(),
   on=!!p[scope==='shared'?'playgroundAiShared':'playgroundAiLocal'];
  const nativeBackground=!!root.TrialumAndroid?.backgroundAiStatus?.();
- if(!ok)return '<p class="small subtle">🔒 AI во игротека: Синапсо+, лично ниво 22 и лабораторија 6. Симулираните разговори остануваат достапни.</p>';
+ if(!ok)return '<p class="small subtle">🔒 AI комуникацијата во игротека се отклучува со развојот на видот. Меморијата постои и без AI.</p>';
  const permitted=scope!=='shared'||root.TrialumShared?.getState?.()?.aiRelayEnabled;
  let html='<div class="card"><h3>🧠 Изборен локален AI во игротеката</h3>'+
  '<p class="small">Мини AI по правило разговара додека екранот е видлив; со твоја дозвола може да продолжи и во заднина. Без модел, играта продолжува. Нема AI XP.</p>';
