@@ -690,7 +690,7 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
   Promise.resolve(Social?.setAgeSignal?.(event)).then(()=>{
    if(s&&Social?.isAdultAllowed?.())Shared?.reconcileAway?.().catch(()=>{});
    if(s)renderTab();
-   toast(Social?.isAdultAllowed?.()?'Google Play сподели 18+ возрастен сигнал за ова интерно бета издание.':'Социјалните функции остануваат заклучени; основната игра работи офлајн.');
+   toast(Social?.isAdultAllowed?.()?'Google Play потврди соодветен 18+ сигнал; Friends може доброволно да се активираат.':'Социјалните функции остануваат заклучени; основната игра работи офлајн.');
   });
  };
  globalThis.TrialumNearbyEvent=event=>{Social?.nearbyEvent(event);if(event?.kind==='invite' && s)chooseTab('friends');};
