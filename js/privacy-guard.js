@@ -35,6 +35,17 @@ function inspectPetSpeech(value,pet){
  const normalized=normalize(line);
  for(const row of Array.isArray(pet?.chatHistory)?pet.chatHistory:[]){
   if(row?.role!=='user')continue;
+  const rawPrivate=String(row.text||'');
+  // Single names, hometowns, schools and secrets can be copied into an
+  // otherwise innocent-looking model sentence; check them individually.
+  const entity=/(?:my (?:real |full )?name is|i(?:'m| am) called|i live in|my (?:address|school|password|secret|birthday) is|i work at)\s+([A-Za-z][A-Za-z'-]{2,}(?:\s+[A-Z][A-Za-z'-]{2,}){0,3})/ig;
+  let named;
+  while((named=entity.exec(rawPrivate))){
+   const value=normalize(named[1]).split(/\s+(?:and|but|because|at|on)\b/)[0].trim();
+   if(value.length>=4&&new RegExp('\\b'+value.replace(/[.*+?^${}()|[\]\\]/g,'\\  const words=normalize(row.text).split(' ').filter(x=>x.length>1);
+  for(let i=0;i+2<words.length;i++){')+'\\b','i').test(normalized))
+    return {blocked:true,reason:'private_named_entity'};
+  }
   const words=normalize(row.text).split(' ').filter(x=>x.length>1);
   for(let i=0;i+2<words.length;i++){
    const phrase=words.slice(i,i+3).join(' ');
