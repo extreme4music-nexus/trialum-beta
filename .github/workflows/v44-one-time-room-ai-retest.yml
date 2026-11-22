@@ -74,7 +74,7 @@ jobs:
           code=code.replace(before,warning+before,1)
           social.write_text(code)
           assert 'ageSignalsAdultEligible(): Boolean = true' in activity.read_text()
-          assert 'applicationIdSuffix = ".qa44social"' in gradle.read_text()
+          assert 'applicationIdSuffix = ".qa44social2"' in gradle.read_text()
           print("Temporary CI-checkout-only social test gate installed; original release branch source unchanged.")
           PY
       - name: Require configured HTTPS backend (no hardcoded or guessed social address)
