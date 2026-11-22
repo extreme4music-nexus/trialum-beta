@@ -202,6 +202,7 @@ function renderTab(){
  const mount=el('selectedPetMount');
  if(tab==='pets'&&mount&&panel)mount.appendChild(panel);
  globalThis.TrialumI18n?.translateDOM?.(el('tabContent'));
+ if(tab==='pets')globalThis.TrialumPetChat?.scroll?.();
  if(tab==='playground')PG?.mount(s,{onSelect:id=>{const r=PG.replay(s,id);if(r.ok)toast(r.message);},onNotice:toast,onRender:renderTab});
  if(tab==='shared')globalThis.TrialumSharedScene?.mount?.();
 }
@@ -662,6 +663,12 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
   },
   notify:toast,
   refreshUI:()=>{if(tab==='playgames'&&s)renderTab();}
+ });
+ document.addEventListener('keydown',ev=>{
+  if(ev.target?.id==='petChatPrompt'&&ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){
+   ev.preventDefault();const send=document.querySelector('[data-do="petChatAsk"]');
+   if(send&&!send.disabled)doAction(send);
+  }
  });
  document.addEventListener('click',ev=>{const startBtn=ev.target.closest('[data-start]');if(startBtn){start(startBtn.dataset.start);return}const tabBtn=ev.target.closest('[data-tab]');if(tabBtn){chooseTab(tabBtn.dataset.tab);return}const btn=ev.target.closest('[data-do]');if(btn)doAction(btn);});
  el('habitatSwitch').addEventListener('change',ev=>selectHabitat(ev.target.value));
