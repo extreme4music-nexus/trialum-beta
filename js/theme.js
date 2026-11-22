@@ -1,4 +1,4 @@
-/* TRIALUM 1.5.5: system-aware and manually overridable theme. */
+/* TRIALUM 1.4 v44: system-aware and manually overridable theme. */
 (function(root){
 'use strict';
 const STORAGE='trialum_theme_preference';
