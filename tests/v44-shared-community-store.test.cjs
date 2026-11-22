@@ -70,7 +70,7 @@ test('server patch locks spend and placement to real room owner, authorizes stor
 test('owner can buy and store without touching local game credits, member cannot manage',async()=>{
  let owner=true,shop=true,requestCount=0;
  const own={pets:[],selectedPet:null,longplay:{credits:7777},resources:{biomass:800}};
- let credits=36,placed=['sandbox','seesaw'],owned=['sandbox','seesaw'];
+ let credits=24,placed=['sandbox','seesaw'],owned=['sandbox','seesaw'];
  const roomInfo=()=>({id:room,title:'Community garden',tier:1,role:owner?'owner':'member'});
  const snapshot=()=>({room:roomInfo(),members:[],toys:placed.slice(),ownedToys:owned.slice(),
   sharedCredits:credits,points:credits,events:[],visitors:[],occupants:[],presenceEnabled:true});
@@ -122,7 +122,7 @@ test('owner can buy and store without touching local game credits, member cannot
   assert.equal(requestCount,starting,'no bogus purchase call');
   const purchase=await sh.purchaseToy('music');
   assert.equal(purchase.cost,22);
-  assert.equal(credits,14);
+  assert.equal(credits,2);
   assert(owned.includes('music')&&!placed.includes('music'),'owned but initially stored when at capacity');
   assert.equal(own.longplay.credits,7777,'personal credits untouched');
   await sh.placement('sandbox',false);
