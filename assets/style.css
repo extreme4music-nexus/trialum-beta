@@ -512,3 +512,39 @@
 .legal-overlay{position:fixed;inset:0;z-index:90;background:#020d18f2;backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px}.legal-card{width:min(900px,100%);max-height:96vh;overflow:auto;padding:clamp(14px,3vw,26px);background:linear-gradient(145deg,#163849,#111f35);border:1px solid #52808b;border-radius:20px;box-shadow:0 20px 90px #000e;color:#e9f7fb}.legal-card h2{margin:4px 0 8px;font-size:clamp(20px,4vw,28px)}.legal-card>p{color:#c0d4dd}.legal-document{width:100%;height:min(54vh,620px);border:1px solid #365b73;border-radius:12px;background:#0a1a28}.legal-check{display:flex;align-items:flex-start;gap:10px;margin:14px 0;padding:13px;border:1px solid #477785;border-radius:11px;background:#123340;color:#e3fcf5;font-weight:650}.legal-check input{width:22px;height:22px;min-width:22px;margin:1px 0 0;accent-color:#62e5ce}.legal-card .btn-line>*{min-width:0}.social-consent{padding:16px}.social-consent h3{font-size:18px}.social-consent h4{margin:14px 0 5px;color:#8fe8d7}.social-consent p,.social-consent li{font-size:13px;line-height:1.6;color:#c4d9e2}.social-consent ul{padding-left:22px}.social-consent li+li{margin-top:7px}.social-consent a{color:#9cddf5;text-decoration:underline}.social-consent-control{border-color:#548477}.social-consent-control button{width:auto}
 
 .licenses-dialog{width:min(760px,94vw);max-height:85vh;background:#10243a;color:#ebf9fb;border:1px solid #41627c;border-radius:18px;padding:18px}.licenses-dialog::backdrop{background:#000b}.licenses-dialog form{display:flex;flex-direction:column;gap:12px}.licenses-dialog header{display:flex;justify-content:space-between;align-items:center}.license-scroll{overflow:auto;max-height:62vh;border:1px solid #2a4660;border-radius:10px;padding:12px}.license-scroll pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace;color:#d7e9ef}.licenses-dialog button{min-height:42px}
+
+
+/* TRIALUM 1.4 v44 — single private pet conversation window */
+.pet-chat{display:flex;flex-direction:column;gap:11px;margin:18px 0;padding:clamp(10px,2vw,17px);border:1px solid #3b7183;border-radius:17px;background:linear-gradient(160deg,#112d42,#0c1d30)}
+.pet-chat-head{display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #31546b;padding-bottom:10px}
+.pet-chat-head h3{margin:3px 0;font-size:18px}
+.pet-chat-head small,.pet-chat-consent small{color:var(--muted);font-size:11px}
+.pet-chat-kicker{font-size:10px;font-weight:850;letter-spacing:.1em;color:#75dfd4}
+.pet-chat-state{white-space:nowrap;max-width:45%;padding:5px 8px;border-radius:20px;background:#163e4b;border:1px solid #447f87;color:#bcf7ef;font-size:10px}
+.pet-chat-config{display:grid;grid-template-columns:auto minmax(120px,1fr);align-items:center;gap:9px;font-size:12px}
+.pet-chat-config select{width:100%;min-width:0;padding:10px;border-radius:10px;background:#0c2337;color:#e9faff;border:1px solid #4d7a8a}
+.pet-chat-config .small{grid-column:2}
+.pet-chat-consent{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pet-chat-consent button{min-height:36px}
+.pet-chat-messages{height:clamp(220px,37vh,430px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#427f91 transparent;background:#071625;border:1px solid #26475e;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.pet-chat-bubble{max-width:min(83%,560px);min-width:70px;align-self:flex-start;padding:9px 12px;border-radius:15px 15px 15px 4px;background:#203c56;border:1px solid #3c6680;overflow-wrap:anywhere}
+.pet-chat-bubble.outgoing{align-self:flex-end;background:#14514e;border-color:#2a8b82;border-radius:15px 15px 4px 15px}
+.pet-chat-sender{display:block;font-size:10px;color:#91e8d8;font-weight:800;margin-bottom:2px}
+.pet-chat-bubble p{margin:0;color:#edf9ff;font-size:13px;white-space:pre-wrap}
+.pet-chat-empty{align-self:center;text-align:center;max-width:275px;color:#92b7c8;font-size:12px;margin:auto}
+.pet-chat-compose{display:flex;flex-direction:column;gap:8px}
+.pet-chat-compose textarea{width:100%;min-height:58px;max-height:140px;resize:vertical;border:1px solid #467588;border-radius:12px;background:#0a2033;color:#e6f9ff;padding:11px;font:13px/1.5 inherit}
+.pet-chat-compose textarea:focus-visible{outline:2px solid #72eddd}
+.pet-chat-controls{display:flex;justify-content:flex-end;align-items:center;gap:7px}
+.pet-chat-controls button{min-width:43px;min-height:43px;border-radius:12px}
+.pet-chat-controls button.primary{flex:0 0 min(125px,38%)}
+.pet-chat-download{display:flex;justify-content:flex-start}
+.pet-chat-download button{min-height:37px}
+.pet-chat .privacy-note{font-size:12px;color:#b3cdd5}
+@media(max-width:550px){.pet-chat{margin:10px -2px;padding:10px}.pet-chat-state{white-space:normal;text-align:right}.pet-chat-config{grid-template-columns:1fr}.pet-chat-config .small{grid-column:1}.pet-chat-messages{height:290px}.pet-chat-bubble{max-width:90%}}
+:root[data-theme="light"] .pet-chat{background:#e9f6f9;color:#153447;border-color:#8cc6cf}
+:root[data-theme="light"] .pet-chat-messages{background:#f5fbfd;border-color:#a5ccd4}
+:root[data-theme="light"] .pet-chat-bubble{background:#d9eaf6;border-color:#b3cadb}
+:root[data-theme="light"] .pet-chat-bubble.outgoing{background:#cef2e6;border-color:#95c9bd}
+:root[data-theme="light"] .pet-chat-bubble p{color:#173a4a}
+:root[data-theme="light"] .pet-chat-config select,:root[data-theme="light"] .pet-chat-compose textarea{background:#fff;color:#12384d}

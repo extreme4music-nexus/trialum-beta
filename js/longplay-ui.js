@@ -1,4 +1,4 @@
-/* TRIALUM 1.4 UI: every feature clearly explains its unlock criteria. */
+/* TRIALUM 1.4 v44 UI: every feature clearly explains its unlock criteria. */
 (function(root){
 'use strict';
 const E=root.TrialumEngine,previous=root.TrialumExpansion;
@@ -119,16 +119,17 @@ function pets(s){
  const list=s.pets.map(q=>'<button data-do="selectPet" data-id="'+esc(q.id)+'" class="pet-option '+(s.selectedPet===q.id?'active':'')+'"><span class="emoji">'+E.SPECIES[q.species].icon+'</span><span><b>'+esc(q.name)+'</b><small>'+
  esc(E.SPECIES[q.species].name)+' · ниво '+E.evolutionProgress(q).level+' · '+q.actionsLeft+'/'+E.petActionLimit(s)+' акции · '+(q.lineage?.length||1)+' генерации</small></span></button>').join('');
  return '<div class="tab-main"><h2>🐾 Миленици · независна еволуција</h2><p class="desc">Секое милениче има свои акции, меморија, нивоа, трансформации и тренинзи.</p><div class="pet-list">'+(list||'<p>Прво одгледај ќелија и изгради живеалиште.</p>')+'</div><div id="selectedPetMount"></div><details class="game-accordion"><summary>🎓 Обука за избраниот миленик</summary><p class="desc">Вештините се отклучуваат постепено — поради сè потешките епохи, високите тренинзи бараат месеци развој.</p><div class="cards">'+training+'</div></details>'+
- (p?chatPanel(s,p)+(root.TrialumMind?.render(s,p)||''):'')+
+ (p?(root.TrialumPetChat?.render?.(s,p)||''):'')+
  '<h3>🚚 Преселба меѓу биосветови</h3><div class="btn-line">'+s.habitats.map(h=>b('↔ '+esc(h.name),'transfer','data-id="'+esc(h.id)+'"',!p||p.habitatId===h.id)).join('')+'</div>'+
  b('✏️ Преименувај','renamePet','',!p)+'</div>';
 }
 // The 135M GGUF model is installed once per app, NOT per species.
 // Reuse a single gate for the UI and for outgoing messages.
 function miniGate(s,p){
- const species=Number(p?.species),lv=p?E.evolutionProgress(p).level:0,lab=Number(s?.research?.level)||0;
- const evolved=Number.isInteger(species)&&species>=4&&!!E.SPECIES[species];
- return {ok:evolved&&lv>=22&&lab>=6,lv,lab,evolved};
+ const lv=p?E.evolutionProgress(p).level:0,lab=Number(s?.research?.level)||0;
+ const rule=root.TrialumPetAI?.capability?.(s,p,'mini')||null;
+ return {ok:root.TrialumPetAI?.unlocked?.(s,p,'mini')===true,
+  lv,lab,evolved:!!rule,rule};
 }
 function chatPanel(s,p){
  const gate=miniGate(s,p),lv=gate.lv,advanced=gate.ok;
@@ -141,8 +142,8 @@ function chatPanel(s,p){
  const history=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-12).map(x=>
  '<div class="chat-message '+(x.role==='user'?'human':'creature')+'"><b>'+(x.role==='user'?'Ти':esc(p.name))+'</b><p>'+esc(x.text)+'</p></div>').join('');
  return '<section class="llm-panel"><h3>🧠 Вистински локален LLM разговор</h3>'+
- '<p class="desc">Синапсо и следните видови добиваат мала јазична мрежа (135 милиони параметри). Пакетот е одделен од APK, се презема само по избор и работи само при директен разговор.</p>'+
- (!advanced?'<div class="lock-hint">🔒 Барања: Синапсо или повисок вид, миленик ниво 22 и лабораторија ниво 6. Сега: вид '+esc(E.SPECIES[p.species]?.name)+', ниво '+lv+', лабораторија '+gate.lab+'.</div>':
+ '<p class="desc">Секое милениче памети од раѓање. Кога видот ќе отклучи AI комуникација, може да разговара преку избраниот локален LLM. Моделот е одделен од меморијата.</p>'+
+ (!advanced?'<div class="lock-hint">🔒 AI разговорот бара способност отклучена со еволуција и истражување. Меморијата е независна од AI. Сега: вид '+esc(E.SPECIES[p.species]?.name)+', ниво '+lv+', лабораторија '+gate.lab+'.</div>':
  '<div class="notice">SmolLM2-135M-Instruct · GGUF ~94 MB · '+esc(state)+'<p class="small">Мини модел, претежно англиски. Разговорите се локални, без сервер и без генерација во заднина.</p></div>'+
  (status!=='installed'&&status!=='generating'&&status!=='downloading'?b(status==='resume-available'?'⬇ Продолжи преземање':'⬇ Преземи вистински LLM пакет','llmDownload','class="primary"',!['not-installed','resume-available'].includes(status)):'')+
  '<div class="chat-log" id="llmTranscript">'+(history||'<p class="subtle small">Започни разговор со својот еволуиран миленик.</p>')+'</div>'+
@@ -224,8 +225,8 @@ function plants(s){
 function help(){
  const en=root.TrialumI18n?.language?.()==='en';
  const sections=en?[
-  ['About Trialum','Trialum — Living World is an offline-first, long-form creature and ecosystem game. Beta 1.0 tests the LW-C feature set. Later Living World phases are still in development.'],
-  ['What’s new in v40','Bug fixes and translations only. Translations have been updated across all supported languages, including the full User Agreement, and untranslated interface text has been fixed.'],
+  ['About Trialum','Trialum — Living World is an offline-first, long-form creature and ecosystem game. 1.4 v44 tests the LW-C feature set. Later Living World phases are still in development.'],
+  ['What’s new in 1.4 v44','One unified scrollable English pet chat, a single LLM model dropdown, optional offline Android voice recognition and TTS, safer shared pet dialogue, lifelong memory, and updated offline legal documents.'],
   ['How to play','Explore the Lab, discover materials and research, create life, grow plants, build habitats, and care for your pets. Actions and resources recover over time. Use the journal and menus to follow discoveries and pet needs.'],
   ['A fictional world','The chemistry, organisms, evolution and ecosystems in Trialum are fictional game systems. They are not a scientific model, medical advice, or instructions for creating real life.'],
   ['Play offline and protect your save','Core play is local and works offline. Use the encrypted migration archive in Settings to move the full world, private AI memories and local friend-message history. Keep its recovery code separately. Plain JSON and Google Play Games Cloud Save exclude private conversations and AI memories.'],
@@ -239,13 +240,13 @@ function help(){
    ['What are push notifications?','Android push notifications are optional and require your consent. If you turn them off, you can still check messages in the game.'],
    ['How do I protect my save?','Create an encrypted migration archive in Settings before changing devices or reinstalling. Store the archive in a location you control and keep its one-time recovery code separately. Google Play Games Cloud Save is separate and does not contain private AI memories or friend conversations.'],
    ['Is the biology real?','No. Trialum’s chemistry, organisms and ecosystems are fictional game systems, not scientific or medical guidance.'],
-   ['Can I buy credits in Beta 1.0?','No. Purchases are disabled in Beta 1.0; credits are earned through play.']
+   ['Can I buy credits in 1.4 v44?','No. Purchases are disabled in 1.4 v44; credits are earned through play.']
   ]],
-  ['About the developer','Developer: Trialum. Feedback and support: toniadrenalin@gmail.com.'],
-  ['Beta and payments','This is a beta. Some systems may change after testing; report reproducible issues with the screen and steps. No purchases are enabled in Beta 1.0; credits are earned through play.']
+  ['About the developer','Developer: eXtreme4 (Toni Cvetkovski). Feedback and support: toniadrenalin@gmail.com.'],
+  ['Beta and payments','This is a beta. Some systems may change after testing; report reproducible issues with the screen and steps. No purchases are enabled in 1.4 v44; credits are earned through play.']
  ]:[
-  ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. Бета 1.0 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
-  ['Што е ново во v40','Само поправки на грешки и преводи. Ажурирани се преводите на сите поддржани јазици, вклучувајќи го целиот User Agreement, и се поправени непреведените текстови во интерфејсот.'],
+  ['За Trialum','Trialum — Living World е долгорочна игра за суштества и екосистеми, со играње што работи и офлајн. 1.4 v44 ги тестира функциите од LW-C. Подоцнежните Living World фази сè уште се развиваат.'],
+  ['Што е ново во 1.4 v44','Единствен скролувачки чат на англиски, dropdown за локалниот LLM, изборен Android офлајн микрофон и TTS, заштитена јавна комуникација, доживотна меморија и ажурирани локални правни документи.'],
   ['Како се игра','Истражувај ја Лабораторијата, откривај материјали и сознанија, создавај живот, одгледувај растенија, гради биосветови и грижи се за милениците. Акциите и ресурсите се обновуваат со време. Дневникот и менијата ги следат откритијата и потребите на милениците.'],
   ['Измислен свет','Хемијата, организмите, еволуцијата и екосистемите во Trialum се измислени системи за игра. Тие не се научен модел, медицински совет или упатство за создавање вистински живот.'],
   ['Офлајн игра и зачувување','Основната игра се чува локално и работи офлајн. За пренос на целиот свет, приватните AI-мемории и локалната историја со пријателите користи шифрирана архива од Поставки. Recovery-кодот чувај го одделно. Обичниот JSON и Google Play Games Cloud Save ги изоставуваат приватните разговори и AI-мемориите.'],
@@ -259,10 +260,10 @@ function help(){
    ['Што се push известувања?','Android push известувањата се опционални и бараат твоја согласност. Ако ги исклучиш, сè уште можеш да ги провериш пораките во играта.'],
    ['Како да го заштитам зачуваниот напредок?','Пред промена на телефон или деинсталација, направи шифрирана архива од Поставки. Зачувај ја на локација што ја контролираш, а recovery-кодот чувај го одделно. Google Play Games Cloud Save не ги содржи приватните AI-мемории или разговорите со пријателите.'],
    ['Дали биологијата е вистинска?','Не. Хемијата, организмите и екосистемите во Trialum се измислени системи за игра, а не научни или медицински упатства.'],
-   ['Можам ли да купам кредити во Бета 1.0?','Не. Купувањата се исклучени во Бета 1.0; кредитите се заработуваат со играње.']
+   ['Можам ли да купам кредити во 1.4 v44?','Не. Купувањата се исклучени во 1.4 v44; кредитите се заработуваат со играње.']
   ]],
-  ['За развивачот','Развивач: Trialum. Повратни информации и поддршка: toniadrenalin@gmail.com.'],
-  ['Бета и плаќања','Ова е бета-верзија. Дел од системите може да се менуваат по тестирањето; пријави проблем со чекорите за повторување и екранот. Во Бета 1.0 нема купувања; кредитите се заработуваат со играње.']
+  ['За развивачот','Развивач: eXtreme4 (Тони Цветковски). Повратни информации и поддршка: toniadrenalin@gmail.com.'],
+  ['Бета и плаќања','Ова е бета-верзија. Дел од системите може да се менуваат по тестирањето; пријави проблем со чекорите за повторување и екранот. Во 1.4 v44 нема купувања; кредитите се заработуваат со играње.']
  ];
  if(root.TrialumAndroid?.betaTesterToolsEnabled?.()===true)sections.splice(sections.length-1,0,[
   en?'Beta tester tools':'Алатки за бета тестери',
@@ -275,7 +276,7 @@ function help(){
  const note=en?'Tell us what you did and what happened.':'Напиши што направи и што се случи.';
  const link=en?'Email Trialum support':'Испрати е-пошта до поддршката';
  return '<div class="tab-main"><h2>ℹ️ '+(en?'About & Help':'За играта и помош')+'</h2><p class="desc">'+(en?'A quick guide to the beta, gameplay and optional online features.':'Краток водич за бетата, играњето и опционалните онлајн функции.')+'</p>'+cards+
- '<section class="card"><h3>'+(en?'User Agreement':'Услови за користење')+'</h3><p>'+(en?'Review the complete version 40 agreement shown at first launch.':'Прегледај го целосниот User Agreement за верзија 40, прикажан при првото отворање.')+'</p><button data-do="legalViewTerms">'+(en?'Open full User Agreement':'Отвори го целиот User Agreement')+'</button></section>'+
+ '<section class="card"><h3>'+(en?'User Agreement':'Услови за користење')+'</h3><p>'+(en?'Read and accept the complete Trialum 1.4 v44 agreement on this device.':'Прегледај го целосниот User Agreement Trialum 1.4 v44 што се прикажува при стартување.')+'</p><button data-do="legalViewTerms">'+(en?'Open full User Agreement':'Отвори го целиот User Agreement')+'</button></section>'+
  '<section class="card"><h3>'+(en?'Privacy Policy':'Политика за приватност')+'</h3><p>'+(en?'Read the complete privacy policy included in the app. It is available offline.':'Прочитај ја целосната политика за приватност вградена во апликацијата. Достапна е и без интернет.')+'</p><button data-do="legalViewPrivacy">'+(en?'Open Privacy Policy':'Отвори ја политиката за приватност')+'</button></section>'+
  '<section class="card"><h3>'+(en?'Delete account':'Бришење на акаунт')+'</h3><p>'+(en?'Open the secure online page to request deletion of your Trialum social profile and associated server data.':'Отвори ја безбедната онлајн страница за барање бришење на социјалниот профил и поврзаните податоци на серверот.')+'</p><button data-do="legalDeleteAccount">'+(en?'Open account deletion page':'Отвори ја страницата за бришење')+'</button></section>'+
  '<section class="card"><h3>'+contact+'</h3><p>'+note+'</p><a href="mailto:toniadrenalin@gmail.com?subject=Trialum%20Beta%20Feedback">'+link+' · toniadrenalin@gmail.com</a></section>'+
@@ -304,12 +305,15 @@ function more(){
  '<span><b>'+name+'</b><small>'+note+'</small></span><span aria-hidden="true">›</span></button>').join('')+'</div></div>';
 }
 const views={more,about:help,lab:catalog,research,habitats:habitat,food,dna,pets,plants:s=>root.TrialumPlantUI?.render(s)||plants(s),settings,notifications,playground:s=>root.TrialumPlayground?.render(s)||'<p>Игротеката не е достапна.</p>',shared:s=>root.TrialumShared?.render(s)||'<p>Заедничката игротека не е достапна.</p>',messages:s=>root.TrialumMessages?.render(s)||'<p>Пораките не се достапни.</p>',playgames:()=>root.TrialumPlayGames?.render()||'<p>Play Games не е достапен.</p>'};
-const actions=new Set(['mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
+const actions=new Set(['petChatAsk','petChatConsent','petChatDownload','petChatImport','petChatMic','petChatSpeak','mindToggle','mindTier','mindDownload','mindAsk','performTrick','llmDownload','llmAsk','debugToggle','debugDays','debugResources','debugPet','exportCrashLog','longInvent','longCraftMaterial','longHabUpgrade','longTrain','transformDNA','longBoost']);
 root.TrialumExpansion={
  render(page,s){if(!s)return '';E.ensureLongplay(s);if(views[page])return (['lab','habitats','pets','research','more'].includes(page)?'':'<button class="section-back" data-tab="more">‹ Повеќе</button>')+views[page](s);return previous.render(page,s);},
  can(action){return actions.has(action)||previous.can(action);},
  handle(action,b,s,ctx){
  if(!actions.has(action))return previous.handle(action,b,s,ctx);
+ const pet=E.currentPet(s);
+ if(action==='petChatAsk')action=root.TrialumPetChat?.tier?.(pet)==='mini'?'llmAsk':'mindAsk';
+ if(root.TrialumPetChat?.handle?.(action,s,pet,ctx))return;
  if(root.TrialumMind?.handle(action,b,s,ctx))return;
  let result=null;
  switch(action){
@@ -326,25 +330,24 @@ root.TrialumExpansion={
    root.TrialumAndroid.downloadModel();ctx.toast('Почна преземање на мини моделот.');return;
  }
  case 'llmAsk':{
-   const p=E.currentPet(s),prompt=(document.getElementById('llmPrompt')?.value||'').trim().slice(0,360);
-   if(!miniGate(s,p).ok){ctx.toast('LLM бара Синапсо или повисок вид, лично ниво 22 и лабораторија 6.');return;}
+   const p=E.currentPet(s),prompt=(document.getElementById('petChatPrompt')?.value||document.getElementById('llmPrompt')?.value||'').trim().slice(0,340);
+  if(p?.localAiConsent!==true){ctx.toast('Enable AI conversations first.');return;}
+   if(!miniGate(s,p).ok){ctx.toast('AI разговорот сè уште не е отклучен за овој вид. Меморијата останува активна.');return;}
    if(!root.TrialumAndroid?.askPet){ctx.toast('Локалниот LLM е достапен само во Android апликацијата.');return;}
     const modelState=root.TrialumAndroid?.modelStatus?.();
     if(modelState==='generating'){ctx.toast('Малиот LLM веќе создава одговор. Почекај пред разговор со следното милениче.');return;}
     if(modelState!=='installed'){ctx.toast('Прво преземи или доврши го локалниот мини модел.');return;}
-   if(!prompt){ctx.toast('Внеси порака.');return;}
+   if(!prompt){ctx.toast('Enter a message.');return;}
+  if(!root.TrialumPetChat?.validEnglish?.(prompt)){ctx.toast('English-only chat in Trialum 1.4 v44. Direct translation is planned for a later version.');return;}
    if(root.TrialumLocalChat?.busy?.()){ctx.toast('Локалниот AI веќе размислува. Пробај по одговорот.');return;}
-   const prior=Array.isArray(p.chatHistory)?p.chatHistory.slice(-4):[];
-   // The 135M mini model can use a brief on-device history of recent turns.
-   // Give yesterday's coarse theme memories priority over old literal turns.
-   // Only the own pet's local JSON summary is consulted; no server transcript.
-   const memory=root.TrialumPlaygroundMemory?.recall?.(p,prompt)||{requested:'recent',found:false,records:[]};
-   const context=JSON.stringify({
-    language:root.TrialumI18n?.language?.()||'mk',
-    species:E.SPECIES[p.species]?.name||'',
-    playground_memory:{requested:memory.requested,found:memory.found,records:memory.records.slice(-2)},
-    history:prior.slice(-2).map(x=>({role:x.role==='pet'?'assistant':'user',text:String(x.text||'').slice(0,85)}))
-   }).slice(0,700);
+   let context;
+   try{
+    context=root.TrialumAIContext.assemble(p,s,prompt,{
+     scope:'private',tier:'mini',maxChars:700,
+     language:'en',
+     history:Array.isArray(p.chatHistory)?p.chatHistory.slice(-4):[]
+    });
+   }catch(_){ctx.toast('Не може безбедно да се состави AI контекст.');return;}
    if(root.TrialumLocalChat&&!root.TrialumLocalChat.begin(p.id)){
     ctx.toast('AI веќе создава одговор.');return;
    }

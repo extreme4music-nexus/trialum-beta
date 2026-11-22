@@ -4,7 +4,9 @@
  */
 (function(root){
 'use strict';
-const MAX_DAYS=45,MAX_ENTRIES=60,MAX_TOPICS=6,MAX_COMPANIONS=3;
+const MAX_DAYS=45,MAX_ENTRIES=60,MAX_TOPICS=6,MAX_COMPANIONS=3,MOMENT_LIMIT=1000000000;
+// Legacy rolling summaries remain a bounded compatibility cache; cognitive context never expires.
+const Context=()=>root.TrialumCognitiveContext;
 const lexicon=[
  ['slide',/лизгал|slide/i],['seesaw',/клацкал|seesaw/i],
  ['sandbox',/песок|песоч|sandbox|sand/i],['water',/базен|плива|вода|pool|swim|water/i],
@@ -61,7 +63,7 @@ function safeEntry(value){
   .filter(x=>topicSet.has(x)))].slice(0,MAX_TOPICS),
   companions:[...new Set((Array.isArray(value.companions)?value.companions:[])
    .map(cleanName).filter(Boolean))].slice(0,MAX_COMPANIONS),
-  moments:Math.max(1,Math.min(99,Math.trunc(Number(value.moments)||1)))};
+  moments:Math.max(1,Math.min(MOMENT_LIMIT,Math.trunc(Number(value.moments)||1)))};
 }
 function read(p,now=Date.now()){
  const cutoff=new Date(now);cutoff.setHours(12,0,0,0);cutoff.setDate(cutoff.getDate()-MAX_DAYS);
@@ -71,6 +73,7 @@ function read(p,now=Date.now()){
 }
 function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  if(!p||(place!=='local'&&place!=='shared'))return false;
+ Context()?.migrateLegacy?.(p);
  const day=dayKey(now);if(!day)return false;
  const memories=read(p,now);
  const key=day+'|'+place;
@@ -82,15 +85,18 @@ function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  const who=cleanName(companion);
  if(who&&!item.companions.includes(who))item.companions.push(who);
  item.companions=item.companions.slice(0,MAX_COMPANIONS);
- item.moments=Math.min(99,item.moments+1);
+ item.moments=Math.min(MOMENT_LIMIT,item.moments+1);
  p.playgroundAiMemories=memories.sort((a,b)=>a.day.localeCompare(b.day)).slice(-MAX_ENTRIES);
+ if(p.id)Context()?.remember?.(p,{day,place,topics:themes,companions:who?[who]:[],moments:1});
  return true;
 }
-function recall(p,question='',now=Date.now()){
+function recall(p,question='',now=Date.now(),scope='private'){
+ // Canonical semantic timeline supersedes the old 45-day display cache.
+ if(p?.id&&Context()?.recall)return Context().recall(p,question,now,{publicScope:scope==='public'});
  const ask=String(question||'').slice(0,360);
  const yesterday=/вчера|вчераш|yesterday/i.test(ask);
  const today=/денес|today/i.test(ask);
- const all=read(p,now),target=yesterday?yesterdayKey(now):today?dayKey(now):null;
+ const all=read(p,now).filter(item=>scope!=='public'||item.place==='shared'),target=yesterday?yesterdayKey(now):today?dayKey(now):null;
  const records=(target?all.filter(x=>x.day===target):all.slice(-3))
   .map(x=>({day:x.day,place:x.place,with:x.companions,
    themes:x.topics,moments:x.moments}));
@@ -122,7 +128,7 @@ function overview(p,question='',now=Date.now()){
     (withNames?' ('+withNames+')':'')+' — '+(words||'playing together')+'.';
  }).join(' ');
 }
-function clear(p){if(p)p.playgroundAiMemories=[];}
+function clear(p){if(p){Context()?.clear?.(p);p.playgroundAiMemories=[];}}
 
 /** Idempotent import of the native background service's coarse daily counters.
  * A device reinstall creates a new stream ID. Already imported moments may not
@@ -131,26 +137,33 @@ function ingestBackground(p,payload,now=Date.now()){
  if(!p||!payload||typeof payload!=='object'||payload.petId!==p.id||
    !/^[0-9a-f-]{36}$/i.test(payload.streamId||'')||
    !Number.isSafeInteger(payload.revision)||payload.revision<0||
-   !Array.isArray(payload.entries)||payload.entries.length>MAX_ENTRIES)return false;
+   !Array.isArray(payload.entries)||payload.entries.length>MAX_ENTRIES||
+   (Context()?.validateNativePeriods&&!Context().validateNativePeriods(payload)))return false;
+ Context()?.migrateLegacy?.(p);
  const same=p.playgroundAiBackgroundStreamId===payload.streamId;
  const last=same?Math.max(0,Number(p.playgroundAiBackgroundRevision)||0):0;
  if(same&&payload.revision<=last)return false;
  const previous=same&&p.playgroundAiBackgroundSeen&&
     typeof p.playgroundAiBackgroundSeen==='object'?p.playgroundAiBackgroundSeen:{};
+ Context()?.seedNativeSeen?.(p,payload.streamId,same?previous:{});
  const seen={...previous},records=read(p,now);
  let changed=false;
  const incoming=payload.entries.map(safeEntry).filter(x=>x&&x.place==='shared');
  for(const entry of incoming){
-  const seenCount=Math.max(0,Math.min(99,Number(seen[entry.day])||0));
+  const seenCount=Math.max(0,Math.min(MOMENT_LIMIT,Number(seen[entry.day])||0));
   const delta=same?Math.max(0,entry.moments-seenCount):entry.moments;
   let item=records.find(x=>x.day===entry.day&&x.place==='shared');
   if(!item){item={day:entry.day,place:'shared',topics:[],companions:[],moments:0};records.push(item);}
   item.topics=[...new Set(item.topics.concat(entry.topics))].slice(0,MAX_TOPICS);
   item.companions=[...new Set(item.companions.concat(entry.companions))].slice(0,MAX_COMPANIONS);
-  item.moments=Math.min(99,item.moments+delta);
+  item.moments=Math.min(MOMENT_LIMIT,item.moments+delta);
+  if(p.id)Context()?.remember?.(p,{day:entry.day,place:'shared',topics:entry.topics,
+   companions:entry.companions,moments:delta});
+  Context()?.accountNativeDay?.(p,payload.streamId,entry.day,delta);
   seen[entry.day]=entry.moments;
   if(delta||entry.topics.some(x=>!item.topics.includes(x)))changed=true;
  }
+ const periodChanges=Context()?.ingestNativePeriods?.(p,payload)||false;
  p.playgroundAiMemories=records.sort((a,b)=>a.day.localeCompare(b.day)).slice(-MAX_ENTRIES);
  p.playgroundAiBackgroundSeen=Object.fromEntries(
   Object.entries(seen).filter(([day])=>/^\d{4}-\d\d-\d\d$/.test(day)&&
@@ -158,7 +171,7 @@ function ingestBackground(p,payload,now=Date.now()){
     .slice(-MAX_ENTRIES));
  p.playgroundAiBackgroundStreamId=payload.streamId;
  p.playgroundAiBackgroundRevision=payload.revision;
- return changed||!same||payload.revision>last;
+ return changed||periodChanges||!same||payload.revision>last;
 }
 
 const api={dayKey,yesterdayKey,topicsFrom,read,remember,recall,context,overview,clear,ingestBackground};

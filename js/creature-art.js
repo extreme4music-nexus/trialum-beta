@@ -1,4 +1,4 @@
-/* TRIALUM 1.5 — deterministic, scalable, 2.5D evolved creature renderer.
+/* TRIALUM 1.4 v44 — deterministic, scalable, 2.5D evolved creature renderer.
    Pure Canvas 2D; no network textures, no 3D GPU, no external assets. */
 (function(root){
 'use strict';

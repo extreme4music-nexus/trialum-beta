@@ -31,10 +31,10 @@ const FOOD=[
  {id:'astral',name:'Астрален еликсир',icon:'🌌',tier:6,cost:{biomass:30,compounds:18},yield:1,energy:18,joy:16,boost:58,group:'all',desc:'Скап фантастичен оброк за највисоки епохи'}
 ];
 const NEW_SPECIES=[
- {name:'Синапсо',shape:'crystal',hue:198,eyes:4,weight:2,voice:1,icon:'🧠',habitat:'crystal',labTier:3,description:'Суштество што препознава едноставни обрасци'},
- {name:'Тералин',shape:'leaf',hue:68,eyes:2,weight:2,voice:4,icon:'🦋',habitat:'garden',labTier:4,description:'Многуосетлива градинска форма'},
- {name:'Орбивокс',shape:'cloud',hue:295,eyes:3,weight:2,voice:3,icon:'🗨️',habitat:'lagoon',labTier:5,description:'Фантастичен комуникатор со говорни симболи'},
- {name:'Ноетриум',shape:'jelly',hue:42,eyes:4,weight:2,voice:2,icon:'🌟',habitat:'crystal',labTier:6,description:'Напредно интелигентно суштество со свој мозаик'}
+ {name:'Синапсо',shape:'crystal',hue:198,eyes:4,weight:2,voice:1,icon:'🧠',habitat:'crystal',labTier:3,description:'Суштество што препознава едноставни обрасци',aiAbilities:{mini:{petLevel:22,labLevel:6}}},
+ {name:'Тералин',shape:'leaf',hue:68,eyes:2,weight:2,voice:4,icon:'🦋',habitat:'garden',labTier:4,description:'Многуосетлива градинска форма',aiAbilities:{mini:{petLevel:22,labLevel:6}}},
+ {name:'Орбивокс',shape:'cloud',hue:295,eyes:3,weight:2,voice:3,icon:'🗨️',habitat:'lagoon',labTier:5,description:'Фантастичен комуникатор со говорни симболи',aiAbilities:{mini:{petLevel:22,labLevel:6}}},
+ {name:'Ноетриум',shape:'jelly',hue:42,eyes:4,weight:2,voice:2,icon:'🌟',habitat:'crystal',labTier:6,description:'Напредно интелигентно суштество со свој мозаик',aiAbilities:{mini:{petLevel:22,labLevel:6}}}
 ];
 const NEW_PLANTS=[
  {id:'nootbloom',name:'Нутрицвет',icon:'🌸',growth:1.2,oxygen:2.6,kind:'Хранлива флора отклучена со нутритивна лабораторија',labTier:2},

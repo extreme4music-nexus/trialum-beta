@@ -9,13 +9,16 @@ const sent=[],generated=[],cancelled=[];
 let saves=0;
 let modelStatus='installed',sharedEnabled=true,bgOn=false;
 const backgroundCalls=[];
+// Locale is explicit: server Macedonian captions are shown only for mk.
+let uiLanguage='mk';
+globalThis.TrialumI18n={language:()=>uiLanguage,t:text=>text};
 const state={active:true,online:true,aiRelayEnabled:true,speechTranslationEnabled:false,
  speechTranslationLanguages:['mk','sq','en'],selected:ROOM,
  snapshot:{presenceEnabled:true,room:{id:ROOM},
  occupants:[{pet:{id:pet.id,name:pet.name}},{pet:{id:'other',name:'Другар'}}]},
  presences:[{petId:pet.id,sessionId:SESSION,kind:'shared',roomId:ROOM}]};
 globalThis.document={visibilityState:'visible',hidden:false,addEventListener(){}};
-globalThis.TrialumEngine={SPECIES:Array.from({length:16},(_,i)=>({name:'Species '+i})),
+globalThis.TrialumEngine={SPECIES:Array.from({length:16},(_,i)=>({name:'Species '+i,aiAbilities:i===4?{mini:{petLevel:22,labLevel:6}}:undefined})),
  currentPet:s=>s.pets.find(p=>p.id===s.selectedPet),
  evolutionProgress:()=>({level:22})};
 globalThis.TrialumPresence={LOCAL:'local_playground',SHARED:'shared_playground',
@@ -36,6 +39,9 @@ globalThis.TrialumShared={getWorld:()=>world,getState:()=>({...state,aiRelayEnab
  sendPetSpeech:(s,p,text)=>{sent.push({s,p,text});return true;}};
 globalThis.TrialumSharedScene={dialogue:()=>({ids:[pet.id,'other'],turn:0,text:'Сакаш да играме?'}),
  refreshCaption:()=>{}};
+globalThis.TrialumPetAI=require('../js/pet-ai-capabilities.js');
+globalThis.TrialumGameKnowledge=require('../js/game-knowledge.js');
+globalThis.TrialumAIContext=require('../js/ai-context.js');
 globalThis.TrialumPlaygroundMemory=require('../js/playground-memory.js');
 globalThis.TrialumDialogueSessions=require('../js/playground-dialogue-session.js');
 require('../js/playground-ai.js');
@@ -75,9 +81,9 @@ test('local mini replaces only visible speech, never XP, and stops on tab change
 test('shared mini generation is routed only to current verified room, non-AI fallback remains',()=>{
  AI.setTab('shared');AI.tick(world,'shared');
  assert.equal(generated.length,2);
- assert.equal(AI.onModelEvent({kind:'playgroundReply',petId:pet.id,text:'Здраво, пријателче!'}),true);
- assert.equal(sent.length,1);assert.equal(sent[0].text,'Здраво, пријателче!');
- assert.equal(AI.speech('shared',ROOM).text,'Здраво, пријателче!');
+ assert.equal(AI.onModelEvent({kind:'playgroundReply',petId:pet.id,text:'Hello, little friend!'}),true);
+ assert.equal(sent.length,1);assert.equal(sent[0].text,'Hello, little friend!');
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, little friend!');
  assert.equal(AI.speech('shared','wrong-room'),null);
  const before=generated.length;AI.stop();
  pet.playgroundAiShared=false;
@@ -91,8 +97,9 @@ test('shared mini generation is routed only to current verified room, non-AI fal
 });
 test('real room messages are only shown in currently visible authorized room',()=>{
  AI.setTab('shared');
- const yes=AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Еј, здраво!',turnId:'5b008b36-c329-4a34-9632-bd30a9f6d231'});
- assert.equal(yes,true);assert.equal(AI.speech('shared',ROOM).text,'Еј, здраво!');
+ const yes=AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Hey, hello!',language:'en',turnId:'5b008b36-c329-4a34-9632-bd30a9f6d231'});
+ assert.equal(yes,true);assert.equal(AI.speech('shared',ROOM).text,'Hey, hello!');
+  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Еј, здраво!',turnId:'bad-old-cyrillic'}),false,'foreign-language room line is not canonical English');
  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:'forged',petId:'other',text:'No'}),false);
  AI.setTab('lab');
  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',text:'No'}),false);
@@ -126,7 +133,19 @@ test('translated room captions use local language, but AI hears only canonical E
   text:'Здраво, другарче!',englishText:'Hello, friend!',language:'mk',translated:true,
   turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b61'}),true);
  assert.equal(AI.speech('shared',ROOM).text,'Здраво, другарче!',
-  'player sees only the chosen display language');
+  'Macedonian UI sees the server-provided Macedonian caption');
+ uiLanguage='fr';
+ assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',
+  text:'Здраво, другарче!',englishText:'Hello, friend!',language:'fr',translated:true,
+  turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b62'}),true);
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, friend!',
+  'every non-Macedonian locale sees English captions');
+ uiLanguage='en';
+ assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',
+  text:'Здраво, другарче!',englishText:'Hello, friend!',language:'en',translated:true,
+  turnId:'0a7b1b26-3547-43a2-bae6-1ff1a7be7b63'}),true);
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, friend!');
+ uiLanguage='mk';
  state.speechTranslationEnabled=false;
  AI.stop();
 });

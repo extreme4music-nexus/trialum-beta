@@ -1,26 +1,177 @@
 /* V44 local cognitive foundation. No model or network dependency. */
 (function(root){
 'use strict';
-const VERSION=1, kinds=new Set(['birth','feed','play','wash','rest','talk','transfer','evolution','encounter']);
+const VERSION=2, kinds=new Set(['birth','feed','play','wash','rest','talk','transfer','evolution','encounter']);
 const dict=()=>Object.create(null);
+const eventCache=new WeakMap();
+function emptyMemory(p){
+ return {version:VERSION,schemaVersion:VERSION,petId:p.id,birthDay:Number.isFinite(p.birthDay)?p.birthDay:null,
+  self:{last:dict(),days:dict(),counts:dict()},owner:{topics:dict()},social:{peers:dict()},
+  associations:dict(),eventLedger:[],eventSerial:0,archivedReceipts:dict(),receiptRuns:[],
+  migrationMetadata:{origin:'created',historicalEventsReconstructed:false}};
+}
 function ensure(p){
- if(!p||typeof p.id!=='string')throw Error('invalid pet');
- if(!p.cognitiveMemory)p.cognitiveMemory={version:VERSION,petId:p.id,birthDay:Number.isFinite(p.birthDay)?p.birthDay:null,self:{last:dict(),days:dict(),counts:dict()},owner:{topics:dict()},social:{peers:dict()},associations:dict()};
+ if(!p||typeof p.id!=='string'||!p.id||p.id.length>128)throw Error('invalid pet');
+ if(!p.cognitiveMemory)p.cognitiveMemory=emptyMemory(p);
  const m=p.cognitiveMemory;
- if(m.version!==VERSION||m.petId!==p.id)throw Error('invalid cognitive identity');
+ if(!m||typeof m!=='object'||m.petId!==p.id)throw Error('invalid cognitive identity');
+ if(m.version===1){
+  // Keep every V1 fact intact. There is no trustworthy old event stream to reconstruct.
+  m.version=VERSION;m.schemaVersion=VERSION;m.eventLedger=[];m.eventSerial=0;
+  m.migrationMetadata={origin:'v1',historicalEventsReconstructed:false};
+ }
+ if(!m.archivedReceipts)m.archivedReceipts=dict();
+ if(!m.receiptRuns)m.receiptRuns=[];
+ if(m.version!==VERSION||m.schemaVersion!==VERSION||!Array.isArray(m.eventLedger)||
+    !Number.isSafeInteger(m.eventSerial)||m.eventSerial<0)throw Error('unsupported cognitive schema');
+ if(!m.self||typeof m.self!=='object'||!m.self.last||!m.self.days||!m.self.counts||
+    !m.owner||!m.owner.topics||!m.social||!m.social.peers)throw Error('invalid cognitive data');
+ packOldReceipts(m);
+ eventIds(m); // Validate on hydration, not only when another game event occurs.
  return m;
 }
-function record(p,kind,{day=null,at=Date.now(),food=null,location=null}={}){
- if(!kinds.has(kind)||!Number.isFinite(at))throw Error('invalid cognitive event');
- const m=ensure(p),s=m.self,key=String(Number.isFinite(day)?day:'unknown');
- const event={kind,at,day:Number.isFinite(day)?day:null,food:typeof food==='string'?food.slice(0,160):null,location:typeof location==='string'?location.slice(0,160):null};
- observeExperience(p,'activity',kind,kind,'experienced',at);
- if(event.location&&['birth','transfer','encounter'].includes(kind))visit(p,event.location,at);
- const bucket=Object.hasOwn(s.days,key)?s.days[key]:(s.days[key]={counts:dict()});
- bucket.counts[kind]=(bucket.counts[kind]||0)+1;
- s.counts[kind]=(s.counts[kind]||0)+1;
- if(!s.last[kind]||s.last[kind].at<=at)s.last[kind]=event;
- return event;
+function eventIds(m){
+ let ids=eventCache.get(m);
+ if(ids)return ids;
+ ids=new Set();
+ for(const event of m.eventLedger){
+  if(!event||event.schemaVersion!==VERSION||!kinds.has(event.kind)||
+   !Number.isFinite(event.at)||event.at<0||event.petId!==m.petId||
+   typeof event.source!=='string'||!/^[a-z][a-z0-9_-]{0,47}$/.test(event.source)||
+   typeof event.eventId!=='string'||!/^[A-Za-z0-9:_./-]{1,160}$/.test(event.eventId)||ids.has(event.eventId))
+   throw Error('corrupt cognitive event ledger');
+  ids.add(event.eventId);
+ }
+ eventCache.set(m,ids);
+ return ids;
+}
+// A small non-cryptographic checksum for local replay receipts, not for authentication.
+function receipt(event){
+ const s=JSON.stringify([event.kind,event.source,event.at,event.day,event.food,
+  event.quantity,event.level,event.location]);
+ let a=2166136261,b=2246822519;
+ for(let i=0;i<s.length;i++){const n=s.charCodeAt(i);a=Math.imul(a^n,16777619);b=Math.imul(b^n,2246822519);}
+ return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');
+}
+// Local, automatically issued event:N receipts occupy contiguous digest runs
+// instead of an unbounded number of redundant JSON object keys.
+function localSerial(id){
+ const match=/^event:([1-9][0-9]*)$/.exec(id);
+ const n=match?Number(match[1]):0;
+ return Number.isSafeInteger(n)&&n>0?n:null;
+}
+function receiptHash(m,id){
+ if(Object.hasOwn(m.archivedReceipts,id))return m.archivedReceipts[id];
+ const serial=localSerial(id);
+ if(serial===null)return undefined;
+ for(const run of m.receiptRuns||[]){
+  const count=run.hashes.length/16,offset=serial-run.start;
+  if(Number.isInteger(offset)&&offset>=0&&offset<count)return run.hashes.slice(offset*16,offset*16+16);
+ }
+ return undefined;
+}
+function putReceipt(m,id,digest){
+ if(receiptHash(m,id)!==undefined)throw Error('duplicate archival receipt');
+ const serial=localSerial(id);
+ if(serial===null){m.archivedReceipts[id]=digest;return;}
+ const runs=m.receiptRuns;
+ const last=runs.at(-1);
+ if(last&&last.hashes.length<32768&&last.start+last.hashes.length/16===serial){
+  last.hashes+=digest;
+ }else runs.push({start:serial,hashes:digest});
+}
+function packOldReceipts(m){
+ if(!Array.isArray(m.receiptRuns))throw Error('corrupt cognitive receipt runs');
+ for(const run of m.receiptRuns){
+  if(!run||!Number.isSafeInteger(run.start)||run.start<1||
+    typeof run.hashes!=='string'||run.hashes.length===0||run.hashes.length>32768||
+    run.hashes.length%16||!/^[a-f0-9]+$/.test(run.hashes))throw Error('corrupt cognitive receipt runs');
+ }
+ const sorted=[...m.receiptRuns].sort((a,b)=>a.start-b.start);
+ for(let i=1;i<sorted.length;i++){
+  const previous=sorted[i-1];
+  if(previous.start+previous.hashes.length/16>sorted[i].start)
+   throw Error('overlapping cognitive receipt runs');
+ }
+ const old=Object.entries(m.archivedReceipts).filter(([id])=>localSerial(id)!==null)
+  .sort((a,b)=>localSerial(a[0])-localSerial(b[0]));
+ for(const [id,digest] of old){
+  if(!/^[a-f0-9]{16}$/.test(digest))throw Error('corrupt cognitive receipt');
+  delete m.archivedReceipts[id];
+  try{putReceipt(m,id,digest);}
+  catch(error){m.archivedReceipts[id]=digest;throw error;}
+ }
+}
+function archiveOld(p,beforeAt){
+ if(!Number.isFinite(beforeAt))throw Error('invalid archive cutoff');
+ const m=ensure(p),keep=[];
+ let dropped=0;
+ for(const event of m.eventLedger){
+  // Birth and finite evolutionary milestones remain exact for the pet's entire life.
+  if(event.at>=beforeAt||event.kind==='birth'||event.kind==='evolution'){keep.push(event);continue;}
+  putReceipt(m,event.eventId,receipt(event));
+  dropped++;
+ }
+ if(dropped){m.eventLedger=keep;eventCache.set(m,new Set(keep.map(e=>e.eventId)));}
+ return dropped;
+}
+function ingest(p,input){
+ if(!input||typeof input!=='object'||!kinds.has(input.kind))throw Error('invalid cognitive event');
+ const at=input.at===undefined?Date.now():input.at;
+ if(!Number.isFinite(at)||at<0)throw Error('invalid cognitive timestamp');
+ const day=input.day===undefined||input.day===null?null:input.day;
+ if(day!==null&&(!Number.isSafeInteger(day)||day<0))throw Error('invalid cognitive day');
+ const source=input.source===undefined?'game':input.source;
+ if(typeof source!=='string'||!/^[a-z][a-z0-9_-]{0,47}$/.test(source))throw Error('invalid cognitive source');
+ const food=typeof input.food==='string'?input.food.slice(0,160):null;
+ const quantity=input.quantity===undefined||input.quantity===null?null:input.quantity;
+ if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0))throw Error('invalid cognitive quantity');
+ const level=input.level===undefined||input.level===null?null:input.level;
+ if(level!==null&&(!Number.isSafeInteger(level)||level<1))throw Error('invalid cognitive level');
+ const location=typeof input.location==='string'?input.location.slice(0,160):null;
+ if(location&&['birth','transfer','encounter'].includes(input.kind))safeKey(location);
+ const supplied=input.eventId;
+ if(supplied!==undefined&&(typeof supplied!=='string'||!/^[A-Za-z0-9:_./-]{1,160}$/.test(supplied)||
+    ['__proto__','constructor','prototype'].includes(supplied)))throw Error('invalid cognitive event id');
+ const m=ensure(p),ids=eventIds(m);
+ if(supplied&&receiptHash(m,supplied)!==undefined){
+  const candidate={kind:input.kind,source,at,day,food,quantity,level,location};
+  if(receiptHash(m,supplied)!==receipt(candidate))throw Error('cognitive event id collision');
+  return {event:null,inserted:false,duplicate:true,archived:true};
+ }
+ if(supplied&&ids.has(supplied)){
+  const prior=m.eventLedger.find(e=>e.eventId===supplied);
+  if(prior.kind!==input.kind||prior.at!==at||prior.day!==day||prior.source!==source||
+     prior.food!==food||prior.quantity!==quantity||prior.level!==level||prior.location!==location)throw Error('cognitive event id collision');
+  return {event:prior,inserted:false,duplicate:true};
+ }
+ let eventId=supplied;
+ if(!eventId){do{m.eventSerial++;eventId='event:'+m.eventSerial;}while(ids.has(eventId)||receiptHash(m,eventId)!==undefined);}
+ else m.eventSerial++;
+ const event={schemaVersion:VERSION,eventId,petId:p.id,kind:input.kind,source,at,day,food,quantity,level,location};
+ const key=day===null?'unknown':String(day),state=m.self;
+ const bucket=Object.hasOwn(state.days,key)?state.days[key]:(state.days[key]={counts:dict()});
+ // Validation above ensures replay/collision cannot affect graph, last values or counts.
+ m.eventLedger.push(event);ids.add(eventId);
+ bucket.counts[input.kind]=(bucket.counts[input.kind]||0)+1;
+ state.counts[input.kind]=(state.counts[input.kind]||0)+1;
+ if(!state.last[input.kind]||state.last[input.kind].at<=at)state.last[input.kind]=event;
+ observeExperience(p,'activity',input.kind,input.kind,'experienced',at);
+ if(location&&['birth','transfer','encounter'].includes(input.kind))visit(p,location,at);
+ return {event,inserted:true,duplicate:false};
+}
+function record(p,kind,options={}){return ingest(p,{...options,kind}).event;}
+function ensureWorld(world){
+ if(!world||!Array.isArray(world.pets))throw Error('invalid cognitive world');
+ for(const pet of world.pets){
+  const isLegacy=!pet.cognitiveMemory;
+  const memory=ensure(pet);
+  if(isLegacy)memory.migrationMetadata.origin='legacy-world';
+  const context=root.TrialumCognitiveContext;
+  context?.migrateLegacy?.(pet);
+  context?.consolidate?.(pet,{gameDay:world.lastDay});
+ }
+ return world;
 }
 function safeKey(value){const k=String(value).trim().slice(0,160);if(!k||['__proto__','constructor','prototype'].includes(k))throw Error('invalid key');return k;}
 function topic(p,value,at=Date.now()){if(!Number.isFinite(at))throw Error('invalid timestamp');const key=safeKey(value),m=ensure(p),t=Object.hasOwn(m.owner.topics,key)?m.owner.topics[key]:{count:0,firstAt:at,lastAt:at};t.count++;t.firstAt=Math.min(t.firstAt,at);t.lastAt=Math.max(t.lastAt,at);m.owner.topics[key]=t;observeExperience(p,'topic',key,key,'discussed-with-owner',at);return t;}
@@ -41,5 +192,5 @@ function observe(p,type,id,label,at=Date.now()){if(!['self','location','peer','t
 function connect(p,from,to,relation,at=Date.now()){const g=graph(p);if(!Object.hasOwn(g.nodes,from)||!Object.hasOwn(g.nodes,to)||!Number.isFinite(at))throw Error('invalid graph edge');const key=JSON.stringify([from,relation,to]);const e=Object.hasOwn(g.edges,key)?g.edges[key]:{from,to,relation,count:0,firstAt:at,lastAt:at};e.count++;e.firstAt=Math.min(e.firstAt,at);e.lastAt=Math.max(e.lastAt,at);g.edges[key]=e;}
 function observeExperience(p,type,id,label,relation,at){const self=observe(p,'self',p.id,p.name,at),node=observe(p,type,id,label,at);connect(p,self,node,relation,at);return node;}
 function cognitiveMap(p,{privateScope=false}={}){const g=graph(p),nodes=Object.entries(g.nodes).filter(([,n])=>privateScope||n.type!=='topic'),allowed=new Set(nodes.map(([k])=>k));return {nodes:nodes.map(([key,n])=>({key,...n})),edges:Object.values(g.edges).filter(e=>allowed.has(e.from)&&allowed.has(e.to)).map(e=>({...e}))};}
-const api={graph,observe,connect,cognitiveMap,recall,VERSION,ensure,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+const api={graph,observe,connect,cognitiveMap,recall,VERSION,ensure,ensureWorld,ingest,archiveOld,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);

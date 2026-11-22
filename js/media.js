@@ -1,4 +1,4 @@
-/* TRIALUM 1.5 — offline media sheet for stills, GIF and optional video.
+/* TRIALUM 1.4 v44 — offline media sheet for stills, GIF and optional video.
    Android saves directly to MediaStore; no user media is uploaded. */
 (function(root){
 'use strict';

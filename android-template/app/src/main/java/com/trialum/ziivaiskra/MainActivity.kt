@@ -42,13 +42,14 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.Executors
 import org.json.JSONArray
 
-/** Android WebView wrapper for compiled Trialum 1.5.5 APK. */
+/** Android WebView wrapper for Trialum 1.4 v44. */
 class MainActivity : Activity() {
 private fun nativeText(macedonian: String, english: String): String =
         TrialumNativeText.get(this, macedonian, english)
 
     private lateinit var web: WebView
     private lateinit var modelRuntime: ModelRuntime
+    private lateinit var petVoice: TrialumPetVoice
     private lateinit var playGames: TrialumPlayGames
     private lateinit var ageSignals: TrialumAgeSignals
     private lateinit var nearby: TrialumNearby
@@ -106,7 +107,8 @@ private fun nativeText(macedonian: String, english: String): String =
     private var pendingBackupName: String = "TRIALUM-world.json"
     private var pendingBackupEncrypted: Boolean = false
     private var pendingSecureArchiveId: String? = null
-    private val maxBackupBytes = 20 * 1024 * 1024
+    private val maxBackupBytes = 20 * 1024 * 1024 // Plain world/rescue backups.
+    private val maxSecureArchiveBytes = 96 * 1024 * 1024
 
     private fun backupNotice(ok: Boolean, message: String, code: String = if (ok) "saved" else "error") {
         if (isFinishing || isDestroyed) return
@@ -132,12 +134,21 @@ private fun nativeText(macedonian: String, english: String): String =
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(32 * 1024)
             var length = 0
+            var secureArchive = false
             while (true) {
                 val count = source.read(buffer)
                 if (count < 0) break
                 length += count
-                if (length > maxBackupBytes) error(nativeText("Бекапот е поголем од 20 MB.", "The backup file exceeds 20 MB."))
+                if (length > maxSecureArchiveBytes)
+                    error(nativeText("Шифрираната архива е поголема од 96 MB.", "Encrypted archive exceeds 96 MB."))
                 output.write(buffer, 0, count)
+                if (length <= 32768) {
+                    val prefix = String(output.toByteArray(), Charsets.UTF_8).take(1024)
+                    secureArchive = secureArchive ||
+                        Regex("\"format\"\\s*:\\s*\"trialum-encrypted-archive\"").containsMatchIn(prefix)
+                }
+                if (!secureArchive && length > maxBackupBytes)
+                    error(nativeText("Обичниот бекап е поголем од 20 MB.", "Plain backup exceeds 20 MB."))
             }
             return String(output.toByteArray(), Charsets.UTF_8).removePrefix("\uFEFF")
         }
@@ -330,6 +341,12 @@ private fun nativeText(macedonian: String, english: String): String =
                     )
             }
         }
+        petVoice = TrialumPetVoice(this) { event ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed)
+                    web.evaluateJavascript("window.TrialumPetVoiceEvent && window.TrialumPetVoiceEvent(" + event.toString() + ");", null)
+            }
+        }
         modelRuntime = ModelRuntime(this) { kind, petId, text ->
             val event = JSONObject().put("kind", kind).put("petId", petId).put("text", text)
             runOnUiThread {
@@ -455,6 +472,7 @@ private fun nativeText(macedonian: String, english: String): String =
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (::nearby.isInitialized) nearby.onPermissionsResult(requestCode, grantResults)
         if (::push.isInitialized) push.permissionResult(requestCode, grantResults)
+        if (::petVoice.isInitialized) petVoice.onPermissionResult(requestCode, grantResults)
     }
     private fun openExternalLegalUri(uri: Uri) {
         try {
@@ -469,6 +487,15 @@ private fun nativeText(macedonian: String, english: String): String =
     }
 
     inner class Bridge {
+        @JavascriptInterface fun startPetVoiceInput(petId: String) {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.start(petId) }
+        }
+        @JavascriptInterface fun speakPetChat(petId: String, text: String) {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.speak(petId, text) }
+        }
+        @JavascriptInterface fun stopPetVoice() {
+            runOnUiThread { if (::petVoice.isInitialized) petVoice.stop() }
+        }
         @JavascriptInterface fun openDeleteAccount() {
             runOnUiThread { openDeleteAccountPage() }
         }
@@ -714,8 +741,8 @@ private fun nativeText(macedonian: String, english: String): String =
         /** Exports ciphertext without copying plaintext private history into rescue files. */
         @JavascriptInterface fun saveEncryptedBackup(json: String, fileName: String) {
             val bytes = json.toByteArray(Charsets.UTF_8)
-            if (bytes.size > maxBackupBytes || bytes.size < 100) {
-                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+            if (bytes.size > maxSecureArchiveBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 96 MB.", "tooLarge") }
                 return
             }
             backupWorker.execute {
@@ -752,8 +779,8 @@ private fun nativeText(macedonian: String, english: String): String =
         /** Opens Android's document picker; the player can select Google Drive or another provider. */
         @JavascriptInterface fun saveEncryptedBackupToProvider(json: String, fileName: String) {
             val bytes = json.toByteArray(Charsets.UTF_8)
-            if (bytes.size > maxBackupBytes || bytes.size < 100) {
-                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+            if (bytes.size > maxSecureArchiveBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 96 MB.", "tooLarge") }
                 return
             }
             backupWorker.execute {
@@ -985,6 +1012,7 @@ private fun nativeText(macedonian: String, english: String): String =
     }
     override fun onStop() {
         foregroundStarted = false
+        if (::petVoice.isInitialized) petVoice.stop()
         if (TrialumBackgroundSpeechService.running) {
             startService(Intent(this, TrialumBackgroundSpeechService::class.java)
                 .setAction(TrialumBackgroundSpeechService.RESUME))
@@ -994,6 +1022,7 @@ private fun nativeText(macedonian: String, english: String): String =
         super.onStop()
     }
     override fun onDestroy() {
+        if (::petVoice.isInitialized) petVoice.destroy()
         if (::nearby.isInitialized) nearby.stop()
         if (::modelRuntime.isInitialized) modelRuntime.destroy()
         web.destroy()

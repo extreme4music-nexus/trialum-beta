@@ -1,0 +1,96 @@
+name: V44 Unified Cognitive Memory Gate
+on:
+  push:
+    branches:
+      - feature/v44-unified-cognitive-memory
+  pull_request:
+    branches:
+      - fix/v44-mnemos-cognitive-integration
+  workflow_dispatch:
+concurrency:
+  # A push and its pull_request event validate the same feature head.
+  # Cancel stale duplicate runs; keep only the latest commit's gate.
+  group: v44-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  cognitive-foundation:
+    name: Cognitive V2 migration + event ingestion
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source syntax
+        run: |
+          node --check js/cognitive-memory.js
+          node --check js/cognitive-context.js
+          node --check js/pet-ai-capabilities.js
+          node --check js/game-knowledge.js
+          node --check js/ai-context.js
+          node --check js/memory-integrity.js
+          node --check js/private-restore.js
+          node --check js/local-conversations.js
+          node --check js/encrypted-archive.js
+          node --check js/app.js
+          node --check js/progression.js
+          node --check js/longplay.js
+          node --check js/fauna-lab.js
+          node --check js/longplay-ui.js
+          node --check js/pet-chat-ui.js
+          node --check js/playground-memory.js
+          node --check js/playground-ai.js
+          node --check js/storage.js
+          node --check js/engine.js
+          node --check js/evolution.js
+          node --check js/advanced-intelligence.js
+          node --check js/mnemos-context.js
+      - name: Cognitive and AI compatibility
+        run: node --test tests/cognitive-memory.test.cjs tests/mnemos-context.test.cjs tests/cognitive-events-v44.test.cjs tests/cognitive-integration-v44.test.cjs tests/cognitive-consolidation-v44.test.cjs tests/pet-ai-capabilities-v44.test.cjs tests/ai-context-v44.test.cjs tests/private-archive-v44.test.cjs tests/playground-memory.test.cjs tests/playground-ai.test.cjs tests/v44-chat-privacy-release.test.cjs
+      - name: Existing engine and evolution regression
+        run: |
+          node tests/engine.test.cjs
+          node tests/evolution.test.cjs
+          node tests/longplay.test.cjs
+
+  android-compile:
+    name: Compile Android background memory Kotlin (no APK/signing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Compile debug Kotlin only
+        run: gradle -p android-template :app:compileDebugKotlin --no-daemon --stacktrace
+
+  longevity-and-recovery:
+    name: 20-year memory, 1000-pet stress and crash-recovery audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Long-horizon / large-roster / privacy / power-loss recovery
+        run: |
+          node --max-old-space-size=768 --test tests/cognitive-stress-v44.test.cjs tests/restore-recovery-v44.test.cjs tests/private-conversations-v44.test.cjs

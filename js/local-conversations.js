@@ -90,15 +90,25 @@ async function replaceAll(input){
    store.clear();for(const row of archive)store.put(row);
    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('conversation_restore_aborted'));
   });
-  try{for(let i=root.localStorage.length-1;i>=0;i--){const key=root.localStorage.key(i);if(key?.startsWith(KEY))root.localStorage.removeItem(key);}}catch(_){}
+  try{
+   // The fallback must be removed or an old conversation could reappear
+   // during a later export after a successful IndexedDB restore.
+   if(root.localStorage){
+    const stale=[];
+    for(let i=0;i<root.localStorage.length;i++){
+     const key=root.localStorage.key(i);
+     if(key?.startsWith(KEY))stale.push(key);
+    }
+    for(const key of stale)root.localStorage.removeItem(key);
+    for(let i=0;i<root.localStorage.length;i++)
+     if(root.localStorage.key(i)?.startsWith(KEY))return false;
+   }
+  }catch(_){return false;}
   return true;
  }catch(_){
-  // Do not silently claim success when the primary store is unavailable.
-  try{
-   for(let i=root.localStorage.length-1;i>=0;i--){const key=root.localStorage.key(i);if(key?.startsWith(KEY))root.localStorage.removeItem(key);}
-   for(const row of archive)root.localStorage.setItem(KEY+row.peerRef,JSON.stringify(row.items));
-   return true;
-  }catch(__){return false;}
+  // Never report a full restore from a fallback-only state while the
+  // primary private conversation DB may still hold obsolete threads.
+  return false;
  }
 }
 root.TrialumLocalConversations={validRef,get,put,append,update,remove,clear,exportAll,replaceAll,validateArchive,LIMIT};
