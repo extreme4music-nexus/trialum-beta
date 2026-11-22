@@ -20,6 +20,9 @@ DO $$ BEGIN
   GRANT SELECT, INSERT, UPDATE, DELETE ON social_account_recovery TO trialum_app;
   -- Recovery explicitly revokes old device push delivery. No INSERT or UPDATE grant.
   GRANT DELETE ON push_registrations TO trialum_app;
+  -- DELETE ... WHERE installation_id requires SELECT on that predicate column,
+  -- not SELECT on encrypted push token ciphertext.
+  GRANT SELECT (installation_id) ON push_registrations TO trialum_app;
  END IF;
 END $$;
 COMMIT;
