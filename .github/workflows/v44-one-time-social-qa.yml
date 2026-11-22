@@ -45,10 +45,7 @@ jobs:
           activity=Path("android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt")
           code=activity.read_text()
           before="""        @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
-              ageSignals.isAdultEligible()"""
-          if before not in code:
-              before="""        @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
-                  ageSignals.isAdultEligible()"""
+            ageSignals.isAdultEligible()"""
           if before not in code: raise SystemExit("Age Signals bridge changed: refuse temporary social patch")
           code=code.replace(before,
               "        // CI-ONLY QA client: not for Play release or distribution to users.\n"
