@@ -241,13 +241,13 @@ async function maybeRenewPresence(){
 }
 function subscribe(){
  if(!ws||!wsReady||ws.readyState!==1)return;
- const language=root.TrialumI18n?.language?.()||'mk';
+ const language=root.TrialumI18n?.language?.()==='mk'?'mk':'en';
  if(st.selected===subscribed&&language===subscribedLanguage)return;
  if(subscribed&&st.selected!==subscribed)ws.send(JSON.stringify({type:'unsubscribe',roomId:subscribed}));
  if(st.selected)ws.send(JSON.stringify({type:'subscribe',roomId:st.selected,language}));
  subscribed=st.selected;subscribedLanguage=language;
 }
-function sendPetSpeech(world,pet,text,language='mk',replyToTurnId=''){
+function sendPetSpeech(world,pet,text,language='en',replyToTurnId=''){
  if(!st.active||!st.online||!st.aiRelayEnabled||root.document?.visibilityState==='hidden'||
      !wsReady||!ws||ws.readyState!==1||subscribed!==st.selected||!pet)return false;
  const loc=P()?.get?.(world,pet.id);
@@ -255,15 +255,12 @@ function sendPetSpeech(world,pet,text,language='mk',replyToTurnId=''){
  if(!st.presences.some(x=>x.petId===pet.id&&x.sessionId===loc.sessionId&&x.kind==='shared'&&x.roomId===st.selected))return false;
  const phrase=String(text||'').trim().slice(0,160);
  if(!phrase||/[\u0000-\u001f\u007f]/.test(phrase))return false;
- const privacy=root.TrialumPrivacyGuard?.inspect?.(phrase)||{};
+ const privacy=root.TrialumPrivacyGuard?.inspectPetSpeech?.(phrase,pet)||{blocked:true};
  if(privacy.blocked||privacy.requiresConfirmation){st.error='За безбедност, разговорот не беше испратен бидејќи може да открива лични податоци.';say();return false;}
  const message={type:'pet_speech',roomId:st.selected,petId:pet.id,
     sessionId:loc.sessionId,turnId:uuid(),text:phrase};
- if(st.speechTranslationEnabled){
-    if(!['mk','en','sq','es','fr','de','it','pt','tr','ar','zh','ja','ko','ru','hi','id','pl'].includes(language))
-      return false;
-    message.language=language;
- }
+ // Pet-to-pet communication is always canonical English; the server translates captions for subscribers.
+ message.language='en';
  // Preserve authenticated conversation links independently of translation.
  if(/^[0-9a-f-]{36}$/i.test(replyToTurnId))message.replyToTurnId=replyToTurnId;
  try{ws.send(JSON.stringify(message));return true;}catch(_){return false;}
