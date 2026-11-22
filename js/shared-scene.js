@@ -40,18 +40,13 @@ function refreshCaption(s,now=Date.now()){
 }
 
 function draw(ctx,s,t){
- ctx.clearRect(0,0,1000,520);
- const sky=ctx.createLinearGradient(0,0,0,520);
- sky.addColorStop(0,'#102d53');sky.addColorStop(.59,'#298f9c');sky.addColorStop(1,'#448b65');
- ctx.fillStyle=sky;ctx.fillRect(0,0,1000,520);
- ctx.fillStyle='#297b5b';ctx.fillRect(0,377,1000,143);
- for(let n=0;n<28;n++){
-  ctx.fillStyle=n%2?'#b7f6c9':'#ffe0a4';ctx.beginPath();
-  ctx.arc(n*40+20,469+(n%3)*12,2.5+n%3,0,TAU);ctx.fill();
+ // Cached, layered 2D scene with tangible garden equipment; no emoji placeholders.
+ if(root.TrialumSharedArt?.paint)root.TrialumSharedArt.paint(ctx,s,t);
+ else{
+  ctx.clearRect(0,0,1000,520);
+  ctx.fillStyle='#18465d';ctx.fillRect(0,0,1000,520);
  }
- const items={sandbox:'🏖️',seesaw:'⚖️',slide:'🛝',pool:'🏊',obstacle:'🧩',trampoline:'✨'};
- ctx.font='48px system-ui';ctx.textAlign='center';
- s.toys.forEach((id,i)=>ctx.fillText(items[id]||'🎠',110+(i%6)*155,422+Math.sin(t*.8+i)*5));
+ const toySlots=root.TrialumSharedArt?.TOYS||{};
  // Pet sprites come from live server leases, NEVER from historical play events.
  const cast=new Map();
  if(s.presenceEnabled){
@@ -79,10 +74,13 @@ function draw(ctx,s,t){
  const pets=[...cast.values()].slice(-6);
  for(let i=0;i<pets.length;i++){
   const p=pets[i],period=Math.floor(Date.now()/6000),
-   toys=(s.toys||[]).filter(id=>Object.prototype.hasOwnProperty.call(items,id)),
+   toys=(s.toys||[]).filter(id=>Object.prototype.hasOwnProperty.call(toySlots,id)),
    toyId=toys.length?toys[hash((s.room?.id||'')+'|'+p.id+'|'+period)%toys.length]:'seesaw',
-   offset=Math.sin(t*1.4+i+period)*16;
-  const x=1000*(i+1)/(pets.length+1)+offset,y=283+Math.sin(t*1.5+i)*17;
+   offset=Math.sin(t*1.4+i+period)*18,
+   slot=root.TrialumSharedArt?.slot?.(toyId);
+  const baseX=slot?.x||1000*(i+1)/(pets.length+1);
+  const x=baseX+offset+(i%3-1)*15,
+   y=Math.max(150,(slot?.y||411)-128)+Math.sin(t*1.5+i)*17;
   const action={skill:toyId==='slide'?'leap':toyId==='trampoline'?'spin':toyId==='seesaw'?'wave':'symbols',
    start:t-1.5,duration:3.2};
   if(root.TrialumCreatureArt?.draw){
@@ -94,7 +92,7 @@ function draw(ctx,s,t){
    ctx.fillStyle='white';ctx.fillRect(x-24,y-13,12,12);ctx.fillRect(x+12,y-13,12,12);
   }
   ctx.fillStyle='#edfff5';ctx.textAlign='center';ctx.font='bold 14px system-ui';
-  ctx.fillText(String(p.display||p.name).slice(0,32),x,356);
+  ctx.fillText(String(p.display||p.name).slice(0,24),x,Math.min(482,y+75));
  }
  const speech=dialogue(s);
  if(speech){
@@ -102,9 +100,8 @@ function draw(ctx,s,t){
   ctx.fillStyle='#f0fff5';ctx.font='bold 19px system-ui';ctx.textAlign='center';
   ctx.fillText((speech.speaker+': '+speech.text).slice(0,68),500,103);
  }
- ctx.fillStyle='rgba(11,36,56,.7)';ctx.fillRect(10,12,260,32);
- ctx.fillStyle='#e9fff5';ctx.font='bold 14px system-ui';ctx.textAlign='left';
- ctx.fillText('🔐 Потврдени присутни миленичиња',18,33);
+ ctx.fillStyle='#e9fff5';ctx.font='bold 12px system-ui';ctx.textAlign='left';
+ ctx.fillText('🔐 Потврдени присутни миленичиња',20,69);
 }
 // LW-B: independent shared room scene paints only if genuinely visible.
 function canPaint(){return Boolean(active&&active.isConnected&&inViewport&&
