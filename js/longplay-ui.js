@@ -126,9 +126,10 @@ function pets(s){
 // The 135M GGUF model is installed once per app, NOT per species.
 // Reuse a single gate for the UI and for outgoing messages.
 function miniGate(s,p){
- const species=Number(p?.species),lv=p?E.evolutionProgress(p).level:0,lab=Number(s?.research?.level)||0;
- const evolved=Number.isInteger(species)&&species>=4&&!!E.SPECIES[species];
- return {ok:evolved&&lv>=22&&lab>=6,lv,lab,evolved};
+ const lv=p?E.evolutionProgress(p).level:0,lab=Number(s?.research?.level)||0;
+ const rule=root.TrialumPetAI?.capability?.(s,p,'mini')||null;
+ return {ok:root.TrialumPetAI?.unlocked?.(s,p,'mini')===true,
+  lv,lab,evolved:!!rule,rule};
 }
 function chatPanel(s,p){
  const gate=miniGate(s,p),lv=gate.lv,advanced=gate.ok;
@@ -141,8 +142,8 @@ function chatPanel(s,p){
  const history=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-12).map(x=>
  '<div class="chat-message '+(x.role==='user'?'human':'creature')+'"><b>'+(x.role==='user'?'Ти':esc(p.name))+'</b><p>'+esc(x.text)+'</p></div>').join('');
  return '<section class="llm-panel"><h3>🧠 Вистински локален LLM разговор</h3>'+
- '<p class="desc">Синапсо и следните видови добиваат мала јазична мрежа (135 милиони параметри). Пакетот е одделен од APK, се презема само по избор и работи само при директен разговор.</p>'+
- (!advanced?'<div class="lock-hint">🔒 Барања: Синапсо или повисок вид, миленик ниво 22 и лабораторија ниво 6. Сега: вид '+esc(E.SPECIES[p.species]?.name)+', ниво '+lv+', лабораторија '+gate.lab+'.</div>':
+ '<p class="desc">Секое милениче памети од раѓање. Кога видот ќе отклучи AI комуникација, може да разговара преку избраниот локален LLM. Моделот е одделен од меморијата.</p>'+
+ (!advanced?'<div class="lock-hint">🔒 AI разговорот бара способност отклучена со еволуција и истражување. Меморијата е независна од AI. Сега: вид '+esc(E.SPECIES[p.species]?.name)+', ниво '+lv+', лабораторија '+gate.lab+'.</div>':
  '<div class="notice">SmolLM2-135M-Instruct · GGUF ~94 MB · '+esc(state)+'<p class="small">Мини модел, претежно англиски. Разговорите се локални, без сервер и без генерација во заднина.</p></div>'+
  (status!=='installed'&&status!=='generating'&&status!=='downloading'?b(status==='resume-available'?'⬇ Продолжи преземање':'⬇ Преземи вистински LLM пакет','llmDownload','class="primary"',!['not-installed','resume-available'].includes(status)):'')+
  '<div class="chat-log" id="llmTranscript">'+(history||'<p class="subtle small">Започни разговор со својот еволуиран миленик.</p>')+'</div>'+
@@ -327,24 +328,21 @@ root.TrialumExpansion={
  }
  case 'llmAsk':{
    const p=E.currentPet(s),prompt=(document.getElementById('llmPrompt')?.value||'').trim().slice(0,360);
-   if(!miniGate(s,p).ok){ctx.toast('LLM бара Синапсо или повисок вид, лично ниво 22 и лабораторија 6.');return;}
+   if(!miniGate(s,p).ok){ctx.toast('AI разговорот сè уште не е отклучен за овој вид. Меморијата останува активна.');return;}
    if(!root.TrialumAndroid?.askPet){ctx.toast('Локалниот LLM е достапен само во Android апликацијата.');return;}
     const modelState=root.TrialumAndroid?.modelStatus?.();
     if(modelState==='generating'){ctx.toast('Малиот LLM веќе создава одговор. Почекај пред разговор со следното милениче.');return;}
     if(modelState!=='installed'){ctx.toast('Прво преземи или доврши го локалниот мини модел.');return;}
    if(!prompt){ctx.toast('Внеси порака.');return;}
    if(root.TrialumLocalChat?.busy?.()){ctx.toast('Локалниот AI веќе размислува. Пробај по одговорот.');return;}
-   const prior=Array.isArray(p.chatHistory)?p.chatHistory.slice(-4):[];
-   // The 135M mini model can use a brief on-device history of recent turns.
-   // Give yesterday's coarse theme memories priority over old literal turns.
-   // Only the own pet's local JSON summary is consulted; no server transcript.
-   const memory=root.TrialumPlaygroundMemory?.recall?.(p,prompt)||{requested:'recent',found:false,records:[]};
-   const context=JSON.stringify({
-    language:root.TrialumI18n?.language?.()||'mk',
-    species:E.SPECIES[p.species]?.name||'',
-    playground_memory:{requested:memory.requested,found:memory.found,records:memory.records.slice(-2)},
-    history:prior.slice(-2).map(x=>({role:x.role==='pet'?'assistant':'user',text:String(x.text||'').slice(0,85)}))
-   }).slice(0,700);
+   let context;
+   try{
+    context=root.TrialumAIContext.assemble(p,s,prompt,{
+     scope:'private',tier:'mini',maxChars:700,
+     language:root.TrialumI18n?.language?.()||'mk',
+     history:Array.isArray(p.chatHistory)?p.chatHistory.slice(-4):[]
+    });
+   }catch(_){ctx.toast('Не може безбедно да се состави AI контекст.');return;}
    if(root.TrialumLocalChat&&!root.TrialumLocalChat.begin(p.id)){
     ctx.toast('AI веќе создава одговор.');return;
    }
