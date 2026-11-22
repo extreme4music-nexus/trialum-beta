@@ -117,6 +117,9 @@ function ensureWorld(world){
   const isLegacy=!pet.cognitiveMemory;
   const memory=ensure(pet);
   if(isLegacy)memory.migrationMetadata.origin='legacy-world';
+  const context=root.TrialumCognitiveContext;
+  context?.migrateLegacy?.(pet);
+  context?.consolidate?.(pet,{gameDay:world.lastDay});
  }
  return world;
 }
