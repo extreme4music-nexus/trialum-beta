@@ -622,3 +622,11 @@
 .guide-full iframe{width:100%;flex:1;border:1px solid #42697f;border-radius:10px;background:#081c2d}
 .guide-full>button{align-self:flex-end}
 @media(max-width:370px){.guide-float{right:8px;bottom:calc(94px + env(safe-area-inset-bottom))}.guide-body{padding:12px}}
+
+/* v44 — future Play Billing catalog is always non-purchasable in beta */
+.future-credit-packs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.future-credit-pack{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:13px 8px}
+.future-credit-pack b{font-size:.96rem}
+.future-credit-pack strong{font-size:1.1rem;color:#dbeffb}
+.future-credit-pack button{width:100%;opacity:.53;cursor:not-allowed;font-size:.83rem}
+@media(max-width:480px){.future-credit-packs{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}}
