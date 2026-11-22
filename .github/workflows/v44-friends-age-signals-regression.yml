@@ -1,0 +1,42 @@
+name: V44 Friends Age Signals regression
+
+on:
+  push:
+    branches: [fix/v44-friends-google-age-signals-only]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  friends-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install UI test dependencies
+        run: npm install --no-save --ignore-scripts --no-audit jsdom@26.1.0 gifuct-js@2.1.2
+      - name: Check Friends JavaScript syntax
+        run: node --check js/social.js
+      - name: Verify Friends is not beta-locked and fails closed for age
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const s = fs.readFileSync('js/social.js','utf8');
+          assert.doesNotMatch(s, /if\s*\(\s*!state\.ageAllowed\s*\|\|\s*!betaBuild\(\)/);
+          assert.doesNotMatch(s, /const eligible\s*=\s*betaBuild\(\)/);
+          assert.match(s, /const eligible\s*=\s*result\?\.status==='adult_signal'&&result\?\.adultEligible===true/);
+          assert.match(s, /isSocialAllowed:\(\)=>state\.ageAllowed&&state\.socialConsented/);
+          assert.match(s, /if\(!state\.socialConsented\)throw Error\('social_consent_required'\)/);
+          assert.match(s, /if\(!state\.ageAllowed\)throw Error\('age_gate_required'\)/);
+          assert.doesNotMatch(s, /const qaAgeBypass=\(\)=>true/);
+          console.log('PASS: no beta lock; consent and adult age signal remain required');
+          NODE
+      - name: Existing Friends UI regression suite
+        run: node tests/social-ui.test.cjs
+      - name: Existing privacy guard suite
+        run: node tests/privacy-guard.test.cjs
