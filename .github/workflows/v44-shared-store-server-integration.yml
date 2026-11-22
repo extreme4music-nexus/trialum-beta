@@ -92,6 +92,32 @@ jobs:
       - name: New store PostgreSQL integration — owner ACL, 14 toys and no double charging
         run: |
           node server-baseline/server/tests/v44-store.integration.mjs
+      - name: Restart disposable server to isolate historical API rate-limit buckets
+        env:
+          HOST: 127.0.0.1
+          PORT: '8787'
+          DATABASE_URL: postgresql://trialum:local_test_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_DATABASE_URL: postgresql://trialum_app:test_app_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_ENABLED: 'true'
+          SHARED_ENABLED: 'true'
+          PRESENCE_ENABLED: 'false'
+          PLAYGROUND_AI_ENABLED: 'false'
+          MESSAGES_ENABLED: 'false'
+          PUSH_ENABLED: 'false'
+        run: |
+          kill "$(cat /tmp/trialum-v44-test.pid)"
+          for i in $(seq 1 30); do
+            if ! curl -fsS --max-time 1 http://127.0.0.1:8787/healthz >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          node server-baseline/server/src/index.mjs >/tmp/trialum-v44-test.log 2>&1 &
+          echo "$!" >/tmp/trialum-v44-test.pid
+          for i in $(seq 1 45); do
+            if curl -fsS --max-time 2 http://127.0.0.1:8787/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/trialum-v44-test.log
+          exit 1
       - name: Existing authenticated shared playground server integration regression
         run: |
           node server-baseline/server/tests/shared.integration.mjs
