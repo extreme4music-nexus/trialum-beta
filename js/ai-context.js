@@ -29,7 +29,7 @@ function assemble(p,world,prompt,opts={}){
   clean:Number.isFinite(p.clean)?p.clean:null,
   bond:Number.isFinite(p.bond)?p.bond:null,
   habitatId:safe(p.habitatId,60),
-  lastMeal:self.lastMeal?{day:self.lastMeal.day,food:safe(self.lastMeal.food,30),
+  lastMeal:priv&&self.lastMeal?{day:self.lastMeal.day,food:safe(self.lastMeal.food,30),
    quantity:self.lastMeal.quantity}:null
  };
  const result={
@@ -46,7 +46,9 @@ function assemble(p,world,prompt,opts={}){
   result.llmLanguage=opts.llmLanguage==='en'?'en':null;
  }
  if(priv){
-  result.traits=opts.traits&&typeof opts.traits==='object'?opts.traits:{};
+  result.traits=Object.fromEntries(['curiosity','warmth','bravery','playfulness']
+   .filter(k=>Number.isFinite(opts.traits?.[k]))
+   .map(k=>[k,Math.max(0,Math.min(100,Number(opts.traits[k])))]));
   result.emotion=safe(opts.emotion||'curious',24);
  }
  const fits=()=>JSON.stringify(result).length<=maxChars;
