@@ -88,11 +88,11 @@ function control(s,p,scope,present){
  if(!p||!present)return '';
  const ok=gate(s,p),installed=modelAvailable(),
   on=!!p[scope==='shared'?'playgroundAiShared':'playgroundAiLocal'];
- const nativeBackground=!!root.TrialumAndroid?.backgroundAiStatus?.();
+ // No background model is armed in this beta; world simulation continues without LLM.
  if(!ok)return '<p class="small subtle">🔒 AI комуникацијата во игротека се отклучува со развојот на видот. Меморијата постои и без AI.</p>';
  const permitted=scope!=='shared'||root.TrialumShared?.getState?.()?.aiRelayEnabled;
  let html='<div class="card"><h3>🧠 Изборен локален AI во игротеката</h3>'+
- '<p class="small">Мини AI по правило разговара додека екранот е видлив; со твоја дозвола може да продолжи и во заднина. Без модел, играта продолжува. Нема AI XP.</p>';
+ '<p class="small">Мини AI разговара само додека екранот е видлив и има активен разговор. При излез AI се гаси, а симулацијата во engine продолжува без модел. Нема AI XP.</p>';
  if(scope==='shared')html+='<p class="small">Кога е вклучен, кратките реплики се испраќаат до присутните членови на оваа приватна игротека. Не се приватни или шифрирани пораки.</p>';
  if(!permitted)html+='<p class="small">Серверската поддршка за AI разговори сè уште не е активирана. Симулираниот разговор работи.</p>';
  if(!installed)html+='<p class="small">Прво преземи го бесплатниот SmolLM2-135M во панелот на миленичето.</p>';
@@ -103,13 +103,7 @@ function control(s,p,scope,present){
   if(state?.speechTranslationEnabled&&!translated)
    html+='<p class="small">🌍 Преводите во оваа фаза се достапни само на македонски, албански и англиски.</p>';
   if(!translated)html+='<p class="small">🌍 За background AI прво е потребен приватен серверски преведувач на англиски.</p>';
-  if(on&&translated){
-   html+='<p class="small">📱 Изборно: продолжи го AI разговорот во заднина со видливо Android известување и копче Stop AI. Се запира при штедење батерија или мала батерија; Android може да го прекине сервисот.</p>';
-   html+='<button data-do="pgAiBackgroundToggle"'+(!installed?' disabled':'')+'>'+
-    (nativeBackground?'⏹ Исклучи AI во заднина':
-     p.playgroundAiBackgroundShared?'▶ Повторно активирај AI во заднина':'📱 Вклучи AI во заднина')+
-    '</button>';
-  }
+  if(on)html+='<p class="small subtle">🔋 AI во заднина е исклучен во оваа бета. Mini работи само за разговори додека играта е видлива.</p>';
  }
  if(on){
   const mix=diagnostics(scope,p);
@@ -147,36 +141,18 @@ function toggle(s,scope,notify,save,render){
  return true;
 }
 function toggleBackground(s,notify,save,render){
- const p=E()?.currentPet?.(s),st=root.TrialumShared?.getState?.(),n=root.TrialumAndroid;
- if(!p||!gate(s,p)||!p.playgroundAiShared||!modelAvailable()||
-   !st?.speechTranslationEnabled||
-   !st?.speechTranslationLanguages?.includes(root.TrialumI18n?.language?.()||'mk')||
-   !st?.online||!st?.selected){
-  notify?.('За AI во заднина се потребни активен мини-модел, игротека и серверско преведување.');
-  return true;
+ // Old beta saves may still contain the background opt-in. Deactivate it on use.
+ let changed=false;
+ for(const p of s?.pets||[])if(p.playgroundAiBackgroundShared){
+  p.playgroundAiBackgroundShared=false;changed=true;
  }
- if(!n?.setPlaygroundBackgroundAi||!n?.backgroundAiStatus){
-  notify?.('AI во заднина бара нова Android апликација.');
-  return true;
- }
- if(p.playgroundAiBackgroundShared&&n.backgroundAiStatus()){
-  n.setPlaygroundBackgroundAi(false,'','','','');
-  p.playgroundAiBackgroundShared=false;
-  save?.();render?.();return true;
- }
- const loc=Presence()?.get?.(s,p.id);
- if(loc?.kind!==Presence()?.SHARED||loc?.status!=='active'||loc.ref!==st.selected||
-   !st.presences?.some(x=>x.petId===p.id&&x.sessionId===loc.sessionId)){
-  notify?.('Прво испрати го миленичето во активната заедничка игротека.');return true;
- }
- if(root.confirm&&!root.confirm(root.TrialumI18n?.t?.('Да продолжи локалниот мини AI со приватни разговори во заднина? Android прикажува известување со Stop AI. Се користи батеријата и интернетот; системот може да го прекине сервисот.')||'Да продолжи локалниот мини AI со приватни разговори во заднина? Android прикажува известување со Stop AI. Се користи батеријата и интернетот; системот може да го прекине сервисот.'))return true;
- if(!n.setPlaygroundBackgroundAi(true,st.selected,p.id,loc.sessionId,p.name||'Pet')){
-  notify?.('Провери ја Android дозволата за известувања и повторно притисни.');return true;
- }
- p.playgroundAiBackgroundShared=true;
- save?.();render?.();notify?.('AI во заднина е побаран. Провери го Android известувањето.');
+ root.TrialumAndroid?.setPlaygroundBackgroundAi?.(false,'','','','');
+ if(changed)save?.();
+ render?.();
+ notify?.('Во оваа бета AI се користи само додека играта е видлива. Заднинскиот модел е исклучен за заштеда на батерија.');
  return true;
 }
+
 function forget(s,notify,save,render){
  const p=E()?.currentPet?.(s);
  if(!p||(!Memory()?.read?.(p)?.length&&!Memory()?.recall?.(p,'')?.found))return false;
@@ -461,6 +437,8 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document?.visibilityState==='hidden')stop();
  else {lastBackgroundImport=0;importBackground(root.TrialumShared?.getWorld?.());}
 });
+root.addEventListener?.('pagehide',()=>stop()); // Android WebView navigation/close
+root.document?.addEventListener?.('freeze',()=>stop());
 root.TrialumPlaygroundAI={gate,modelAvailable,enabled,suppressSimulation,diagnostics,control,toggle,toggleBackground,forget,stop,setTab,tick,speech,onPeerSpeech,onModelEvent,
  syncBackgroundMemory:importBackground,
  setSave(fn){saveMemory=typeof fn==='function'?fn:()=>{};}};
