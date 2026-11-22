@@ -1,4 +1,4 @@
-/* TRIALUM 1.5.6-B opt-in friends. No tracking, no Google requirement.
+/* TRIALUM 1.4 v44 opt-in friends. No tracking, no Google requirement.
  * Account credentials are kept only in native Android Keystore-backed storage,
  * NEVER in local game saves, localStorage, backup JSON or shared URLs. */
 (function(root){
@@ -253,7 +253,7 @@ function render(){
     html+='<div class="card"><div class="social-header"><h3>🐾 Мои пријатели ('+state.friends.length+')</h3><button data-do="socialRefresh">Освежи</button></div>'+
       (state.friends.length?state.friends.map(f=>'<div class="friend-item social-friend"><b>👋 '+safe(f.nickname)+'</b><div class="btn-line">'+
        '<button data-do="socialRemove" data-id="'+safe(f.id)+'">Отстрани</button><button data-do="socialBlock" data-id="'+safe(f.id)+'">Блокирај</button></div></div>').join(''):'<p class="subtle">Сè уште немаш пријатели. Испрати ја првата покана!</p>')+'</div>'+
-      '<p class="small subtle">Посетите во домот, заедничката игротека и пораките се дел од 1.6-LW. Известувањата за пораки ќе се проверат по LW.</p>'+
+      '<p class="small subtle">Посетите во домот, заедничката игротека и пораките се дел од 1.4 v44. Известувањата за пораки ќе се проверат по LW.</p>'+
       '<p class="small subtle">Ова ги брише серверскиот профил за Пријатели и неговите поврзани социјални податоци; локалниот свет и зачувувањата остануваат на уредот. Бришењето на апликацијата само по себе не го брише онлајн профилот. Избриши го профилот тука пред деинсталација. Надворешниот веб-тек за бришење се подготвува одделно.</p>'+ 
       '<div class="btn-line"><button data-do="socialDelete">Избриши профил и серверски податоци</button></div>';
   }
