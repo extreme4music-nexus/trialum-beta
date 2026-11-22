@@ -40,3 +40,21 @@
 - **Checkpoint 05:** Multiyear simulation, stress/restarts, offline Android + real GGUF model QA, privacy audit, final regression and review.
 
 Each checkpoint ends with a commit diff, tests and explicit open findings. No implicit approval or promotion to release.
+
+## Checkpoint 02 — Lifetime contextual memory and periodic semantic consolidation
+
+**Scope implemented on the same coordinated feature branch (owner review required):**
+
+1. `js/cognitive-context.js` implements durable, per-pet, topic-only playground context. Semantically relevant concepts, companion display names (sanitized), activity moments and provenance-aware native import metadata persist without a time-to-live.
+2. Deterministic rolling resolution, **not deletion**: full daily summaries remain recent for 45 calendar days; older daily observations fold into monthly summaries; months older than 24 months fold into annual summaries. Historical years are never time-expired. Fixed topic and name vocabularies prevent private raw speech, links, tokens or transcripts from becoming long-lived memory.
+3. `js/cognitive-memory.js` archives non-milestone game event payloads older than 45 days, maintaining replay receipts, lifetime cumulative counters and authoritative last occurrences. Birth and evolutionary milestones stay exact. Old game-day buckets aggregate into 30-game-day periods and then 360-game-day years.
+4. The V2 `archivedReceipts` record uses *non-cryptographic local checksums*. Its purpose is compact accidental-replay detection, not adversarial message authenticity. For arbitrary novel event IDs the receipt map still grows with lifetime unique IDs; there is no truthful guarantee of constant-size memory without potentially losing information.
+5. `js/playground-memory.js` remains a short-term compatibility cache and now writes directly to the durable contextual store. Existing cache data migrates once without inventing missing historical days. Private/local playground topics never enter the public/shared model context. User-requested deletion clears both cache and lifelong playground context.
+6. `js/playground-ai.js` retrieves contextual history using the relevant prompt and private/public scope. Advanced local AI also retrieves lifelong contextual summaries using `js/mnemos-context.js`. Previously duplicated private AI topic counting in `advanced-intelligence.js` was removed.
+7. `BackgroundPetMemory.kt` now keeps recent daily observations and rolls old native records into monthly/yearly on-device archives instead of discarding them. A compaction-only snapshot advances the stream revision for reliable JS reimport.
+8. Native-to-JS import uses per-stream month/year watermarks to account for already-imported daily data and avoid duplicate semantic moments. The private encrypted export synchronizes native background memory first, as does app initialization. Plain/cloud exports still exclude private cognitive data.
+9. `tests/cognitive-consolidation-v44.test.cjs` exercises historical multi-year recall, public/private separation, V1 migration, native daily/month/year replay, explicit deletion, full JSON round-trip, large event compression and archived replay IDs. Dedicated CI now also checks Android Kotlin compilation **without APK generation or signing**.
+
+**Important caveats remaining:** Android compilation must be confirmed by the workflow, and an emulator/device test remains outstanding. Daily native summaries still retain a preexisting 99-moment counter cap; future work must raise/normalize that counter without breaking older imports. The 20 MB encrypted archive size ceiling may become a constraint in extreme simulated lifetimes; measure and address in archive/performance checkpoint. Exact original sentence-level transcripts are intentionally not promised or stored; only factual and semantic summaries persist. Contextual archives do not yet have a separately tested encrypted restoration path across a true Android installation.
+
+**Next owner-controlled checkpoint:** declarative AI eligibility for future species, one safe scoped context assembler for every model tier and background route, and game knowledge retrieval. No merge to the release branch.
