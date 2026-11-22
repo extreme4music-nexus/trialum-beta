@@ -174,8 +174,14 @@ internal object BackgroundPetMemory {
         val before = state.toString()
         compact(state, LocalDate.now())
         val serialized = state.toString()
-        if (before != serialized) context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putString("pet_" + petId, serialized).commit()
+        if (before != serialized) {
+            // A consolidation-only snapshot must be visible to the JS bridge as a new revision.
+            state.put("revision", state.optLong("revision", 0L) + 1L)
+            val updated = state.toString()
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString("pet_" + petId, updated).commit()
+            return updated
+        }
         return serialized
     }
 }
