@@ -255,27 +255,16 @@ function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
  const translated=scope==='shared'&&!!root.TrialumShared?.getState?.()?.speechTranslationEnabled;
  // Never truncate serialized JSON: native ModelRuntime must parse
  // llmLanguage="en" reliably, even after many rich room turns.
- const contextData={
-  llmLanguage:translated?'en':null,
-  language:translated?'en':(root.TrialumI18n?.language?.()||'mk'),
-  oneShortSentence:true,mode:'fictional_playground',
-  species:String(E()?.SPECIES?.[p.species]?.name||'').slice(0,24),
-  // Only ephemeral playground speech is included. Never private user-pet chat.
-  roomTurns:Sessions()?.context?.(scope,scope==='shared'?roomId:localSessionKey,
-   null,980)||[],
-  memories:Memory()?.recall?.(p,prompt,now,scope==='shared'?'public':'private')?.records?.slice(0,2)||[]
- };
- let context=JSON.stringify(contextData);
- while(context.length>1450&&contextData.roomTurns.length){
-  contextData.roomTurns.shift();context=JSON.stringify(contextData);
- }
- if(context.length>1450){
-  contextData.memories=[];context=JSON.stringify(contextData);
- }
- if(context.length>1450){
-  contextData.species='';context=JSON.stringify(contextData);
- }
- if(context.length>1450)throw Error('bounded_playground_context_exceeded');
+ let context;
+ try{
+  context=root.TrialumAIContext.assemble(p,s,prompt,{
+   scope:scope==='shared'?'playground-shared':'playground-local',tier:'mini',
+   language:translated?'en':(root.TrialumI18n?.language?.()||'mk'),
+   llmLanguage:translated?'en':null,
+   roomTurns:Sessions()?.context?.(scope,scope==='shared'?roomId:localSessionKey,null,980)||[],
+   maxChars:1450,now
+  });
+ }catch(_){root.TrialumLocalChat?.finish?.(p.id);return false;}
  pending={petId:p.id,petName:String(p.name||'Милениче'),scope,roomId,sessionId,at:now,
   heard:String(meta.heard||'').slice(0,130),companion:String(meta.companion||'').slice(0,32),
   peerId:meta.peerId,replyToTurnId:String(meta.replyToTurnId||'')};
