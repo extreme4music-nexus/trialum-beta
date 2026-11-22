@@ -45,11 +45,11 @@ jobs:
           activity=Path("android-template/app/src/main/java/com/trialum/ziivaiskra/MainActivity.kt")
           code=activity.read_text()
           import re
-          pattern=r'@JavascriptInterface\\s+fun\\s+ageSignalsAdultEligible\\(\\):\\s*Boolean\\s*=\\s*ageSignals\\.isAdultEligible\\(\\)'
+          pattern=r'@JavascriptInterface\s+fun\s+ageSignalsAdultEligible\(\):\s*Boolean\s*=\s*ageSignals\.isAdultEligible\(\)'
           code,count=re.subn(pattern,'@JavascriptInterface fun ageSignalsAdultEligible(): Boolean = true',code,count=1)
           if count!=1: raise SystemExit("Age Signals bridge changed: refuse temporary social patch")
           code=code.replace('@JavascriptInterface fun ageSignalsAdultEligible(): Boolean = true',
-              '// CI-ONLY QA social test; never published.\\n        @JavascriptInterface fun ageSignalsAdultEligible(): Boolean = true',1)
+              '// CI-ONLY QA social test; never published.\n        @JavascriptInterface fun ageSignalsAdultEligible(): Boolean = true',1)
           activity.write_text(code)
           gradle=Path("android-template/app/build.gradle.kts")
           code=gradle.read_text()
