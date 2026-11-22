@@ -293,6 +293,10 @@ class ModelRuntime(
         }
     }
 
+    fun rejectPlaygroundRequest(petId: String, reason: String) {
+        emit("error", petId.take(70), reason.take(160))
+    }
+
     fun ask(
         petId: String, petName: String, userMessage: String,
         tier: String = "mini", personaContext: String = "", playground: Boolean = false
