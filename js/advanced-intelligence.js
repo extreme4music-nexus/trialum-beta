@@ -1,5 +1,5 @@
-/* TRIALUM 1.5.5: game-simulated personality/emotions and opt-in local
-   multilingual GGUF for eligible advanced pets, including future species.
+/* TRIALUM 1.4 v44: game-simulated personality/emotions and opt-in local
+   English-language GGUF for eligible advanced pets, including future species.
    No remote generation, no automatic download, no model bundled in APK. */
 (function(root){
 'use strict';
