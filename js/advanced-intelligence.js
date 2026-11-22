@@ -143,14 +143,14 @@ function handle(action,button,s,ctx){
   return true;
  }
  if(action==='mindAsk'){
-  const prompt=(root.document?.getElementById('mindPrompt')?.value||'').trim().slice(0,340);
+  const prompt=(root.document?.getElementById('petChatPrompt')?.value||root.document?.getElementById('mindPrompt')?.value||'').trim().slice(0,340);
   if(!prompt)return true;
   if(localChat.busy()){ctx.toast(tr('AI веќе размислува. Пробај по одговорот.','AI is already thinking. Try after the reply.'));return true;}
   if(status(m.tier)!=='installed'||!root.TrialumAndroid?.askPetAdvanced){ctx.toast(tr('Прво преземи го моделот.','Download the model first.'));return true}
   let context;
   try{
    context=root.TrialumMnemosContext.assemble(p,s,prompt,{
-    language:root.TrialumI18n?.language?.()||'mk',
+    language:'en',
     traits:persona(p),emotion:mood(p).id,
     history:p.chatHistory,legacy:m.memories
    });
