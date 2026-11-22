@@ -34,8 +34,14 @@ function portableSnapshot(state){
  delete copy.cloudMemoryVersion;
  return copy;
 }
-async function load(){let state=null;try{state=await dbRead()}catch(_){}if(E().validate(state))return state;
- try{state=JSON.parse(localStorage.getItem(KEY)||'null');if(E().validate(state))return state;}catch(_){}
+function hydrateMemory(world){
+ // An invalid private memory must never turn a valid saved world into a new game.
+ try{root.TrialumCognitiveMemory?.ensureWorld?.(world);}
+ catch(error){root.TrialumCognitiveMemoryLoadError=String(error?.message||error).slice(0,160);}
+ return world;
+}
+async function load(){let state=null;try{state=await dbRead()}catch(_){}if(E().validate(state))return hydrateMemory(state);
+ try{state=JSON.parse(localStorage.getItem(KEY)||'null');if(E().validate(state))return hydrateMemory(state);}catch(_){};
  try{const old=JSON.parse(localStorage.getItem(LEGACY)||'null');const s=legacyConvert(old);if(s){await save(s);return s;}}catch(_){}
  return null;}
 // Capture each world at the moment a save is requested, then serialize writes.
@@ -48,6 +54,10 @@ function orderedWrite(work){
 }
 async function save(s){
  if(!E().validate(s))return {ok:false,backend:'invalid_world'};
+ try{root.TrialumCognitiveMemory?.ensureWorld?.(s);}
+ catch(error){root.TrialumCognitiveMemoryLoadError=String(error?.message||error).slice(0,160);
+  return {ok:false,backend:'invalid_cognitive_memory'};}
+
  // JSON snapshot matches export format; never let a later UI mutation alter an
  // already scheduled IndexedDB transaction.
  let snapshot;
