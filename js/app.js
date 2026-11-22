@@ -295,27 +295,20 @@ function exportBackup(){
   const prepared=globalThis.TrialumMemoryIntegrity.prepare(world);
   const approve=confirm(en()?'Restore the encrypted archive? It will replace the world, AI memories and local friend conversation history on this device. Save an encrypted backup of the current device first if needed.':'Да ја вратам шифрираната архива? Таа ќе ги замени светот, AI-меморијата и локалната историја со пријателите на овој уред. Ако ти требаат тековните податоци, прво зачувај шифрирана архива.');
   if(!approve)return false;
-  const oldWorld=s?JSON.parse(JSON.stringify(s)):null;
-  const oldConversations=await globalThis.TrialumLocalConversations.exportAll();
-  try{
-   const applied=await importBackupState(prepared.world,{confirmed:true,preservePrivate:false});
-   if(!applied)throw Error('restore_world_write_failed');
-   if(!await globalThis.TrialumLocalConversations.replaceAll(archive))
-    throw Error('restore_conversations_write_failed');
-  }catch(error){
-   let rolledWorld=false,rolledConversations=false;
-   try{
+  await globalThis.TrialumPrivateRestore.run({
+   world:prepared.world,prepare:()=>prepared,
+   snapshotWorld:async()=>s?JSON.parse(JSON.stringify(s)):null,
+   snapshotConversations:()=>globalThis.TrialumLocalConversations.exportAll(),
+   applyWorld:w=>importBackupState(w,{confirmed:true,preservePrivate:false}),
+   applyConversations:()=>globalThis.TrialumLocalConversations.replaceAll(archive),
+   rollbackWorld:async oldWorld=>{
     const saved=oldWorld?await S.save(oldWorld):await S.clear();
-    rolledWorld=!!saved?.ok;
-    if(rolledWorld){
-     s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();sendNative();
-    }
-   }catch(_){}
-   try{rolledConversations=!!(await globalThis.TrialumLocalConversations.replaceAll(oldConversations));}
-   catch(_){}
-   if(!rolledWorld||!rolledConversations)throw Error('restore_rollback_failed');
-   throw Error('restore_failed_rolled_back');
-  }
+    if(!saved?.ok)return false;
+    s=oldWorld;Shared?.bindWorld?.(s);W.setState(s);render();sendNative();
+    return true;
+   },
+   rollbackConversations:old=>globalThis.TrialumLocalConversations.replaceAll(old)
+  });
   backupFeedback(en()?'Encrypted archive restored, including local friend history and AI memories.':'Шифрираната архива е вратена, вклучувајќи ја локалната историја со пријателите и AI-меморијата.',true);
   return true;
  }
