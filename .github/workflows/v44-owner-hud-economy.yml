@@ -25,12 +25,15 @@ jobs:
           node --check js/action-topup-ui.js
           node --check js/day-passes.js
           node --check js/day-passes-ui.js
+          node --check js/resource-hud-ui.js
           node --check js/engine.js
           node --check js/longplay.js
           node --check js/app.js
           node --check tests/v44-action-economy.test.cjs
           node --check tests/v44-day-passes.test.cjs
+          node --check tests/v44-hud-details.test.cjs
       - name: New engine and UI action purchase regressions
         run: |
           node tests/v44-action-economy.test.cjs
           node tests/v44-day-passes.test.cjs
+          node tests/v44-hud-details.test.cjs
