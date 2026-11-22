@@ -48,7 +48,7 @@ test('records are bounded and untrusted backups sanitized',()=>{
  const x=Memory.read(p,noon(2026,11,12));
  assert.equal(x.length,1);assert.deepEqual(x[0].topics,['slide']);
  assert.deepEqual(x[0].companions,['John script']);
- assert.equal(x[0].moments,99);
+ assert.equal(x[0].moments,9000,'V44 preserves long-lived counts beyond the old 99-moment cap');
  assert.deepEqual(Memory.read({playgroundAiMemories:{not:'an array'}},noon(2026,11,12)),[]);
  Memory.clear(p);assert.equal(p.playgroundAiMemories.length,0);
 });
