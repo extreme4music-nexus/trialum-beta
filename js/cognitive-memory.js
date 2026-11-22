@@ -24,6 +24,7 @@ function ensure(p){
     !Number.isSafeInteger(m.eventSerial)||m.eventSerial<0)throw Error('unsupported cognitive schema');
  if(!m.self||typeof m.self!=='object'||!m.self.last||!m.self.days||!m.self.counts||
     !m.owner||!m.owner.topics||!m.social||!m.social.peers)throw Error('invalid cognitive data');
+ eventIds(m); // Validate on hydration, not only when another game event occurs.
  return m;
 }
 function eventIds(m){
@@ -31,8 +32,10 @@ function eventIds(m){
  if(ids)return ids;
  ids=new Set();
  for(const event of m.eventLedger){
-  if(!event||typeof event.eventId!=='string'||event.petId!==m.petId||
-   !/^[A-Za-z0-9:_./-]{1,160}$/.test(event.eventId)||ids.has(event.eventId))
+  if(!event||event.schemaVersion!==VERSION||!kinds.has(event.kind)||
+   !Number.isFinite(event.at)||event.at<0||event.petId!==m.petId||
+   typeof event.source!=='string'||!/^[a-z][a-z0-9_-]{0,47}$/.test(event.source)||
+   typeof event.eventId!=='string'||!/^[A-Za-z0-9:_./-]{1,160}$/.test(event.eventId)||ids.has(event.eventId))
    throw Error('corrupt cognitive event ledger');
   ids.add(event.eventId);
  }
