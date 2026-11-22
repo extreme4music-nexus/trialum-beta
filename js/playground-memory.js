@@ -90,9 +90,9 @@ function remember(p,{place,companion,said,heard,now=Date.now()}={}){
  if(p.id)Context()?.remember?.(p,{day,place,topics:themes,companions:who?[who]:[],moments:1});
  return true;
 }
-function recall(p,question='',now=Date.now()){
+function recall(p,question='',now=Date.now(),scope='private'){
  // Canonical semantic timeline supersedes the old 45-day display cache.
- if(p?.id&&Context()?.recall)return Context().recall(p,question,now);
+ if(p?.id&&Context()?.recall)return Context().recall(p,question,now,{publicScope:scope==='public'});
  const ask=String(question||'').slice(0,360);
  const yesterday=/вчера|вчераш|yesterday/i.test(ask);
  const today=/денес|today/i.test(ask);
