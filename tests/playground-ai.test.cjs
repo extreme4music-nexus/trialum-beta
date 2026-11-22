@@ -37,6 +37,8 @@ globalThis.TrialumShared={getWorld:()=>world,getState:()=>({...state,aiRelayEnab
 globalThis.TrialumSharedScene={dialogue:()=>({ids:[pet.id,'other'],turn:0,text:'Сакаш да играме?'}),
  refreshCaption:()=>{}};
 globalThis.TrialumPetAI=require('../js/pet-ai-capabilities.js');
+globalThis.TrialumGameKnowledge=require('../js/game-knowledge.js');
+globalThis.TrialumAIContext=require('../js/ai-context.js');
 globalThis.TrialumPlaygroundMemory=require('../js/playground-memory.js');
 globalThis.TrialumDialogueSessions=require('../js/playground-dialogue-session.js');
 require('../js/playground-ai.js');
