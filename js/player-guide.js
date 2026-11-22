@@ -55,13 +55,13 @@ function answer(question,s,p,opts={}){
  if(/\b(hello|hi|hey|greetings)\b/.test(q))return "Hello! I'm "+who+". I can help with food, credits, actions, plants, habitats, research, and what to do next.";
  if(/\b(food|feed|hungry|eat|recipe|warehouse)\b/.test(q))
   return "To get food: open More > Food, produce a compatible recipe in the Nutrition Laboratory, move portions through the Warehouse into this pet's Home Reserve, then press Feed in Pets. Check the pet's actions and food compatibility.";
- if(/\b(credit|earn|reward|money|currency)\b/.test(q))
+ if(/\b(credits?|earn|rewards?|money|currency)\b/.test(q))
   return "Earn in-game credits from pet training and care, research, evolutionary milestones, and achievements. Tap Credits in the top HUD to see your balance. When an action runs out, one earned credit restores one action. Real-money purchases are disabled in this beta.";
  if(/\b(day|skip|pass|time travel)\b/.test(q))
   return "Tap Day in the upper HUD to buy day passes, then use them whenever you choose. One day costs 50 earned credits; larger packs get discounts. Check plants and pets first — skipping runs full daily simulation and neglect can harm them.";
- if(/\b(plant|water|seedling|flora|greenhouse|garden)\b/.test(q))
+ if(/\b(plants?|water|seedlings?|flora|greenhouse|garden)\b/.test(q))
   return "Open More > Flora. Research a plant, produce seedlings in the Laboratory, grow and water them in a compatible greenhouse bed or pool, then transplant mature healthy plants. Check hydration before skipping days.";
- if(/\b(action|refill|out of moves|no more moves|energy)\b/.test(q))
+ if(/\b(actions?|refill|out of moves|no more moves|energy)\b/.test(q))
   return "Each lab, pet, habitat and greenhouse has its own action allowance. When actions run out, use the contextual Restore Actions button to add one or a pack for one earned credit per action, or wait for time to refill them.";
  if(/\b(friend|social|age|invite|message|shared room)\b/.test(q))
   return "Friends and shared rooms are optional. They require adult Google Play Age Signals verification, explicit social consent and server authorization. Unknown or underage status stays offline; the main game still works.";
