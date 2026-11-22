@@ -1,5 +1,5 @@
 /* TRIALUM 1.5.5: game-simulated personality/emotions and opt-in local
-   multilingual GGUF for an already evolved Mnemos (species 9, level 165+).
+   multilingual GGUF for eligible advanced pets, including future species.
    No remote generation, no automatic download, no model bundled in APK. */
 (function(root){
 'use strict';
@@ -73,16 +73,16 @@ function button(label,act,attrs='',disabled=false){
 function render(s,p){
  if(!p)return '';
  const ok=eligible(s,p),traits=persona(p),emotion=mood(p);
- const intro='<section class="intelligence-panel"><h3>🧠 '+tr('Напредна интелигенција на Мнемос','Mnemos advanced intelligence')+'</h3>'+
+ const intro='<section class="intelligence-panel"><h3>🧠 '+tr('Напредна интелигенција','Advanced intelligence')+' · '+esc(p.name)+'</h3>'+ 
  '<p class="small">'+tr('Личност и емоции се симулирани игровни состојби, не вистински чувства.','Personality and emotions are simulated game states, not real feelings.')+'</p>';
- if(!ok)return intro+'<p class="lock-hint">🔒 '+tr('Се отклучува и за веќе развиен Мнемос: вид Мнемос, ниво 165 и лабораторија 20.','Also unlocks for existing evolved Mnemos: species Mnemos, level 165, laboratory 20.')+'</p></section>';
+ if(!ok)return intro+'<p class="lock-hint">🔒 '+tr('Напредна интелигенција: вид од Мнемос наваму, ниво 165 и лабораторија 20.','Advanced intelligence: Mnemos or later species, level 165 and laboratory 20.')+'</p></section>';
  const m=p.mind&&typeof p.mind==='object'?p.mind:{enabled:false,tier:'compact',memories:[]};
  const tier=MODELS[m.tier]||MODELS.compact;
  let html=intro+'<div class="emotion-meter"><span>💫 '+tr('Расположение','Mood')+': '+emotion.emoji+' '+esc(emotion.label)+'</span>'+
  '<span>✨ '+tr('Љубопитност','Curiosity')+' '+traits.curiosity+'</span>'+
  '<span>💞 '+tr('Топлина','Warmth')+' '+traits.warmth+'</span>'+
  '<span>🦁 '+tr('Храброст','Bravery')+' '+traits.bravery+'</span></div>';
- html+='<p class="privacy-note">'+tr('Разговорите и меморијата на Мнемос се чуваат локално. Не се испраќаат на Trialum серверот, не се вклучуваат во обичен JSON или Google Cloud Save. За пренос меѓу уреди користи ја шифрираната архива во Поставки; recovery-кодот чувај го одделно.','Mnemos chats and memory are stored locally. They are not sent to the Trialum server or included in plain JSON or Google Cloud Save. To move them between devices, use the encrypted archive in Settings and keep its recovery code separate.')+'</p>';
+ html+='<p class="privacy-note">'+tr('Разговорите и меморијата на миленикот се чуваат локално. Не се испраќаат на Trialum серверот, не се вклучуваат во обичен JSON или Google Cloud Save. За пренос меѓу уреди користи ја шифрираната архива во Поставки; recovery-кодот чувај го одделно.','Pet chats and memory are stored locally. They are not sent to the Trialum server or included in plain JSON or Google Cloud Save. To move them between devices, use the encrypted archive in Settings and keep its recovery code separate.')+'</p>';
  html+=button(m.enabled?'🔐 '+tr('Исклучи AI меморија','Disable AI memory'):'✅ '+tr('Се согласувам за локален AI','Allow local AI'),'mindToggle');
  if(!m.enabled)return html+'<p class="small">'+tr('Модел не се презема пред согласност. Не е потребен за играње.','No model is downloaded without consent. It is never required for gameplay.')+'</p></section>';
  html+='<div class="llm-choices">'+Object.values(MODELS).map(model=>
@@ -105,7 +105,7 @@ function render(s,p){
  html+='<p class="privacy-note">'+tr('Потребни се Wi-Fi, слободен простор и доволно RAM. Google и облак не се потребни. Моделот се вчитува само по порака.','Requires network, free storage and sufficient RAM. Google/cloud is not required. The model loads only when you send a message.')+'</p>';
  const notes=Array.isArray(m.memories)?m.memories.slice(-4):[];
  if(notes.length)html+='<details><summary>🧠 '+tr('Меморија','Memory')+' ('+notes.length+')</summary><ul>'+notes.map(x=>'<li>'+esc(x).slice(0,180)+'</li>').join('')+'</ul></details>';
- html+='<label for="mindPrompt">'+tr('Порака до Мнемос','Message to Mnemos')+'</label><textarea id="mindPrompt" maxlength="340" rows="2" placeholder="'+tr('Напиши кратка порака…','Write a short message…')+'"></textarea>';
+ html+='<label for="mindPrompt">'+tr('Порака до миленикот','Message to pet')+'</label><textarea id="mindPrompt" maxlength="340" rows="2" placeholder="'+tr('Напиши кратка порака…','Write a short message…')+'"></textarea>';
  html+=button('💬 '+tr('Разговарај локално','Chat locally'),'mindAsk','class="primary"',!installed||localChat.busy());
   html+='<p class="small subtle">'+tr(
     'Локалните AI разговори се бесплатни и не трошат дневни акции или кредити. Нема дневен лимит; еден одговор во исто време.',
@@ -116,7 +116,7 @@ function render(s,p){
 function handle(action,button,s,ctx){
  if(!['mindToggle','mindTier','mindDownload','mindImport','mindAsk'].includes(action))return false;
  const p=E()?.currentPet?.(s);
- if(!eligible(s,p)){ctx.toast(tr('Прво развиј Мнемос.','Evolve Mnemos first.'));return true}
+ if(!eligible(s,p)){ctx.toast(tr('Прво отклучи напредна интелигенција за миленикот.','Unlock advanced intelligence for this pet first.'));return true}
  const m=mind(p);
  if(action==='mindToggle'){
   if(!m.enabled){
@@ -165,7 +165,7 @@ function handle(action,button,s,ctx){
   m.memories.push('Player: '+prompt.slice(0,140));m.memories=m.memories.slice(-8);m.turns=(m.turns||0)+1;
   try{root.TrialumAndroid.askPetAdvanced(p.id,p.name,prompt,tier.key,context);}
    catch(_){localChat.finish(p.id);ctx.toast(tr('Неуспешен старт на локалниот AI.','Could not start local AI.'));return true;}
-  ctx.scheduleSave();ctx.render();ctx.toast(tr('Мнемос размислува локално…','Mnemos is thinking locally…'));return true;
+  ctx.scheduleSave();ctx.render();ctx.toast(tr('Миленикот размислува локално…','Pet is thinking locally…'));return true;
  }
  return true;
 }
@@ -176,7 +176,7 @@ function onReply(s,p,text){
  const lastUser=Array.isArray(p.chatHistory)?[...p.chatHistory].reverse().find(x=>x.role==='user')?.text||'':'';
  // Persist semantic themes only after a successful private model reply.
  if(lastUser&&reply)root.TrialumCognitiveMemory?.summarize(p,lastUser,reply);
- m.memories.push('Mnemos: '+reply);m.memories=m.memories.slice(-8);
+ m.memories.push('Pet: '+reply);m.memories=m.memories.slice(-8);
  const emotion=mood(p).id;
  p.reactionAt=Date.now();p.reaction=emotion==='joyful'?'spin':'wave';
  root.TrialumWorld?.reactEmotion?.(p.id,emotion);
