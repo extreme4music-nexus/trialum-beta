@@ -81,9 +81,9 @@ test('local mini replaces only visible speech, never XP, and stops on tab change
 test('shared mini generation is routed only to current verified room, non-AI fallback remains',()=>{
  AI.setTab('shared');AI.tick(world,'shared');
  assert.equal(generated.length,2);
- assert.equal(AI.onModelEvent({kind:'playgroundReply',petId:pet.id,text:'Здраво, пријателче!'}),true);
- assert.equal(sent.length,1);assert.equal(sent[0].text,'Здраво, пријателче!');
- assert.equal(AI.speech('shared',ROOM).text,'Здраво, пријателче!');
+ assert.equal(AI.onModelEvent({kind:'playgroundReply',petId:pet.id,text:'Hello, little friend!'}),true);
+ assert.equal(sent.length,1);assert.equal(sent[0].text,'Hello, little friend!');
+ assert.equal(AI.speech('shared',ROOM).text,'Hello, little friend!');
  assert.equal(AI.speech('shared','wrong-room'),null);
  const before=generated.length;AI.stop();
  pet.playgroundAiShared=false;
@@ -97,8 +97,9 @@ test('shared mini generation is routed only to current verified room, non-AI fal
 });
 test('real room messages are only shown in currently visible authorized room',()=>{
  AI.setTab('shared');
- const yes=AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Еј, здраво!',turnId:'5b008b36-c329-4a34-9632-bd30a9f6d231'});
- assert.equal(yes,true);assert.equal(AI.speech('shared',ROOM).text,'Еј, здраво!');
+ const yes=AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Hey, hello!',language:'en',turnId:'5b008b36-c329-4a34-9632-bd30a9f6d231'});
+ assert.equal(yes,true);assert.equal(AI.speech('shared',ROOM).text,'Hey, hello!');
+  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',speaker:'Другар',text:'Еј, здраво!',turnId:'bad-old-cyrillic'}),false,'foreign-language room line is not canonical English');
  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:'forged',petId:'other',text:'No'}),false);
  AI.setTab('lab');
  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',text:'No'}),false);
