@@ -251,6 +251,26 @@ android {
             resValue("string", "trialum_firebase_sender_id", "")
         }
     }
+    // One-time owner verification APK for Trialum 1.4 v44, signed with a
+    // disposable CI-generated Android debug key. Its separate package prevents
+    // replacement of the installed Play release and loss of private worlds.
+    // It does NOT prove Play Age Signals or live social-server authorization.
+    buildTypes {
+        create("qa44") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa44"
+            versionNameSuffix = "-qa44"
+            isDebuggable = true
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa44"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+            resValue("string", "trialum_firebase_api_key", "")
+            resValue("string", "trialum_firebase_project_id", "")
+            resValue("string", "trialum_firebase_sender_id", "")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
