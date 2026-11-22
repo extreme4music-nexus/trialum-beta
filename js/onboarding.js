@@ -1,4 +1,4 @@
-/* TRIALUM 1.5.5 — skippable welcome story and replayable guided tutorial.
+/* TRIALUM 1.4 v44 — skippable welcome story and replayable guided tutorial.
    No game rewards, progression mutations, or personal data in these dialogs. */
 (function(root){
 'use strict';
