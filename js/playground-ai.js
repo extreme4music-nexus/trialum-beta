@@ -180,7 +180,7 @@ function toggleBackground(s,notify,save,render){
 }
 function forget(s,notify,save,render){
  const p=E()?.currentPet?.(s);
- if(!p||!Memory()?.read?.(p)?.length)return false;
+ if(!p||(!Memory()?.read?.(p)?.length&&!Memory()?.recall?.(p,'')?.found))return false;
  if(root.confirm&&!root.confirm(root.TrialumI18n?.t?.('Да ги избришам сите тематски сеќавања на ова милениче од игротеките? Ова не ги менува XP и дневникот.')||'Да ги избришам сите тематски сеќавања на ова милениче од игротеките? Ова не ги менува XP и дневникот.'))return true;
  Memory().clear(p);
  root.TrialumAndroid?.clearBackgroundAiMemories?.(p.id);
@@ -264,7 +264,7 @@ function attempt(s,p,scope,prompt,roomId='',sessionId='',meta={}){
   // Only ephemeral playground speech is included. Never private user-pet chat.
   roomTurns:Sessions()?.context?.(scope,scope==='shared'?roomId:localSessionKey,
    null,980)||[],
-  memories:Memory()?.recall?.(p,'',now)?.records?.slice(-1)||[]
+  memories:Memory()?.recall?.(p,prompt,now,scope==='shared'?'public':'private')?.records?.slice(0,2)||[]
  };
  let context=JSON.stringify(contextData);
  while(context.length>1450&&contextData.roomTurns.length){
