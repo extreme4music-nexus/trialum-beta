@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import {randomBytes,createHash} from 'node:crypto';
 import {Pool} from 'pg';
+import WebSocket from 'ws';
 const host=process.env.TRIALUM_SHARED_BASE||'';
 const url=process.env.TRIALUM_TEST_DATABASE_URL||'';
 if(!host.startsWith('http://127.0.0.1:')||!/^(postgres|postgresql):\/\//.test(url))
@@ -56,10 +57,37 @@ try{
  });expected(missing,401,'unknown account');
  assert.equal(wrong.data.error,missing.data.error);
  // New key is generated and saved by user BEFORE server rotation.
+ // An authenticated old device's WS must be explicitly terminated when the
+ // identity rotates, not merely denied the next HTTP API request.
+ const ws=new WebSocket(host.replace(/^http:/,'ws:')+'/v1/social/live',{
+   headers:{Origin:'https://appassets.androidplatform.net'}
+ });
+ const opened=new Promise((resolve,reject)=>{
+   ws.once('open',resolve);ws.once('error',reject);
+   setTimeout(()=>reject(Error('old socket connect timed out')),4000);
+ });
+ await opened;
+ const ready=new Promise((resolve,reject)=>{
+   ws.on('message',bytes=>{
+    const v=JSON.parse(bytes.toString('utf8'));
+    if(v.type==='ready')resolve(v);
+    if(v.type==='error')reject(Error(v.error));
+   });
+   setTimeout(()=>reject(Error('old socket auth timed out')),4000);
+ });
+ ws.send(JSON.stringify({type:'auth',credential:owner.credential}));
+ await ready;
+ const closed=new Promise((resolve,reject)=>{
+   ws.once('close',(code,reason)=>resolve({code,reason:String(reason)}));
+   setTimeout(()=>reject(Error('stale authenticated WSS was NOT revoked')),4000);
+ });
  const next=secret(),recover=await request('recovery/restore','POST',{
   id:owner.id,recoveryKey:owner.recoveryKey,nextRecoveryKey:next
  });
  expected(recover,200,'recovery');
+ const close=await closed;
+ assert.equal(close.code,1008,'old socket invalidated after recovery');
+ assert.equal(close.reason,'session_revoked');
  assert.equal(recover.data.id,owner.id,'stable social ID');
  assert.notEqual(recover.data.credential,owner.credential,'rotated bearer');
  assert.equal(recover.data.recoveryKitRotated,true);
