@@ -5,7 +5,7 @@
  root.TrialumActionEconomy=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(E){
  'use strict';
- const VALID=new Set(['lab','pet','habitat']);
+ const VALID=new Set(['lab','pet','habitat','garden']);
  const fail=(code,message,extra={})=>({ok:false,code,message,...extra});
  function inspect(s,scope,id){
   if(!E||!s||!VALID.has(scope))return fail('invalid_scope','Unknown action type.');
@@ -17,6 +17,10 @@
    target=(s.pets||[]).find(p=>p.id===id);
    if(!target)return fail('unknown_pet','Choose an existing pet.');
    field='actionsLeft';limit=E.petActionLimit(s);label=String(target.name||'Pet');
+  }else if(scope==='garden'){
+   target=E.ensureAgro?.(s);
+   if(!target)return fail('unknown_garden','Garden actions are unavailable.');
+   field='actionsLeft';limit=4;label='Greenhouse garden';
   }else{
    target=(s.habitats||[]).find(h=>h.id===id);
    if(!target)return fail('unknown_habitat','Choose an existing habitat.');
@@ -27,7 +31,7 @@
   if(!Number.isSafeInteger(current)||current<0||!Number.isSafeInteger(limit)||limit<0||
      !Number.isSafeInteger(balance)||balance<0)
     return fail('corrupt_balance','Cannot safely refill actions: invalid world state.');
-  return {ok:true,scope,id:scope==='lab'?null:id,label,current,limit,
+  return {ok:true,scope,id:scope==='lab'||scope==='garden'?null:id,label,current,limit,
    room:Math.max(0,limit-current),credits:balance};
  }
  function buy(s,scope,id,quantity){
@@ -40,12 +44,12 @@
    return fail('insufficient_credits','Not enough credits earned in the game.',{
     ...info,ok:false,needed:quantity,shortfall:quantity-info.credits});
   // Complete validation precedes all spending; JS calls are synchronous on one world instance.
-  const target=scope==='lab'?s:scope==='pet'?s.pets.find(p=>p.id===id):s.habitats.find(h=>h.id===id);
-  const field=scope==='lab'?'labActions':scope==='pet'?'actionsLeft':'dayActions';
+  const target=scope==='lab'?s:scope==='pet'?s.pets.find(p=>p.id===id):scope==='garden'?s.agro:s.habitats.find(h=>h.id===id);
+  const field=scope==='lab'?'labActions':scope==='pet'||scope==='garden'?'actionsLeft':'dayActions';
   const ledger=s.longplay.ledger;
   if(!Array.isArray(ledger))return fail('invalid_ledger','Credit history is unavailable.');
   const record={day:s.lastDay,value:-quantity,
-   reason:'HUD action refill: '+scope+' '+(scope==='lab'?'':String(id).slice(0,64)),
+   reason:'HUD action refill: '+scope+' '+(scope==='lab'||scope==='garden'?'':String(id).slice(0,64)),
    type:'spent'};
   target[field]+=quantity;
   s.longplay.credits-=quantity;
