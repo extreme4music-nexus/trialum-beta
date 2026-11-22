@@ -12,8 +12,9 @@ const map=()=>Object.create(null);
 function context(p){
  const m=C.ensure(p);
  if(!m.contextual)m.contextual={days:map(),months:map(),years:map(),
-  legacyImported:false,lastCompactedAt:0};
+  legacyImported:false,lastCompactedAt:0,nativeStreams:map()};
  const x=m.contextual;
+ x.nativeStreams??=map();
  for(const k of ['days','months','years'])if(!x[k]||typeof x[k]!=='object'||Array.isArray(x[k]))throw Error('invalid contextual archive');
  return x;
 }
@@ -48,6 +49,68 @@ function remember(p,{day,place,topics=[],companions=[],moments=1}={}){
  const x=context(p);
  add(x.days,day+'|'+place,{moments,topics:t,companions:names});
  return true;
+}
+// Native background streams can outlive the WebView. Count cumulative native
+// monthly/yearly archives exactly once by carrying per-stream semantic watermarks.
+function nativeStream(p,id){
+ if(typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id))throw Error('invalid native stream');
+ const x=context(p);
+ return Object.hasOwn(x.nativeStreams,id)?x.nativeStreams[id]:
+  (x.nativeStreams[id]={months:map(),years:map(),seeded:false});
+}
+function accountNativeDay(p,id,day,moments){
+ if(!validDay(day)||!Number.isSafeInteger(moments)||moments<0)throw Error('invalid native day');
+ const n=nativeStream(p,id);
+ const month=day.slice(0,7),year=day.slice(0,4);
+ n.months[month]=(n.months[month]||0)+moments;
+ n.years[year]=(n.years[year]||0)+moments;
+}
+function seedNativeSeen(p,id,seen){
+ const n=nativeStream(p,id);
+ if(n.seeded)return;
+ for(const [day,value] of Object.entries(seen&&typeof seen==='object'?seen:{})){
+  const count=Number(value);
+  if(validDay(day)&&Number.isSafeInteger(count)&&count>=0)accountNativeDay(p,id,day,count);
+ }
+ n.seeded=true;
+}
+function validateNativePeriods(packet){
+ for(const [field,period] of [['months','month'],['years','year']]){
+  const items=packet?.[field];
+  if(items===undefined)continue;
+  if(!Array.isArray(items)||items.length>(field==='months'?36:500))return false;
+  for(const value of items){
+   const key=value?.[period],count=value?.moments;
+   if(typeof key!=='string'||!(period==='year'?/^\d{4}$/.test(key):
+      /^\d{4}-(0[1-9]|1[0-2])$/.test(key))||
+      !Number.isSafeInteger(count)||count<0||count>1000000000||
+      (value.place!==undefined&&value.place!=='shared')||
+      (value.topics!==undefined&&!Array.isArray(value.topics))||
+      (value.companions!==undefined&&!Array.isArray(value.companions)))return false;
+  }
+ }
+ return true;
+}
+function ingestNativePeriods(p,packet){
+ if(!validateNativePeriods(packet))throw Error('invalid native summaries');
+ const n=nativeStream(p,packet.streamId),x=context(p);
+ let changed=false;
+ for(const entry of packet.months||[]){
+  const key=entry.month,seen=n.months[key]||0,delta=Math.max(0,entry.moments-seen);
+  if(delta){
+   add(x.months,key+'|shared',{moments:delta,topics:safeTopics(entry.topics),companions:safeNames(entry.companions)});
+   n.months[key]=seen+delta;
+   const year=key.slice(0,4);n.years[year]=(n.years[year]||0)+delta;changed=true;
+  }
+ }
+ for(const entry of packet.years||[]){
+  const key=entry.year,seen=n.years[key]||0,delta=Math.max(0,entry.moments-seen);
+  if(delta){
+   add(x.years,key+'|shared',{moments:delta,topics:safeTopics(entry.topics),companions:safeNames(entry.companions)});
+   n.years[key]=seen+delta;changed=true;
+  }
+ }
+ return changed;
 }
 function migrateLegacy(p){
  if(!p||typeof p.id!=='string'||!p.id)return false;
@@ -151,7 +214,8 @@ function clear(p){
  x.days=map();x.months=map();x.years=map();x.legacyImported=true;
  x.lastCompactedAt=0;
 }
-const api={context,remember,migrateLegacy,consolidate,recall,clear};
+const api={context,remember,migrateLegacy,consolidate,recall,clear,
+ nativeStream,accountNativeDay,seedNativeSeen,validateNativePeriods,ingestNativePeriods};
 root.TrialumCognitiveContext=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
