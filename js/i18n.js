@@ -1,4 +1,4 @@
-/* TRIALUM 1.5 — lightweight offline, extendable UI locale catalogs.
+/* TRIALUM 1.4 v44 — lightweight offline, extendable UI locale catalogs.
    Gameplay state stays language-neutral. Player names and journal history untouched. */
 (function(root){
 'use strict';
