@@ -7,7 +7,7 @@ const eventCache=new WeakMap();
 function emptyMemory(p){
  return {version:VERSION,schemaVersion:VERSION,petId:p.id,birthDay:Number.isFinite(p.birthDay)?p.birthDay:null,
   self:{last:dict(),days:dict(),counts:dict()},owner:{topics:dict()},social:{peers:dict()},
-  associations:dict(),eventLedger:[],eventSerial:0,
+  associations:dict(),eventLedger:[],eventSerial:0,archivedReceipts:dict(),
   migrationMetadata:{origin:'created',historicalEventsReconstructed:false}};
 }
 function ensure(p){
@@ -20,6 +20,7 @@ function ensure(p){
   m.version=VERSION;m.schemaVersion=VERSION;m.eventLedger=[];m.eventSerial=0;
   m.migrationMetadata={origin:'v1',historicalEventsReconstructed:false};
  }
+ if(!m.archivedReceipts)m.archivedReceipts=dict();
  if(m.version!==VERSION||m.schemaVersion!==VERSION||!Array.isArray(m.eventLedger)||
     !Number.isSafeInteger(m.eventSerial)||m.eventSerial<0)throw Error('unsupported cognitive schema');
  if(!m.self||typeof m.self!=='object'||!m.self.last||!m.self.days||!m.self.counts||
@@ -42,6 +43,28 @@ function eventIds(m){
  eventCache.set(m,ids);
  return ids;
 }
+// A small non-cryptographic checksum for local replay receipts, not for authentication.
+function receipt(event){
+ const s=JSON.stringify([event.kind,event.source,event.at,event.day,event.food,
+  event.quantity,event.level,event.location]);
+ let a=2166136261,b=2246822519;
+ for(let i=0;i<s.length;i++){const n=s.charCodeAt(i);a=Math.imul(a^n,16777619);b=Math.imul(b^n,2246822519);}
+ return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');
+}
+function archiveOld(p,beforeAt){
+ if(!Number.isFinite(beforeAt))throw Error('invalid archive cutoff');
+ const m=ensure(p),keep=[];
+ let dropped=0;
+ for(const event of m.eventLedger){
+  // Birth and finite evolutionary milestones remain exact for the pet's entire life.
+  if(event.at>=beforeAt||event.kind==='birth'||event.kind==='evolution'){keep.push(event);continue;}
+  if(Object.hasOwn(m.archivedReceipts,event.eventId))throw Error('duplicate archival receipt');
+  m.archivedReceipts[event.eventId]=receipt(event);
+  dropped++;
+ }
+ if(dropped){m.eventLedger=keep;eventCache.set(m,new Set(keep.map(e=>e.eventId)));}
+ return dropped;
+}
 function ingest(p,input){
  if(!input||typeof input!=='object'||!kinds.has(input.kind))throw Error('invalid cognitive event');
  const at=input.at===undefined?Date.now():input.at;
@@ -61,6 +84,11 @@ function ingest(p,input){
  if(supplied!==undefined&&(typeof supplied!=='string'||!/^[A-Za-z0-9:_./-]{1,160}$/.test(supplied)||
     ['__proto__','constructor','prototype'].includes(supplied)))throw Error('invalid cognitive event id');
  const m=ensure(p),ids=eventIds(m);
+ if(supplied&&Object.hasOwn(m.archivedReceipts,supplied)){
+  const candidate={kind:input.kind,source,at,day,food,quantity,level,location};
+  if(m.archivedReceipts[supplied]!==receipt(candidate))throw Error('cognitive event id collision');
+  return {event:null,inserted:false,duplicate:true,archived:true};
+ }
  if(supplied&&ids.has(supplied)){
   const prior=m.eventLedger.find(e=>e.eventId===supplied);
   if(prior.kind!==input.kind||prior.at!==at||prior.day!==day||prior.source!==source||
@@ -111,5 +139,5 @@ function observe(p,type,id,label,at=Date.now()){if(!['self','location','peer','t
 function connect(p,from,to,relation,at=Date.now()){const g=graph(p);if(!Object.hasOwn(g.nodes,from)||!Object.hasOwn(g.nodes,to)||!Number.isFinite(at))throw Error('invalid graph edge');const key=JSON.stringify([from,relation,to]);const e=Object.hasOwn(g.edges,key)?g.edges[key]:{from,to,relation,count:0,firstAt:at,lastAt:at};e.count++;e.firstAt=Math.min(e.firstAt,at);e.lastAt=Math.max(e.lastAt,at);g.edges[key]=e;}
 function observeExperience(p,type,id,label,relation,at){const self=observe(p,'self',p.id,p.name,at),node=observe(p,type,id,label,at);connect(p,self,node,relation,at);return node;}
 function cognitiveMap(p,{privateScope=false}={}){const g=graph(p),nodes=Object.entries(g.nodes).filter(([,n])=>privateScope||n.type!=='topic'),allowed=new Set(nodes.map(([k])=>k));return {nodes:nodes.map(([key,n])=>({key,...n})),edges:Object.values(g.edges).filter(e=>allowed.has(e.from)&&allowed.has(e.to)).map(e=>({...e}))};}
-const api={graph,observe,connect,cognitiveMap,recall,VERSION,ensure,ensureWorld,ingest,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+const api={graph,observe,connect,cognitiveMap,recall,VERSION,ensure,ensureWorld,ingest,archiveOld,record,topic,encounter,awareness,themes,summarize,socialMoment,suggestion,worldMap,associate,visit};root.TrialumCognitiveMemory=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
