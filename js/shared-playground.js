@@ -530,6 +530,13 @@ function render(world){
    '<canvas id="sharedScene" width="1000" height="520" '+
    (room.role==='owner'&&shopEnabled?'tabindex="0" role="button" aria-label="'+t('Select a toy on the scene','Избери справа на сцената')+'"':
      'role="img" aria-label="Shared playground with pets and toys"')+'></canvas>'+
+   (room.role==='owner'&&shopEnabled&&selectedToy&&(snap.toys||[]).includes(selectedToy)?
+      '<div class="shared-toy-popup" role="group" data-no-translate>'+
+       '<b>'+escape(Shop().localName(selectedToy,root.TrialumI18n?.language?.()))+'</b>'+
+       '<button data-do="shToyRemove" data-toy="'+escape(selectedToy)+'">↩ '+
+        t('Put in storage','Врати во складиште')+'</button>'+
+       '<button data-do="shShopToggle" aria-label="'+t('Close toy actions','Затвори управување')+'">✕</button>'+
+      '</div>':'')+
    '<p class="small subtle" id="sharedAutoTalk" aria-live="polite">🐾 Присутните миленичиња сами истражуваат и разменуваат кратки разговори.</p></div>'+
    (root.TrialumSharedStoreUI?.render?.(snap,{owner:room.role==='owner',enabled:shopEnabled,
      catalog:serverCatalog,open:storeOpen,selectedToy})||'');
