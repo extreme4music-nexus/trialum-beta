@@ -12,7 +12,7 @@ const backgroundCalls=[];
 // Locale is explicit: server Macedonian captions are shown only for mk.
 let uiLanguage='mk';
 globalThis.TrialumI18n={language:()=>uiLanguage,t:text=>text};
-const state={active:true,online:true,aiRelayEnabled:true,speechTranslationEnabled:false,
+const state={active:true,online:true,aiRelayEnabled:true,speechReady:true,speechTranslationEnabled:false,
  speechTranslationLanguages:['mk','sq','en'],selected:ROOM,
  snapshot:{presenceEnabled:true,room:{id:ROOM},
  occupants:[{pet:{id:pet.id,name:pet.name}},{pet:{id:'other',name:'Другар'}}]},
