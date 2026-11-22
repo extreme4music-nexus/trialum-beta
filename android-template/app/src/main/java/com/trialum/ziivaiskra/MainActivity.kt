@@ -106,7 +106,8 @@ private fun nativeText(macedonian: String, english: String): String =
     private var pendingBackupName: String = "TRIALUM-world.json"
     private var pendingBackupEncrypted: Boolean = false
     private var pendingSecureArchiveId: String? = null
-    private val maxBackupBytes = 20 * 1024 * 1024
+    private val maxBackupBytes = 20 * 1024 * 1024 // Plain world/rescue backups.
+    private val maxSecureArchiveBytes = 96 * 1024 * 1024
 
     private fun backupNotice(ok: Boolean, message: String, code: String = if (ok) "saved" else "error") {
         if (isFinishing || isDestroyed) return
@@ -132,12 +133,21 @@ private fun nativeText(macedonian: String, english: String): String =
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(32 * 1024)
             var length = 0
+            var secureArchive = false
             while (true) {
                 val count = source.read(buffer)
                 if (count < 0) break
                 length += count
-                if (length > maxBackupBytes) error(nativeText("Бекапот е поголем од 20 MB.", "The backup file exceeds 20 MB."))
+                if (length > maxSecureArchiveBytes)
+                    error(nativeText("Шифрираната архива е поголема од 96 MB.", "Encrypted archive exceeds 96 MB."))
                 output.write(buffer, 0, count)
+                if (length <= 32768) {
+                    val prefix = String(output.toByteArray(), Charsets.UTF_8).take(1024)
+                    secureArchive = secureArchive ||
+                        Regex("\\"format\\"\\s*:\\s*\\"trialum-encrypted-archive\\"").containsMatchIn(prefix)
+                }
+                if (!secureArchive && length > maxBackupBytes)
+                    error(nativeText("Обичниот бекап е поголем од 20 MB.", "Plain backup exceeds 20 MB."))
             }
             return String(output.toByteArray(), Charsets.UTF_8).removePrefix("\uFEFF")
         }
@@ -714,8 +724,8 @@ private fun nativeText(macedonian: String, english: String): String =
         /** Exports ciphertext without copying plaintext private history into rescue files. */
         @JavascriptInterface fun saveEncryptedBackup(json: String, fileName: String) {
             val bytes = json.toByteArray(Charsets.UTF_8)
-            if (bytes.size > maxBackupBytes || bytes.size < 100) {
-                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+            if (bytes.size > maxSecureArchiveBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 96 MB.", "tooLarge") }
                 return
             }
             backupWorker.execute {
@@ -752,8 +762,8 @@ private fun nativeText(macedonian: String, english: String): String =
         /** Opens Android's document picker; the player can select Google Drive or another provider. */
         @JavascriptInterface fun saveEncryptedBackupToProvider(json: String, fileName: String) {
             val bytes = json.toByteArray(Charsets.UTF_8)
-            if (bytes.size > maxBackupBytes || bytes.size < 100) {
-                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 20 MB.", "tooLarge") }
+            if (bytes.size > maxSecureArchiveBytes || bytes.size < 100) {
+                runOnUiThread { backupNotice(false, "Шифрираната архива е празна или е поголема од 96 MB.", "tooLarge") }
                 return
             }
             backupWorker.execute {
