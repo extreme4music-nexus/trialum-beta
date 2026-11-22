@@ -314,4 +314,17 @@ val syncWebAssets by tasks.registering(Copy::class) {
     }
     into(layout.projectDirectory.dir("src/main/assets/web"))
 }
-tasks.named("preBuild") { dependsOn(syncWebAssets) }
+// License notices are a mandatory OFFLINE asset in every APK/AAB variant,
+// not an optional report generated only by a historical release workflow.
+// The inventory is generated from the same resolved runtime dependency graph
+// used by the internal beta. No licenses are fetched at runtime.
+val bundleOfflineLicenseNotices by tasks.registering(Copy::class) {
+    dependsOn("generateLicenseReport")
+    from(rootDir.parentFile.resolve("docs/licenses/MODEL-LICENSES.md"))
+    from(rootDir.parentFile.resolve("docs/licenses/THIRD-PARTY-NOTICES.txt"))
+    from(layout.buildDirectory.file("reports/licenses/licenses.json")) {
+        rename { "ANDROID-DEPENDENCY-LICENSES.json" }
+    }
+    into(layout.projectDirectory.dir("src/main/assets/licenses"))
+}
+tasks.named("preBuild") { dependsOn(syncWebAssets, bundleOfflineLicenseNotices) }
