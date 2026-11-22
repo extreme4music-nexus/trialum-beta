@@ -583,43 +583,17 @@ private fun nativeText(macedonian: String, english: String): String =
         @JavascriptInterface fun clearBackgroundAiMemories(petId: String) {
             BackgroundPetMemory.clear(applicationContext, petId)
         }
+        // V44 beta resource policy: background model inference is OFF.
+        // The engine continues simulating pets after the UI leaves the foreground.
         @JavascriptInterface fun setPlaygroundBackgroundAi(
             enabled: Boolean, roomId: String, petId: String,
             sessionId: String, petName: String
         ): Boolean {
-            if (!enabled) {
-                runOnUiThread {
-                    startService(Intent(this@MainActivity, TrialumBackgroundSpeechService::class.java)
-                        .setAction(TrialumBackgroundSpeechService.STOP))
-                }
-                return true
+            if (TrialumBackgroundSpeechService.running) runOnUiThread {
+                startService(Intent(this@MainActivity, TrialumBackgroundSpeechService::class.java)
+                    .setAction(TrialumBackgroundSpeechService.STOP))
             }
-            val uuid = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
-            if (!foregroundStarted || modelRuntime.status() != "installed" ||
-                !uuid.matches(roomId) || !uuid.matches(sessionId) ||
-                !petId.matches(Regex("^[A-Za-z0-9_-]{1,64}$")) ||
-                petName.length !in 1..48 || !SocialCredentialVault.read(this@MainActivity)
-                    .matches(Regex("^[A-Za-z0-9_-]{43}$"))) return false
-            if (Build.VERSION.SDK_INT >= 33 &&
-                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                    android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                runOnUiThread {
-                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 58012)
-                }
-                return false // User must explicitly enable again after granting.
-            }
-            runOnUiThread {
-                try {
-                    val intent = Intent(this@MainActivity, TrialumBackgroundSpeechService::class.java)
-                        .setAction(TrialumBackgroundSpeechService.START)
-                        .putExtra("roomId", roomId).putExtra("petId", petId)
-                        .putExtra("sessionId", sessionId).putExtra("petName", petName)
-                    startForegroundService(intent)
-                } catch (_: Exception) {
-                    // Status remains false; user may retry while app is visible.
-                }
-            }
-            return true
+            return !enabled // Disabling succeeds; enabling never arms background AI in beta.
         }
         @JavascriptInterface fun modelStatus(): String = modelRuntime.status()
         @JavascriptInterface fun modelGenerationBusy(): Boolean = modelRuntime.isGenerating()
@@ -1005,7 +979,7 @@ private fun nativeText(macedonian: String, english: String): String =
         foregroundStarted = true
         if (TrialumBackgroundSpeechService.running) {
             startService(Intent(this, TrialumBackgroundSpeechService::class.java)
-                .setAction(TrialumBackgroundSpeechService.PAUSE))
+                .setAction(TrialumBackgroundSpeechService.STOP))
         }
         TrialumPush.syncRevocation(applicationContext)
         if (::modelRuntime.isInitialized) modelRuntime.onVisible()
@@ -1014,8 +988,9 @@ private fun nativeText(macedonian: String, english: String): String =
         foregroundStarted = false
         if (::petVoice.isInitialized) petVoice.stop()
         if (TrialumBackgroundSpeechService.running) {
+            // No independent GGUF inference may continue when the game is closed/hidden.
             startService(Intent(this, TrialumBackgroundSpeechService::class.java)
-                .setAction(TrialumBackgroundSpeechService.RESUME))
+                .setAction(TrialumBackgroundSpeechService.STOP))
         }
         if (::nearby.isInitialized) nearby.stop()
         if (::modelRuntime.isInitialized) modelRuntime.onHidden()
