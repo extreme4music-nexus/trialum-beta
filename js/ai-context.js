@@ -27,8 +27,8 @@ function assemble(p,world,prompt,opts={}){
   joy:Number.isFinite(p.joy)?p.joy:null,
   energy:Number.isFinite(p.energy)?p.energy:null,
   clean:Number.isFinite(p.clean)?p.clean:null,
-  bond:Number.isFinite(p.bond)?p.bond:null,
-  habitatId:safe(p.habitatId,60),
+  bond:priv&&Number.isFinite(p.bond)?p.bond:null,
+  habitatId:priv?safe(p.habitatId,60):null,
   lastMeal:priv&&self.lastMeal?{day:self.lastMeal.day,food:safe(self.lastMeal.food,30),
    quantity:self.lastMeal.quantity}:null
  };
@@ -82,7 +82,7 @@ function assemble(p,world,prompt,opts={}){
  for(const item of root.TrialumGameKnowledge?.search?.(prompt,{limit:4})||[]){
   add(result.knowledge,{id:item.id,name:item.name,description:item.description});
  }
- for(const peer of retrieved?.peers||[]){
+ for(const peer of priv?(retrieved?.peers||[]):[]){
   add(result.cognitive.peers,{id:safe(peer.id,60),name:safe(peer.name,36),lastAt:peer.lastAt});
  }
  if(priv)for(const entry of retrieved?.locations||[])add(result.cognitive.locations,entry);
