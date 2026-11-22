@@ -21,6 +21,10 @@ function catalog(){
  for(const bi of e.BIOMES||[])if(bi?.id)add('biome',bi.id,bi.name,'Живеалиште / biome');
  for(const food of e.foodRecipes||[])if(food?.id)add('food',food.id,food.name,food.desc||food.description||'',{lab:food.tier||0});
  for(const t of e.researchFields||[])if(t?.id)add('research',t.id,t.name,'Лабораториска дисциплина / research');
+ for(const t of e.researchTiers||[])if(t?.level)add('lab',t.level,t.name,'Лабораториско ниво / laboratory level',{level:t.level});
+ for(const m of e.longplayMaterials||[])if(m?.id)add('material',m.id,m.name,m.description||'Ресурс за истражување и градба',{lab:m.lab||0});
+ for(const zone of root.TrialumWarehouseInventory?.ZONES||[])
+  add('inventory',zone,zone,'Локација на единствената залиха за храна / canonical stock allocation');
  for(const t of e.longplayTech||[])if(t?.id)add('technology',t.id,t.name,t.description||'Лабораториска технологија');
  for(const t of root.TrialumPlayground?.TOYS||[])if(t?.id)add('toy',t.id,t.name,t.desc||'',{lab:t.lab||0});
  for(const t of e.longplayLineages||[])if(t?.id!==undefined)add('lineage',t.id,e.SPECIES?.[t.id]?.name||String(t.id),t.description||'',{lab:t.lab||0});
@@ -28,6 +32,17 @@ function catalog(){
   'Секое милениче памети независно од AI. Постарите контекстуални сеќавања се консолидираат.');
  add('rule','ai_unlock','AI разговор / AI communication',
   'AI разговорот се отклучува преку развој и лабораторија и бара согласност и достапен локален модел.');
+ add('rule','food_inventory','Исхрана и склад / food inventory',
+  'Рецептите се произведуваат во лабораторија и потоа се распределуваат во склад или лични порции без дуплирање.');
+ add('rule','garden','Градина и растенија / garden',
+  'Растенијата се одгледуваат во живеалишта; растот и условите зависат од биосветот.');
+ add('rule','economy','Игровни кредити / game credits',
+  'Кредитите и ресурсите се освојуваат во играта; купување со вистински пари не е активирано.');
+ add('rule','playground','Игри во игротека / playground games',
+  'Играчките се отклучуваат со ниво и лабораторија; AI не е неопходен за игра.');
+ for(const tab of ['lab','research','habitats','plants','food','dna','pets',
+  'playground','friends','notifications','settings'])
+  add('navigation',tab,tab,'Екран во интерфејсот на играта / navigation tab');
  return out;
 }
 function search(prompt,{limit=4}={}){
@@ -56,7 +71,7 @@ function coverage(){
  const e=E()||{},items=catalog();
  const count=t=>items.filter(x=>x.type===t).length;
  return {version:VERSION,species:count('species'),plants:count('plant'),biomes:count('biome'),
-  phases:count('phase'),foods:count('food'),toys:count('toy'),
+  phases:count('phase'),foods:count('food'),toys:count('toy'),laboratories:count('lab'),materials:count('material'),
   expected:{species:(e.SPECIES||[]).filter(Boolean).length,plants:(e.PLANTS||[]).filter(Boolean).length,
    biomes:(e.BIOMES||[]).filter(Boolean).length,phases:(e.PHASES||[]).length}};
 }
