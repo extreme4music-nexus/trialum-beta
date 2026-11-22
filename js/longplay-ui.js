@@ -337,7 +337,8 @@ root.TrialumExpansion={
     const modelState=root.TrialumAndroid?.modelStatus?.();
     if(modelState==='generating'){ctx.toast('Малиот LLM веќе создава одговор. Почекај пред разговор со следното милениче.');return;}
     if(modelState!=='installed'){ctx.toast('Прво преземи или доврши го локалниот мини модел.');return;}
-   if(!prompt){ctx.toast('Внеси порака.');return;}
+   if(!prompt){ctx.toast('Enter a message.');return;}
+  if(!root.TrialumPetChat?.validEnglish?.(prompt)){ctx.toast('English-only chat in Trialum 1.4 v44. Direct translation is planned for a later version.');return;}
    if(root.TrialumLocalChat?.busy?.()){ctx.toast('Локалниот AI веќе размислува. Пробај по одговорот.');return;}
    let context;
    try{
