@@ -127,7 +127,7 @@ function recordRows(obj,period){
   .map(([key,v])=>({day:key.slice(0,precision),period,place:key.slice(precision+1),
    with:safeNames(v.companions),themes:safeTopics(v.topics),moments:v.moments||0}));
 }
-function recall(p,question='',now=Date.now()){
+function recall(p,question='',now=Date.now(),{publicScope=false}={}){
  migrateLegacy(p);
  const x=context(p),ask=String(question||'').slice(0,360);
  const yesterday=/вчера|вчераш|yesterday/i.test(ask),today=/денес|today/i.test(ask);
@@ -138,6 +138,7 @@ function recall(p,question='',now=Date.now()){
  const when=new Date(now),targetYear=explicitYear||(previous?String(when.getFullYear()-1):
   yearsAgo?String(when.getFullYear()-Number(yearsAgo[1]||yearsAgo[2])):null);
  const rows=[...recordRows(x.days,'day'),...recordRows(x.months,'month'),...recordRows(x.years,'year')]
+  .filter(row=>!publicScope||row.place==='shared')
   .sort((a,b)=>b.day.localeCompare(a.day));
  const target=day?rows.filter(x=>x.day===day):
   targetYear?rows.filter(x=>x.day.startsWith(targetYear)):rows.slice(0,3);
