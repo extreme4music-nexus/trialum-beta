@@ -55,6 +55,7 @@ jobs:
           node --check tests/v44-shared-community-store.test.cjs
           node --check tests/v44-friends-age-signals.test.cjs
           node --check tests/v44-version-and-licenses.test.cjs
+          node --check tests/v44-social-account-recovery.test.cjs
           node --check tests/v44-phone-ai-animation-locale.test.cjs
       - name: New engine and UI action purchase regressions
         run: |
@@ -70,6 +71,7 @@ jobs:
           node --test tests/v44-phone-ai-animation-locale.test.cjs
           node --test tests/v44-friends-age-signals.test.cjs tests/social-ui.test.cjs
           node --test tests/v44-version-and-licenses.test.cjs
+          node --test tests/v44-social-account-recovery.test.cjs
           # The two historical FCM tests depend on absent server and signing-workflow
           # files in this client-only branch. Run only actual social/message client
           # regressions impacted here, not unrelated unavailable server assertions.
