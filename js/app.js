@@ -343,7 +343,7 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
  if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
- if(['socialRegister','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
+ if(['socialRegister','socialRestoreStart','socialRecoveryIssue','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
  if(['shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialProfileActive?.()){chooseTab('friends');toast('🔒 Пораките и заедничката игротека бараат активен социјален профил.');return;}
  if(action==='socialConsentAccept'){if(!el('socialConsentCheck')?.checked){toast('Прво означи дека ги разбираш условите.');return;}Social?.setSocialConsent?.(true).then(ok=>{if(ok){renderTab();if(Social?.isAdultAllowed?.())toast('Социјалната согласност е вклучена на овој уред.');}});return;}
  if(action==='socialConsentLater'){chooseTab('lab');toast('Социјалните услуги остануваат исклучени. Офлајн играта е достапна.');return;}
@@ -466,7 +466,20 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
  }
  case 'socialRegister':{
   const nickname=el('socialNick')?.value.trim()||s.profileName||'Чувар на искра';
-  Social?.register(nickname).then(v=>{if(v)toast('Профилот е создаден. Зачувај го единственото ID од страницата Пријатели.');});
+  Social?.register(nickname).then(v=>{if(v)toast('🔐 Профилот е создаден. Зачувај го ID-то и recovery-клучот од заштитениот прозорец!');});
+  return;
+ }
+ case 'socialRestoreStart':{
+  const id=String(el('socialRestoreId')?.value||'').trim();
+  const secret=String(el('socialRestoreSecret')?.value||'').trim();
+  if(el('socialRestoreSecret'))el('socialRestoreSecret').value='';
+  Social?.startRecovery?.(id,secret);
+  return;
+ }
+ case 'socialRecoveryIssue':{
+  Social?.issueRecoveryKit?.().then(ok=>{
+   if(ok)toast('🔐 Зачувај го новиот recovery-клуч од заштитениот прозорец.');
+  });
   return;
  }
  case 'socialInvite':{
