@@ -380,11 +380,16 @@ function onPeerSpeech(message){
  const state=root.TrialumShared?.getState?.();
  if(!state?.online||!state.aiRelayEnabled||message.roomId!==state.selected)return false;
  if(!(state.snapshot?.occupants||[]).some(x=>x.pet?.id===message.petId))return false;
- // The model consumes English ONLY after the server attests translation.
- if(state.speechTranslationEnabled&&message.translated!==true)return false;
- const displayText=sanitize(root.TrialumI18n?.language?.()==='mk'?message.text:(message.englishText||message.text));if(!displayText)return false;
- const modelText=state.speechTranslationEnabled?sanitize(message.englishText):displayText;
+ // All models hear canonical English; Macedonian is display-only.
+ // Reject a foreign-language source unless the server supplies English.
+ const uiMk=root.TrialumI18n?.language?.()==='mk';
+ const modelText=sanitize(message.englishText||
+  (message.language==='en'?message.text:''));
  if(!modelText)return false;
+ if(uiMk&&state.speechTranslationEnabled&&message.translated!==true)return false;
+ const displayText=sanitize(uiMk&&message.translated===true&&
+  message.language==='mk'?message.text:modelText);
+ if(!displayText)return false;
  const speaker=String(message.speaker||'Милениче').slice(0,32);
  const accepted=Sessions()?.receive('shared',state.selected,{
   id:message.turnId,petId:message.petId,speaker,text:modelText,
