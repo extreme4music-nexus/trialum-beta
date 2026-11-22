@@ -4,8 +4,7 @@
 (function(root){
 'use strict';
 const native=()=>root.TrialumAndroid||null;
-const betaBuild=()=>native()?.betaTesterToolsEnabled?.()===true;
-const qaAgeBypass=()=>betaBuild()&&native()?.qaSocialAgeBypass?.()===true;
+// Age eligibility is a separate native Google Play gate, never a beta-tester flag.
 const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const CODE=/^[A-Za-z0-9_-]{43}$/;
 const state={enabled:false,online:false,ready:false,busy:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false};
@@ -41,7 +40,7 @@ function setError(e){
 }
 async function request(path,method='GET',body=null,key=credential){
   if(!state.socialConsented)throw Error('social_consent_required');
-  if(!state.ageAllowed||!betaBuild())throw Error('age_gate_required');
+  if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true)throw Error('age_gate_required');
   if(!state.server)throw Error('social_service_disabled');
   const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),7000);
   try{
@@ -57,7 +56,7 @@ async function request(path,method='GET',body=null,key=credential){
 async function run(fn){
   if(state.busy)return null;
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return null;}
-  if(!state.ageAllowed||!betaBuild()){state.error='Социјалните функции се заклучени за оваа верзија.';emit();return null;}
+  if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true){state.error='Социјалните функции бараат потврден Google Play 18+ сигнал и согласност.';emit();return null;}
   state.busy=true;state.error='';emit();
   try{return await fn();}catch(e){setError(e);return null;}
   finally{state.busy=false;emit();}
@@ -66,8 +65,8 @@ async function init(){
   state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
-  state.ageAllowed=betaBuild()&&(qaAgeBypass()||native()?.ageSignalsAdultEligible?.()===true);
-  if(qaAgeBypass())state.ageStatus='qa_bypass';
+  state.ageAllowed=native()?.ageSignalsAdultEligible?.()===true;
+  state.ageStatus=state.ageAllowed?'adult_signal':'unchecked';
   if(!state.socialConsented){state.online=false;state.ready=false;emit();return;}
   if(!state.ageAllowed){state.online=false;emit();return;}
   credential=String(native()?.socialCredential?.()||'');
@@ -113,8 +112,6 @@ async function register(name){
 }
 function requestAgeCheck(){
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return false;}
-  if(!betaBuild()){state.ageStatus='unavailable';state.error='Социјалните функции се достапни само во одобреното интерно тестирање.';emit();return false;}
-  if(qaAgeBypass()){state.ageAllowed=true;state.ageStatus='qa_bypass';state.error='QA тест: проверката на возраст е привремено исклучена само во ова изолирано издание.';emit();return true;}
   if(!native()?.requestAgeSignals){state.ageStatus='unavailable';state.error='За безбедна потврда е потребна официјалната Android апликација од Google Play.';emit();return false;}
   state.ageAllowed=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];
   root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
@@ -122,7 +119,7 @@ function requestAgeCheck(){
 }
 function setAgeSignal(result){
   if(!state.socialConsented){state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;emit();return;}
-  const eligible=betaBuild()&&(qaAgeBypass()||(result?.status==='adult_signal'&&result?.adultEligible===true));
+  const eligible=result?.status==='adult_signal'&&result?.adultEligible===true&&native()?.ageSignalsAdultEligible?.()===true;
   state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
   if(!eligible){state.online=false;state.ready=false;state.identity=null;state.friends=[];root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.';emit();return;}
   state.error='';emit();return init();
@@ -265,7 +262,7 @@ async function setSocialConsent(enabled){
   if(root.TrialumLegal?.revokeSocialConsent?.()!==true)return false;state.socialConsented=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];state.code='';state.preview=null;
   root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();emit();return true;
 }
-root.TrialumSocial={init,refresh,register,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,isAdultAllowed:()=>state.ageAllowed,isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&betaBuild(),isSocialProfileActive:()=>state.ageAllowed&&state.socialConsented&&betaBuild()&&state.ready&&!!state.identity,
+root.TrialumSocial={init,refresh,register,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,isAdultAllowed:()=>state.ageAllowed,isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&native()?.ageSignalsAdultEligible?.()===true,isSocialProfileActive:()=>state.ageAllowed&&state.socialConsented&&native()?.ageSignalsAdultEligible?.()===true&&state.ready&&!!state.identity,
  setPending(value){state.pending=parseCode(value);state.preview=null;emit();},clearPreview(){state.preview=null;state.pending='';emit();},
  onChange(fn){changed=fn},getState(){return {...state,friends:state.friends.slice()}}};
 if(typeof module==='object'&&module.exports)module.exports={parseCode,inviteMessage};
