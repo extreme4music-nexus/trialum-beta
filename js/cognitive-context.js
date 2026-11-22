@@ -63,14 +63,14 @@ function migrateLegacy(p){
  return items.length>0;
 }
 function cutoff(now,days){const d=new Date(now);d.setHours(12,0,0,0);d.setDate(d.getDate()-days);return dayKey(d.getTime());}
-function mergeBucket(to,from,key){
- const v=from[key];add(to,key,{moments:v.moments||0,topics:safeTopics(v.topics),companions:safeNames(v.companions)});
+function mergeBucket(to,from,sourceKey,targetKey){
+ const v=from[sourceKey];add(to,targetKey,{moments:v.moments||0,topics:safeTopics(v.topics),companions:safeNames(v.companions)});
 }
 function rollDays(store,limit,periods){
  for(const key of Object.keys(store)){
   const day=key.slice(0,10),place=key.slice(11);
   if(day>=limit||!['local','shared'].includes(place))continue;
-  mergeBucket(periods,store,key.replace(/^\d{4}-\d{2}-\d{2}/,day.slice(0,7)));
+  mergeBucket(periods,store,key,day.slice(0,7)+'|'+place);
   delete store[key];
  }
 }
@@ -78,7 +78,7 @@ function rollMonths(store,limit,years){
  for(const key of Object.keys(store)){
   const month=key.slice(0,7),place=key.slice(8);
   if(month>=limit||!['local','shared'].includes(place))continue;
-  mergeBucket(years,store,month.slice(0,4)+'|'+place);
+  mergeBucket(years,store,key,month.slice(0,4)+'|'+place);
   delete store[key];
  }
 }
