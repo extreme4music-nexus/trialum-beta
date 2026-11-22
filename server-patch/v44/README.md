@@ -15,6 +15,13 @@ This folder is a **staged patch**, not a deployed backend. The original `Trialum
 - Any direct forged credit transfer, client-only placement, member-only unplace, unknown item, or currency conversion is rejected. The existing room membership and consent checks remain intact.
 - Existing `server/src/shared.mjs` source base inspected from `Trialum/main` at blob SHA `05ac9d3e7db32ea17347e3437d3e28f90c5317ba`; the complete modified source is staged in `src/shared.mjs` for peer review and controlled deployment. **Do not assume your current deployed server is still this exact version.**
 
+## New: recover existing social ID after reinstall (requires independent security review)
+- Following community shop migration `007`, apply `sql/008_social_account_recovery.sh` under a privileged role. Confirm account verifier table and least-privilege push token deletion grants.
+- Staged `src/social.mjs`, `src/account-recovery.mjs`, `src/live.mjs` add pseudonymous same-ID recovery. Generated 256-bit one-time recovery code is shown only in Android protected UI, while keyed HMAC verifier is stored on server. New device user must save a fresh recovery code BEFORE rotating the old secret/credential. Prior sessions/WSS are invalidated.
+- REQUIRED secret `SOCIAL_RECOVERY_PEPPER_B64`: generate 32 CSPRNG bytes outside source control, deploy via secure secret manager and back up. Never commit, print or replace this value casually.
+- Disposable PostgreSQL suite `tests/account-recovery.integration.mjs` verifies same UUID, preserved friends/room wallet, generic errors, old token revocation, kit reissue and permanent deletion. Real server and phone proof still required.
+- Full threat model/Play policy: `docs/V44-SOCIAL-RECOVERY-SECURITY-CODEX-HANDOFF-20261122.md` in the parent development repository. The ID plus random code is not independent MFA.
+
 ## Safe rollout order — not automatic
 1. Verify currently deployed server commit, schema, permissions, health and REST/WSS behavior. Acquire a consistent PostgreSQL backup and rehearse restore to a disposable database.
 2. Review the diff between the currently deployed `server/src/shared.mjs` and this staged file. Resolve newer server modifications; never blindly overwrite. Install modified server source through the owner-controlled backend deployment.
