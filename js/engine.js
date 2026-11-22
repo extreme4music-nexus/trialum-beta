@@ -37,7 +37,14 @@ function newGame(mode='real',timestamp=Date.now()){
  log(s,'Светот започна од неживи виртуелни елементи. Нема клетки, флора или миленици.','milestone');
  return s;
 }
-function dayFor(s,now=Date.now()){return s.mode==='demo'?s.demoDay:1+Math.max(0,Math.floor((now-s.createdAt)/DAY_MS));}
+function dayFor(s,now=Date.now()){
+ const natural=s.mode==='demo'?s.demoDay:1+Math.max(0,Math.floor((now-s.createdAt)/DAY_MS));
+ // Earned/paid skip-day passes advance simulated time, NOT the real-world clock.
+ // Missing/invalid legacy fields have zero offset; no old save is re-dated.
+ const offset=Number.isSafeInteger(s?.longplay?.paidDayOffset)&&s.longplay.paidDayOffset>=0
+  ?Math.min(36500,s.longplay.paidDayOffset):0;
+ return natural+offset;
+}
 function canPay(stock,cost){return Object.entries(cost).every(([k,v])=>(stock[k]||0)>=v);}
 function pay(stock,cost){if(!canPay(stock,cost))return false;for(const [k,v]of Object.entries(cost))stock[k]-=v;return true;}
 function currentPet(s){return s.pets.find(p=>p.id===s.selectedPet)||null;}
