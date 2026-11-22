@@ -33,6 +33,9 @@ jobs:
           node --check js/longplay-ui.js
           node --check js/playground-ai.js
           node --check js/shared-playground-art.js
+          node --check js/shared-shop.js
+          node --check js/shared-store-ui.js
+          node --check server-patch/v44/src/shared.mjs
           node --check js/shared-scene.js
           node --check js/social.js
           node --check js/messages.js
@@ -49,6 +52,7 @@ jobs:
           node --check tests/v44-locked-billing.test.cjs
           node --check tests/v44-ai-lifecycle.test.cjs
           node --check tests/v44-shared-visual.test.cjs
+          node --check tests/v44-shared-community-store.test.cjs
           node --check tests/v44-friends-age-signals.test.cjs
           node --check tests/v44-version-and-licenses.test.cjs
           node --check tests/v44-phone-ai-animation-locale.test.cjs
@@ -62,6 +66,7 @@ jobs:
           node tests/v44-locked-billing.test.cjs
           node tests/v44-ai-lifecycle.test.cjs
           node tests/v44-shared-visual.test.cjs
+          node --test tests/v44-shared-community-store.test.cjs
           node --test tests/v44-phone-ai-animation-locale.test.cjs
           node --test tests/v44-friends-age-signals.test.cjs tests/social-ui.test.cjs
           node --test tests/v44-version-and-licenses.test.cjs
