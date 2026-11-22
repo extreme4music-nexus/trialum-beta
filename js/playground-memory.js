@@ -96,7 +96,7 @@ function recall(p,question='',now=Date.now(),scope='private'){
  const ask=String(question||'').slice(0,360);
  const yesterday=/вчера|вчераш|yesterday/i.test(ask);
  const today=/денес|today/i.test(ask);
- const all=read(p,now),target=yesterday?yesterdayKey(now):today?dayKey(now):null;
+ const all=read(p,now).filter(item=>scope!=='public'||item.place==='shared'),target=yesterday?yesterdayKey(now):today?dayKey(now):null;
  const records=(target?all.filter(x=>x.day===target):all.slice(-3))
   .map(x=>({day:x.day,place:x.place,with:x.companions,
    themes:x.topics,moments:x.moments}));
