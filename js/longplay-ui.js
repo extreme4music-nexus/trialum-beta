@@ -184,6 +184,12 @@ function settings(s){
  b('🏝️ Биосвет +1 акција · 8','longBoost','data-boost="habitat"',s.longplay.credits<8)+
  b('🧬 Скратување на ран период · 20','longBoost','data-boost="phase"',s.longplay.credits<20||s.stage>=7)+'</div>'+
  '<p class="small subtle">Нема наплата, реклами ниту активна продавница.</p></div>'+
+ '<div class="settings-group future-credit-store" aria-label="Future credit packs - beta locked">'+
+ '<h3>🔒 '+(en?'Future credit packs (beta locked)':'Идни пакети кредити (заклучени во бета)')+'</h3>'+
+ '<p class="small subtle">'+(en?'Planned packages only. No payment service or credit grant is active. Prices are proposed USD prices and could vary in Google Play.':'Само планирани пакети. Нема активна наплата ниту доделување кредити. Цените се планирани во USD и може да се разликуваат на Google Play.')+'</p>'+
+ '<div class="future-credit-packs">'+(root.TrialumBillingCatalog?.list?.()||[]).map(item=>
+ '<div class="card future-credit-pack"><b>💠 '+fmt(item.credits)+' '+(en?'credits':'кредити')+'</b><strong>'+esc(item.displayPrice)+'</strong><button disabled aria-disabled="true" type="button">'+(en?'Unavailable in beta':'Недостапно во бета')+'</button></div>').join('')+'</div>'+
+ '<p class="small subtle">'+(en?'All credits currently used in the game are earned through gameplay.':'Сите кредити што сега се користат во играта се заработуваат преку играње.')+'</p></div>'+
  (beta?'<div class="settings-group debug-zone"><h3>🧭 '+(en?'Beta Tester Center':'Бета-тестерски центар')+'</h3>'+
  '<p class="small">'+(en?'These tools are included only in the Google Play internal-testing build. Google Play controls who can install it. Social features require a shared adult age signal; unknown, declined or managed-child profiles stay offline.':'Овие алатки се вклучени само во изданието за Google Play интерно тестирање. Google Play го контролира списокот кој може да го инсталира. Социјалните функции бараат споделен сигнал за полнолетност; непознат, одбиен или родителски управуван профил останува офлајн.')+'</p>'+
  '<div class="btn-line">'+b(en?'Export diagnostic report':'Извези краш/дијагностички извештај','exportCrashLog')+b(en?'Test local notification':'Пробај локално известување','betaNotify')+'</div>'+
