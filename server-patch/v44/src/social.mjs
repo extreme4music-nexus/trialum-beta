@@ -85,9 +85,11 @@ export async function socialRequest(req, res, pool, signal=()=>{}) {
       return true;
     }
     if (path === '/v1/social/status' && req.method==='GET') {
-      await pool.query('SELECT 1');
+      const present=await pool.query(
+        "SELECT to_regclass('public.social_account_recovery') AS table_name");
       json(res,200,{ready:true,mode:'private_beta',
-        accountRecoveryEnabled:recoveryReady(),recoveryVersion:1});return true;
+        accountRecoveryEnabled:recoveryReady()&&!!present.rows[0]?.table_name,
+        recoveryVersion:1});return true;
     }
     // Unauthenticated restore happens BEFORE bearer-token authentication.
     // Account ID alone is never sufficient. No one can change an ID.
