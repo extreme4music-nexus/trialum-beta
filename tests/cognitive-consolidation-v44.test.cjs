@@ -69,6 +69,7 @@ test('native background replay does not duplicate permanent semantic summaries',
  P.clear(restored);
  assert.equal(X.recall(restored,'2026',noon(2032,11,22)).found,false);
  assert.equal(P.recall(restored,'2026',noon(2032,11,22)).found,false);
+ assert.equal(Object.keys(X.context(restored).nativeStreams).length,0);
 });
 
 test('event payload compression retains milestones, lifetime counters and old replay protection',()=>{
@@ -129,4 +130,17 @@ test('native daily to monthly to yearly archival is replay-safe and remains life
  const malformed={...old,revision:5,months:[{month:'2026-00',moments:2}]};
  assert.equal(P.ingestBackground(copy,malformed,now),false);
  assert.equal(X.context(copy).years['2017|shared'].moments,20);
+});
+
+test('canonical thematic timeline never retains other players literal speech',()=>{
+ const p={id:'only-themes'};
+ const phrase='We played music and met on www.private.example SECRET_TOKEN_12345';
+ assert(P.remember(p,{place:'shared',companion:'Friend <script> / http://bad.example',
+  heard:phrase,said:'We sang music together',now:noon(2026,11,22)}));
+ const serialized=JSON.stringify(p.cognitiveMemory);
+ assert(!serialized.includes('SECRET_TOKEN_12345'));
+ assert(!serialized.includes('www.private.example'));
+ assert(!serialized.includes('We sang'));
+ assert(!serialized.includes('<script>'));
+ assert(X.recall(p,'music',noon(2026,11,22),{publicScope:true}).found);
 });
