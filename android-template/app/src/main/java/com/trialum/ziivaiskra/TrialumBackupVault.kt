@@ -28,7 +28,8 @@ import java.util.UUID
  */
 internal class TrialumBackupVault(private val context: Context) {
     private val root = File(context.noBackupFilesDir, "trialum-world-rescue-v2")
-    private val limit = 20 * 1024 * 1024
+    private val limit = 20 * 1024 * 1024 // Plain rescue worlds stay bounded.
+    private val secureLimit = 96 * 1024 * 1024 // Ciphertext V2 JSON envelope.
     private val keep = 16
     private val keepPinned = 4
     private val secureIdRule = Regex("^secure_[0-9_]+_[a-f0-9]{8}_[a-f0-9]{16}\\.json$")
@@ -54,13 +55,18 @@ internal class TrialumBackupVault(private val context: Context) {
     }
 
     private fun inspectEncrypted(bytes: ByteArray): JSONObject {
-        require(bytes.size in 100..limit) { "Encrypted archive is empty or exceeds 20 MB." }
+        require(bytes.size in 100..secureLimit) { "Encrypted archive is empty or exceeds 96 MB." }
         val json = JSONObject(String(bytes, Charsets.UTF_8))
         require(json.optString("format") == "trialum-encrypted-archive" &&
-            json.optInt("version", -1) == 1 && json.optString("cipher") == "AES-256-GCM" &&
+            json.optInt("version", -1) in 1..2 && json.optString("cipher") == "AES-256-GCM" &&
             json.optString("kdf") == "PBKDF2-SHA256" && json.optInt("iterations") == 600000 &&
             json.optString("salt").isNotBlank() && json.optString("iv").isNotBlank() &&
-            json.optString("ciphertext").isNotBlank()) { "Invalid encrypted Trialum archive." }
+            json.optString("ciphertext").isNotBlank() &&
+            (json.optInt("version", -1) == 1 ||
+             (json.optString("codec") in listOf("gzip", "none") &&
+              json.optLong("plainBytes", -1L) in 0L..(64L * 1024L * 1024L)))) {
+            "Invalid encrypted Trialum archive."
+        }
         return json
     }
 
@@ -150,7 +156,7 @@ internal class TrialumBackupVault(private val context: Context) {
     fun loadEncrypted(id: String): ByteArray {
         require(secureIdRule.matches(id)) { "Invalid encrypted archive identifier." }
         val file = File(root, id)
-        require(file.isFile && file.length() in 100..limit.toLong()) { "Invalid encrypted archive size." }
+        require(file.isFile && file.length() in 100..secureLimit.toLong()) { "Invalid encrypted archive size." }
         val bytes = file.readBytes()
         require(hex(digest(bytes)).startsWith(id.removeSuffix(".json").substringAfterLast("_"))) {
             "Encrypted archive SHA-256 mismatch."
