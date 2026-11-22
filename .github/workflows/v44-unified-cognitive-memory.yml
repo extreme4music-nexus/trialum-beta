@@ -1,0 +1,35 @@
+name: V44 Unified Cognitive Memory Gate
+on:
+  push:
+    branches:
+      - feature/v44-unified-cognitive-memory
+  pull_request:
+    branches:
+      - fix/v44-mnemos-cognitive-integration
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cognitive-foundation:
+    name: Cognitive V2 migration + event ingestion
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source syntax
+        run: |
+          node --check js/cognitive-memory.js
+          node --check js/storage.js
+          node --check js/engine.js
+          node --check js/evolution.js
+          node --check js/advanced-intelligence.js
+          node --check js/mnemos-context.js
+      - name: Cognitive and AI compatibility
+        run: node --test tests/cognitive-memory.test.cjs tests/mnemos-context.test.cjs tests/cognitive-events-v44.test.cjs tests/cognitive-integration-v44.test.cjs
+      - name: Existing engine and evolution regression
+        run: |
+          node tests/engine.test.cjs
+          node tests/evolution.test.cjs
