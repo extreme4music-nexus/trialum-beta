@@ -538,8 +538,8 @@ private fun nativeText(macedonian: String, english: String): String =
         }
         @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
             ageSignals.isAdultEligible()
-        @JavascriptInterface fun qaSocialAgeBypass(): Boolean =
-            BuildConfig.BETA_TESTER_TOOLS && BuildConfig.QA_SOCIAL_AGE_BYPASS
+        // Legacy QA bridge remains for binary compatibility, but can never bypass Age Signals.
+        @JavascriptInterface fun qaSocialAgeBypass(): Boolean = false
         @JavascriptInterface fun betaTesterToolsEnabled(): Boolean = BuildConfig.BETA_TESTER_TOOLS
         @JavascriptInterface fun socialCredential(): String = SocialCredentialVault.read(this@MainActivity)
         @JavascriptInterface fun socialStoreCredential(credential: String): Boolean =
