@@ -115,3 +115,4 @@ The v46 patch under `server-patch/v46/` is historical and requires Age Signals/P
 ## Change log
 
 - 2026-11-23: opened v47 branch from v46 base; set app version identity; began dormant Age Signals, preset-only client, and display-only generated pet-name localization work. Server synchronization remains pending.
+- 2026-11-23: added a design-only roadmap for empty-by-default gardens, real seed-to-crop harvest, refrigerator storage, and extensible grain/mill/bakery production. No gameplay code or build changed. See [V47_GARDEN_CROPS_AND_PRODUCTION_ROADMAP.md](V47_GARDEN_CROPS_AND_PRODUCTION_ROADMAP.md).
