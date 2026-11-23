@@ -1,6 +1,9 @@
 name: Trialum v45 internal beta AAB
 
 on:
+  push:
+    branches:
+      - fix/v44-optional-microphone-feature-20261123
   workflow_dispatch:
 
 permissions:
