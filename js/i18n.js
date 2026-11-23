@@ -1,4 +1,4 @@
-/* TRIALUM 1.4 v44 — lightweight offline, extendable UI locale catalogs.
+/* TRIALUM v47 — lightweight offline, extendable UI locale catalogs.
    Gameplay state stays language-neutral. Player names and journal history untouched. */
 (function(root){
 'use strict';
@@ -25,6 +25,16 @@ function raw(text){
  const prefix=trim.slice(0,first),body=trim.slice(first);
  const translated=strings[body]||fallbackStrings[body]||dynamic(body);
  return value.replace(trim,prefix+translated);
+}
+function displayPetName(pet){
+ const name=String(typeof pet==='string'?pet:pet?.name??'');
+ if(typeof pet==='string'||pet?.nameIsCustom===true)return name;
+ const species=root.TrialumEngine?.SPECIES?.[Number(pet?.species)];
+ if(!species?.name)return name;
+ const prefix=String(species.name)+' ';
+ if(!name.startsWith(prefix))return name;
+ const suffix=name.slice(prefix.length).trim();
+ return /^\d+$/.test(suffix)?raw(species.name)+' '+suffix:name;
 }
 function translateWords(text){
  return text.replace(/[А-Яа-яЀ-ӿ]+(?:-[А-Яа-яЀ-ӿ]+)*/g,word=>{
@@ -115,6 +125,6 @@ async function change(requested){
 if(root.addEventListener)root.addEventListener('languagechange',()=>{
  if(preference==='auto')change('auto').then(()=>root.TrialumI18n?.translateDOM?.(root.document?.body));
 });
-root.TrialumI18n={language,preference:getPreference,systemLanguage,change,translateDOM,t:raw,languages:allow.slice(),catalog:catalog.map(([code,name,flag])=>({code,name,flag}))};
-if(typeof module==='object'&&module.exports)module.exports={raw,dynamic};
+root.TrialumI18n={language,preference:getPreference,systemLanguage,change,translateDOM,t:raw,displayPetName,languages:allow.slice(),catalog:catalog.map(([code,name,flag])=>({code,name,flag}))};
+if(typeof module==='object'&&module.exports)module.exports={raw,dynamic,displayPetName};
 })(typeof globalThis!=='undefined'?globalThis:this);

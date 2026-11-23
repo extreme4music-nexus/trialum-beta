@@ -40,13 +40,14 @@ function choose(s,p,value){
 }
 function render(s,p){
  if(!p)return '';
+ const petName=root.TrialumI18n?.displayPetName?.(p)||p.name;
  const available=choices(s,p);
  const t=available.includes(tier(p))?tier(p):available[0]||null;
  const helper=t==='helper',st=helper?'available':t?status(t):'not-available',agreed=helper||(t?consent(p,t):false);
  const busy=!!root.TrialumLocalChat?.busy?.();
  const messages=(Array.isArray(p.chatHistory)?p.chatHistory:[]).slice(-40);
  const history=messages.map((m,i)=>'<div class="pet-chat-bubble '+(m.role==='user'?'outgoing':'incoming')+
-  '" data-chat-index="'+i+'"><span class="pet-chat-sender">'+(m.role==='user'?'You':esc(p.name))+
+  '" data-chat-index="'+i+'"><span class="pet-chat-sender">'+(m.role==='user'?'You':esc(petName))+
   '</span><p>'+esc(m.text||'')+'</p></div>').join('');
  const options=available.map(k=>'<option value="'+k+'"'+(k===t?' selected':'')+'>'+
   (k==='helper'?'Game assistant · no AI download':esc(models[k].name)+' · '+models[k].size)+'</option>').join('');
@@ -57,14 +58,14 @@ function render(s,p){
  }[st]||st);
  const text='<section class="pet-chat" aria-label="On-device English pet chat" data-pet-id="'+esc(p.id)+'">'+
   '<header class="pet-chat-head"><div><span class="pet-chat-kicker">PRIVATE · ENGLISH · ON-DEVICE</span>'+
-  '<h3>💬 Chat with '+esc(p.name)+'</h3><small>Lifetime memories stay with your pet, not the model.</small></div>'+
+  '<h3>💬 Chat with '+esc(petName)+'</h3><small>Lifetime memories stay with your pet, not the model.</small></div>'+
   '<span class="pet-chat-state">'+esc(label)+'</span></header>';
  let body='<div class="pet-chat-config"><label for="petChatModel">Conversation mode / Local language model</label>'+
   '<select id="petChatModel" aria-label="Choose conversation mode">'+options+'</select>'+
   '<span class="small subtle">'+(helper?'Offline game assistant · no AI model required.':'One model at a time · '+esc(models[t].ram)+' RAM recommended')+'</span></div>';
  if(helper){
   body+='<p class="privacy-note">Game assistant (not an LLM). Beta pet interaction is English only; other languages may not work correctly. Answers use the offline Player Guide and live game state.</p>'+
-   '<div id="petChatMessages" class="pet-chat-messages" role="log" aria-live="polite" aria-label="Conversation with '+esc(p.name)+'">'+
+   '<div id="petChatMessages" class="pet-chat-messages" role="log" aria-live="polite" aria-label="Conversation with '+esc(petName)+'">'+
    (history||'<p class="pet-chat-empty">Ask: Where do I get food? How do I earn credits? What should I do next?</p>')+'</div>'+
    '<div class="pet-chat-compose"><textarea id="petChatPrompt" rows="2" maxlength="340" placeholder="Ask in English…" aria-label="English game assistant question"></textarea>'+
    '<div class="pet-chat-controls"><button type="button" data-do="petChatMic" aria-label="Android on-device English recognition"'+(!root.TrialumAndroid?.startPetVoiceInput?' disabled':'')+'>🎙️</button>'+
@@ -80,7 +81,7 @@ function render(s,p){
  if(st==='not-installed'||st==='resume-available')body+='<div class="pet-chat-download">'+
    '<button class="primary" data-do="petChatDownload">⬇ '+(st==='resume-available'?'Resume download':'Download selected model')+'</button></div>';
  if(st!=='installed'&&t!=='mini'&&root.TrialumAndroid?.chooseModelTier)body+='<button data-do="petChatImport">📂 Import verified GGUF</button>';
- body+='<div id="petChatMessages" class="pet-chat-messages" role="log" aria-live="polite" aria-label="Conversation with '+esc(p.name)+'">'+
+ body+='<div id="petChatMessages" class="pet-chat-messages" role="log" aria-live="polite" aria-label="Conversation with '+esc(petName)+'">'+
   (history||'<p class="pet-chat-empty">Say hello. Your pet can remember its experiences even when AI is unavailable.</p>')+
   '</div><div class="pet-chat-compose"><textarea id="petChatPrompt" rows="2" maxlength="340" placeholder="Write in English…" aria-label="Message in English"></textarea>'+
   '<div class="pet-chat-controls">'+

@@ -44,7 +44,7 @@ function drawCreatureClassic(p,at,t,selected,act=null){const sz=at.size*(.62+p.g
  if(ev.level>=75){ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='hsl('+((hue+140)%360)+',90%,69%)';ctx.beginPath();ctx.moveTo(-59,-56);ctx.quadraticCurveTo(-175,-125+Math.sin(t*2)*13,-143,48);ctx.quadraticCurveTo(-116,13,-59,-6);ctx.fill();ctx.beginPath();ctx.moveTo(60,-56);ctx.quadraticCurveTo(180,-125+Math.sin(t*2)*13,143,48);ctx.quadraticCurveTo(110,13,60,-6);ctx.fill();ctx.restore();}
  if(ev.level>=150){for(let j=0;j<4;j++)circle(-75+j*50,-45+Math.sin(t*2+j)*7,5+j%2,'#e8fcff');}
  ctx.restore();if(selected){ctx.save();ctx.setLineDash([6,6]);ctx.strokeStyle='#c6ffe5';ctx.lineWidth=2;circle(at.x,at.y,r*.99,null,'#bbffe6',2);ctx.setLineDash([]);text('▼',at.x,at.y-r-25,22,'#dafff4');ctx.restore()}
- text(p.name,at.x,at.y+r*.89+26,16,'#effffe');if(p.lastSpeech&&t*1000-(p.speechAt||0)<1900)text(p.lastSpeech,at.x,at.y-r*1.05-30,18,'#f9d9ff');
+ text(root.TrialumI18n?.displayPetName?.(p)||p.name,at.x,at.y+r*.89+26,16,'#effffe');if(p.lastSpeech&&t*1000-(p.speechAt||0)<1900)text(p.lastSpeech,at.x,at.y-r*1.05-30,18,'#f9d9ff');
  return {id:p.id,x:at.x,y:at.y,r:r*1.04};}
 function drawSkillFX(p,at,t,act){
  if(!act||t<act.start||t>act.start+act.duration)return;

@@ -62,7 +62,9 @@ async function refresh(){
  try{
   const [status,inbox]=await Promise.all([req('status'),req('inbox')]);
   state.ready=!!status.ready;state.presets=status.presets||{};
-  state.freeTextEnabled=status.freeTextEnabled===true;state.pushAvailable=status.pushAvailable===true;
+  // v47 keeps player-to-player messaging on approved presets only. Server enforcement
+  // must be updated in the matching Trialum-Server patch before a release candidate.
+  state.freeTextEnabled=false;state.pushAvailable=status.pushAvailable===true;
   state.events=Array.isArray(inbox.events)?inbox.events:[];
   state.mutes=Array.isArray(inbox.mutes)?inbox.mutes:[];
   state.pushRegistered=inbox.pushRegistered===true;
@@ -77,7 +79,7 @@ async function refresh(){
 }
 function sendPending(){
  if(!socketReady||!socket||socket.readyState!==1)return;
- const pending=state.messages.filter(m=>m.mine&&m.delivery==='pending'&&!sending.has(m.id));
+ const pending=state.messages.filter(m=>m.mine&&m.kind==='preset'&&m.delivery==='pending'&&!sending.has(m.id));
  for(const item of pending){
   if(!state.friends.some(f=>f.id===item.peerRef))continue;
   try{socket.send(JSON.stringify({type:'friend_message',messageId:item.id,recipientRef:item.peerRef,
@@ -93,6 +95,9 @@ async function receiveLive(m){
   return;
  }
  if(m.type!=='friend_message')return;
+ if(m.kind!=='preset'||!Object.values(state.presets).includes(m.text)){
+  state.error=tr('Слободна порака од стар клиент е одбиена.','A custom message from an older client was rejected.');emit();return;
+ }
  const peerRef=String(m.senderRef||''),friend=state.friends.find(f=>f.id===peerRef);
  if(!friend||!uuidRe.test(m.messageId)||typeof m.text!=='string'||m.text.length>120)return;
  const finding=root.TrialumPrivacyGuard?.inspect?.(m.text)||{};
@@ -201,7 +206,7 @@ const formatDate=t=>{const d=new Date(t);return Number.isFinite(d.getTime())?d.t
 function render(){
  if(!state.enabled && !config())return '<div class="tab-main"><h2>💌 Пријателски пораки</h2><p class="notice">🔒 Прво отвори Пријатели и создај социјален профил. Локалната игра останува достапна офлајн.</p><button data-tab="friends">🤝 Пријатели</button></div>';
  if(!state.ready)return '<div class="tab-main message-hub"><h2>💌 Пријателски пораки</h2><p class="notice">'+esc(state.error||'Пораките се вчитуваат…')+'</p><button data-do="msgRefresh">Освежи</button></div>';
- let html='<div class="tab-main message-hub"><div class="message-heading"><div><p class="microcap">ПРИВАТНИ ПОРАКИ · 1.4 v44</p><h2>💌 Пријателски пораки</h2></div><span class="tag">'+(state.transportOnline?'🟢 Поврзано':'⚪ Нема врска')+'</span></div>'+ 
+ let html='<div class="tab-main message-hub"><div class="message-heading"><div><p class="microcap">ПРИВАТНИ ПОРАКИ · 1.5 v47</p><h2>💌 Пријателски пораки</h2></div><span class="tag">'+(state.transportOnline?'🟢 Поврзано':'⚪ Нема врска')+'</span></div>'+
  '<p class="desc">'+esc(tr('Пораките се пренесуваат во живо само меѓу потврдени пријатели. Серверот не треба да чува офлајн пораки или историја. Секој уред ја чува својата локална копија; обичниот JSON и Google Cloud Save ја изоставуваат. Шифрираната архива во Поставки може да ја пренесе локалната историја на нов уред. Ако пријателот е офлајн, пораката чека локално додека не се поврзеш.','Messages are relayed live between confirmed friends. The server should not store offline messages or history. Each device keeps its own local copy; plain JSON and Google Cloud Save exclude it. The encrypted archive in Settings can transfer local history to a new device. If a friend is offline, a message waits locally until you reconnect.'))+'</p>';
  if(state.error)html+='<p class="notice" role="status">'+esc(state.error)+'</p>';
  html+='<div class="card"><h3>✉️ Испрати пријателска фраза</h3>'+
@@ -209,7 +214,7 @@ function render(){
    (state.friends.length?state.friends.map(f=>'<option value="'+esc(f.id)+'"'+(f.id===state.selected?' selected':'')+'>'+esc(f.nickname)+'</option>').join(''):'<option value="">Нема пријатели</option>')+
    '</select><div class="message-presets">'+Object.entries(state.presets).map(([id,label])=>
     '<button data-do="msgSend" data-preset="'+esc(id)+'"'+(!state.friends.length||state.busy?' disabled':'')+'>'+esc(label)+'</button>').join('')+'</div>'+
-   (state.freeTextEnabled?'<label for="msgCustom">Кратка порака (до 120 знаци)</label><textarea id="msgCustom" maxlength="120" rows="2" placeholder="Без вистински имиња или контактни податоци"></textarea><button data-do="msgCustomSend">Испрати кратка порака</button>':'<p class="small subtle">🔒 Слободниот текст е исклучен на серверот. Готовите фрази се достапни.</p>')+
+   (state.freeTextEnabled?'<label for="msgCustom">Кратка порака (до 120 знаци)</label><textarea id="msgCustom" maxlength="120" rows="2" placeholder="Без вистински имиња или контактни податоци"></textarea><button data-do="msgCustomSend">Испрати кратка порака</button>':'<p class="small subtle">🔒 Слободниот текст е исклучен во ова издание. Достапни се само одобрени готови фрази.</p>')+
    '</div>';
  html+='<div class="card"><h3>🔔 Android известувања</h3>'+ 
    '<p class="desc">Push известувањата се за покани и настани во играта. Разговорите не се чуваат за офлајн испорака и немаат message push.</p>';

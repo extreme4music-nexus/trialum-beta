@@ -483,7 +483,7 @@ function visitsView(world){
  for(const v of st.visits.slice(0,20)){
   if(v.sender_is_me!==true&&v.receiver_is_me!==true)continue;
   const receive=v.receiver_is_me===true;
-  out+='<div class="friend-item social-friend"><span>🐾 '+escape(v.pet_public?.name||'Миленик')+
+  out+='<div class="friend-item social-friend"><span>🐾 '+escape(root.TrialumI18n?.displayPetName?.(v.pet_public)||v.pet_public?.name||'Миленик')+
    ' · '+(v.destination==='habitat'?'🏠':'🌳')+' · '+escape(v.status)+
    (receive?' · од '+escape(v.sender_name||'пријател'):'')+'</span><div class="btn-line">'+
    (receive&&v.status==='pending'?'<button data-do="shVisitDecision" data-id="'+escape(v.id)+'" data-kind="accept">✓ Прифати</button><button data-do="shVisitDecision" data-id="'+escape(v.id)+'" data-kind="decline">Одбиј</button>':'')+
@@ -502,7 +502,7 @@ function offlineReturnPanel(world){
 function render(world){
  worldRef=world;
  const me=self(),own=root.TrialumPlayground?.eligible(world)?.ok,snap=st.snapshot,room=snap?.room;
- let out='<div class="tab-main shared-hub"><div class="shared-heading"><div><p class="microcap">1.4 v44 · ПРИВАТЕН СЕРВЕР</p><h2>🌳 Заедничка игротека</h2><p class="desc">Покани за членство, посети со согласност и вистинска синхронизација. Без реклами и продажба на податоци.</p></div><span class="tag">🔐 Доброволно</span></div>';
+ let out='<div class="tab-main shared-hub"><div class="shared-heading"><div><p class="microcap">1.5 v47 · ПРИВАТЕН СЕРВЕР</p><h2>🌳 Заедничка игротека</h2><p class="desc">Покани за членство, посети со согласност и вистинска синхронизација. Без реклами и продажба на податоци.</p></div><span class="tag">🔐 Доброволно</span></div>';
  if(st.error)out+='<div class="notice social-warning" role="status">'+escape(st.error)+'</div>';
  if(st.roomNoticeUntil>Date.now()){
   const name=escape(st.roomNoticeName||'Играч');
@@ -555,7 +555,7 @@ function render(world){
    '<p class="small subtle">Простор: '+escape(room.title)+' · ID '+escape(room.id.slice(0,8))+
    '. Двајцата пријатели треба да ја изберат истата игротека од копчињата погоре.</p>'+
    (occupants.length?'<div class="friend-item">'+occupants.map(o=>
-    '<span>🐾 '+escape(o.pet.name||'Милениче')+' · '+escape(o.display||'Играч')+'</span>').join('')+
+    '<span>🐾 '+escape(root.TrialumI18n?.displayPetName?.(o.pet)||o.pet.name||'Милениче')+' · '+escape(o.display||'Играч')+'</span>').join('')+
     '</div>':'<p class="small subtle">Нема потврдени миленичиња во овој простор. Освежи по испраќањето.</p>')+
    '</div>';
   out+='<div class="notice">'+(p?.pendingRemoteReturn?.sessionId===loc?.sessionId?

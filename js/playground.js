@@ -418,7 +418,7 @@ function render(s){
  const reasonLabel={completed:'завршена сесија',returned:'предвремено враќање',presence_lost:'прекинато присуство'};
  const outcome=last?'<details class="card"><summary>📖 Последно враќање · +'+last.xpEarned+' XP</summary><p>Играно '+Math.floor(last.elapsedMs/MINUTE)+' мин · '+last.practiceCount+' успешни вежби · потрошена енергија '+last.energySpent+'.</p><p>Играчки: '+safe(last.toysUsed.join(', ')||'набљудување')+' · '+safe(reasonLabel[last.reason]||last.reason)+'</p>'+skillReview+'</details>':'';
  let out='<div class="tab-main playground-hub"><div class="playground-title"><div><p class="microcap">МОЈА ИГРОТЕКА · ЛОКАЛНО</p><h2>🎠 Полјана на радоста</h2><p class="desc">Играј во реално време, отклучувај справи и развивај вештини. Без регистрација или интернет.</p></div><span class="tag">Простор '+q.space+'/5</span></div>'+
- '<div class="notice">'+locationControls+'</div>'+progress+outcome+'<div class="pg-board"><canvas id="playgroundScene" width="1000" height="520" role="img" aria-label="Анимирана игротека со милениче и играчки; избери играчка преку копчињата под сликата"></canvas><div class="pg-overlay"><span>🐾 '+safe(pet.name)+' · ниво '+g.level+'</span><span>Игри денес: '+used+'/'+maxActions+'</span></div></div>'+
+ '<div class="notice">'+locationControls+'</div>'+progress+outcome+'<div class="pg-board"><canvas id="playgroundScene" width="1000" height="520" role="img" aria-label="Анимирана игротека со милениче и играчки; избери играчка преку копчињата под сликата"></canvas><div class="pg-overlay"><span>🐾 '+safe(root.TrialumI18n?.displayPetName?.(pet)||pet.name)+' · ниво '+g.level+'</span><span>Игри денес: '+used+'/'+maxActions+'</span></div></div>'+
  '<div class="notice"><strong>💠 '+Math.floor(b)+'</strong> заработени кредити · <strong>'+q.unlocked.length+'/'+slots(q)+'</strong> места за играчки <div class="btn-line"><button data-do="pgExpand"'+(q.space>=5||b<exp?' disabled':'')+'>🌳 Прошири простор · '+exp+' кредити</button></div></div>';
  out+=root.TrialumPlaygroundAI?.control?.(s,pet,'playground',atLocal)||'';
  out+='<h3>Играчки и справи</h3><div class="cards pg-toys">';
@@ -479,7 +479,7 @@ function draw(ctx,s,t){
    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-20,y-12,13,0,Math.PI*2);ctx.arc(x+20,y-12,13,0,Math.PI*2);ctx.fill();
    ctx.fillStyle='#17324b';ctx.beginPath();ctx.arc(x-18,y-10,5,0,Math.PI*2);ctx.arc(x+22,y-10,5,0,Math.PI*2);ctx.fill();
  }
- ctx.font='bold 20px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText(String(pet.name).slice(0,24),x,y+103);
+ ctx.font='bold 20px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText(String(root.TrialumI18n?.displayPetName?.(pet)||pet.name).slice(0,24),x,y+103);
  // Other pets voluntarily present in the same offline playground can join
  // the conversation. Neither party earns XP for speech or animation frames.
  const dialogue=localDialogue(s,pet,Date.now());
@@ -491,7 +491,7 @@ function draw(ctx,s,t){
    ctx.beginPath();ctx.arc(bx,by,34,0,Math.PI*2);ctx.fill();
    ctx.fillStyle='#17324b';ctx.beginPath();
    ctx.arc(bx-10,by-7,4,0,Math.PI*2);ctx.arc(bx+10,by-7,4,0,Math.PI*2);ctx.fill();
-   ctx.font='bold 15px system-ui';ctx.fillStyle='#fff';ctx.fillText(String(partner.name).slice(0,18),bx,by+60);
+   ctx.font='bold 15px system-ui';ctx.fillStyle='#fff';ctx.fillText(String(root.TrialumI18n?.displayPetName?.(partner)||partner.name).slice(0,18),bx,by+60);
   }
  }
  if(dialogue){
