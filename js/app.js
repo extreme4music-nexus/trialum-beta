@@ -343,7 +343,8 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
  if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
- if(['socialRegister','socialRestoreStart','socialRecoveryIssue','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
+ if(action==='socialEligibilityRetry'){Social?.retryEligibility?.();return;}
+ if(['socialRegister','socialRestoreStart','socialRecoveryIssue','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозволен возрастен сигнал.');return;}
  if(['shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialProfileActive?.()){chooseTab('friends');toast('🔒 Пораките и заедничката игротека бараат активен социјален профил.');return;}
  if(action==='socialConsentAccept'){if(!el('socialConsentCheck')?.checked){toast('Прво означи дека ги разбираш условите.');return;}Social?.setSocialConsent?.(true).then(ok=>{if(ok){renderTab();if(Social?.isAdultAllowed?.())toast('Социјалната согласност е вклучена на овој уред.');}});return;}
  if(action==='socialConsentLater'){chooseTab('lab');toast('Социјалните услуги остануваат исклучени. Офлајн играта е достапна.');return;}
@@ -718,6 +719,7 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
  Shared?.onPresenceChange(()=>{if(s){render();scheduleSave();}});
  Messages?.onChange(()=>{if(s&&tab==='messages')renderTab();});
  globalThis.TrialumPushEvent=event=>{Messages?.pushEvent(event);};
+ globalThis.TrialumSocialForegroundEvent=event=>{Social?.onForeground?.(event);};
  globalThis.TrialumAgeSignalsEvent=event=>{
   Promise.resolve(Social?.setAgeSignal?.(event)).then(()=>{
    if(s&&Social?.isAdultAllowed?.())Shared?.reconcileAway?.().catch(()=>{});
@@ -845,7 +847,7 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
  window.addEventListener('scroll',updateSceneScroll,{passive:true});
  window.addEventListener('resize',()=>{scrollHeightOffset();updateSceneScroll();},{passive:true});
  scrollHeightOffset();updateSceneScroll();
- document.addEventListener('visibilitychange',()=>{if(s&&document.visibilityState==='visible'){const before=s.labActions;const autonomy=PG?.reconcile?.(s)?.changed;const expired=Presence?.expireLocal?.(s)?.changed;const days=E.advance(s);if(autonomy||expired||days||before!==s.labActions){render();scheduleSave();activeSignals()}Shared?.reconcileAway?.().catch(()=>{});}else if(s)forceSave();});
+ document.addEventListener('visibilitychange',()=>{Social?.onForeground?.(document.visibilityState==='visible'?'visible':'hidden');if(s&&document.visibilityState==='visible'){const before=s.labActions;const autonomy=PG?.reconcile?.(s)?.changed;const expired=Presence?.expireLocal?.(s)?.changed;const days=E.advance(s);if(autonomy||expired||days||before!==s.labActions){render();scheduleSave();activeSignals()}Shared?.reconcileAway?.().catch(()=>{});}else if(s)forceSave();});
  window.addEventListener('pagehide',()=>{if(s)forceSave()});
  // LW-B: elapsed simulation time is reconciled on foreground/restore above;
  // never run periodic world mutation/DOM repaint while WebView is hidden.
