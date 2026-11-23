@@ -15,22 +15,32 @@ function harness({consent=false,adult=false,beta=false,qa=false,credential=''}={
    socialApiUrl:()=> 'https://friends.example',
    socialCredential:()=>credential,
    socialStoreCredential:()=>true,
+   socialShowRecoveryKit:()=>{},socialGenerateRecoveryKey:()=> 'N'.repeat(43),
+   socialConfirmPreparedRecovery:()=>{},
+   requestSocialIntegrityToken:(id,action,version,subject)=>
+      ctx.TrialumSocialIntegrityEvent({requestId:id,ok:true,token:'X'.repeat(220)}),
    nearbyStop:()=>{},
   },
   TrialumLegal:{
    socialAccepted:()=>consent,
    grantSocialConsent:()=>{consent=true;return true},
-   revokeSocialConsent:()=>{consent=false;return true}
+   revokeSocialConsent:()=>{consent=false;return true},
+    setSocialConsentVersion:version=>version==='trialum-social-v1'
   },
   TrialumMessages:{deactivate:()=>{}},TrialumShared:{deactivate:()=>{}},
   TrialumPeer:{clear:()=>{}},
   confirm:()=>true,
   fetch:async(url,opts)=>{
    calls.push({url,opts});
-   const result=url.endsWith('/status')?{ready:true}:
-    url.endsWith('/me')?{id:'owner-1',nickname:'Nova'}:
+   const result=url.endsWith('/v1/social/status')?{ready:true,
+      socialAttestationReady:true,socialConsentVersion:'trialum-social-v1',
+      accountRecoveryEnabled:true,recoveryVersion:1}:
+    url.endsWith('/v1/social/eligibility/status')?{eligible:true,
+      profileId:'123e4567-e89b-42d3-a456-426614174000',
+      expiresAt:new Date(Date.now()+86400000).toISOString()}:
+    url.endsWith('/me')?{id:'123e4567-e89b-42d3-a456-426614174000',nickname:'Nova'}:
     url.endsWith('/friends')?{friends:[]}:{ok:true};
-   return {ok:true,json:async()=>result};
+   return {ok:true,status:200,json:async()=>result};
   }
  };
  ctx.globalThis=ctx;vm.createContext(ctx);vm.runInContext(source('js/social.js'),ctx);
@@ -77,7 +87,8 @@ test('user can request Play age signal without beta tester permission',async()=>
  await h.api.setAgeSignal({status:'adult_signal',adultEligible:true});
  assert.equal(h.api.isSocialAllowed(),true);
  assert.equal(h.api.isSocialProfileActive(),false,'profile still requires separate creation');
- assert.equal(h.calls.length,0,'no automatic social profile or transmission');
+ assert(h.calls.every(x=>x.url.endsWith('/v1/social/status')),
+   'only capability discovery is allowed; never create an account');
 });
 test('reject unsupported status and native revoked eligibility after result',async()=>{
  const h=harness({consent:true,adult:false});
