@@ -167,7 +167,7 @@ function setError(e){
     invite_invalid_or_expired:'Поканата истекла или веќе е искористена.',
     blocked:'Пријателството не е дозволено.',
     self_invitation:'Ова е твојата сопствена покана.',
-    authentication_required:'Профилот не е активен. Потребно е повторно поврзување.',
+    authentication_required:'Серверскиот токен не важи. Врати го истиот профил преку ID и recovery-клуч; не создавај нов.',
     rate_limited:'Премногу обиди. Пробај подоцна.',
     social_service_disabled:'Серверот за пријатели сè уште не е активиран.',
     personal_data_blocked:'Не користи вистинско име или контактни податоци. Избери измислен прекар.',
@@ -204,6 +204,10 @@ async function request(path,method='GET',body=null,key=credential){
     const payload=await res.json().catch(()=>({}));
     if(!res.ok){
       const code=String(payload.error||'server_unavailable');
+      if(res.status===401||code==='authentication_required'){
+        state.authRecoveryNeeded=true;state.identity=null;
+        suspendSocial('Профилот е сочуван. За повторно поврзување употреби го recovery-клучот.');
+      }
       if((res.status===428&&path!=='eligibility/status')||
          ['session_revoked','social_consent_required','eligibility_proof_invalid',
           'integrity_verification_unavailable'].includes(code))onEligibilityError(code);
@@ -275,7 +279,7 @@ async function loadProfile(){
   const list=await request('friends');
   if(!onlineReady())throw Error('age_gate_required');
   state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;
-  state.error='';emit();return me;
+  state.authRecoveryNeeded=false;state.error='';emit();return me;
 }
 async function refresh(){return run(loadProfile);}
 async function register(name){
@@ -413,7 +417,7 @@ async function acceptPreparedRecovery(id,newKey){
    // the user can retry. Never pretend credentials were saved.
    throw Error('secure_storage_unavailable');
   }
-  credential=restored.credential;
+  credential=restored.credential;state.authRecoveryNeeded=false;
   state.identity={id:restored.id,nickname:restored.nickname};
   state.online=true;state.ready=true;
   // A recovered bearer remains saved even if renewed verification is unavailable.
@@ -562,7 +566,11 @@ function render(){
     html+='<div class="card"><h3>🔐 Постоечкиот социјален профил е зачуван</h3>'+
       '<p>Серверската дозвола мора да се потврди пред онлајн дружба. Не е потребна нова регистрација; локалниот свет не е променет.</p>'+
       '<div class="btn-line"><button class="primary" data-do="socialEligibilityRetry">Провери повторно / обнови</button>'+
-      '<button data-do="socialDelete">Избриши серверски профил</button></div></div>';
+      '<button data-do="socialDelete">Избриши серверски профил</button></div>'+
+      (state.authRecoveryNeeded?'<h4>Врати го постојниот профил со recovery kit</h4>'+
+      '<label for="socialRestoreId">Профил ID</label><input id="socialRestoreId" maxlength="36" autocomplete="off">'+
+      '<label for="socialRestoreSecret">Recovery-клуч</label><input id="socialRestoreSecret" type="password" maxlength="43" autocomplete="off">'+
+      '<button class="primary" data-do="socialRestoreStart">Врати го профилот</button>':'')+'</div>';
   }
   else if(!state.identity){
     html+='<div class="card social-hero"><h3>✨ Создај приватен профил за дружба</h3>'+
