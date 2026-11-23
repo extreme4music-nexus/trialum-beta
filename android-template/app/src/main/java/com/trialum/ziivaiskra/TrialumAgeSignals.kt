@@ -18,11 +18,15 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
     private val manager: AgeSignalsManager =
         AgeSignalsManagerFactory.create(appContext)
     @Volatile private var adultEligible = false
+    @Volatile private var requestGeneration = 0
+
+    fun invalidate() { requestGeneration++; adultEligible = false }
 
     fun isAdultEligible(): Boolean = adultEligible
 
     fun request(activity: Activity) {
         adultEligible = false
+        val generation = ++requestGeneration
         try {
             val access = AgeSignalsAccessRequest.builder().setActivity(activity).build()
             manager.requestAgeSignalsAccess(access)
@@ -35,12 +39,12 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                         else -> "UNKNOWN"
                     }
                     recordDiagnostic("age_signals.access", label)
-                    if (status == AgeSignalsStatus.SHARED) checkSharedSignals()
-                    else finish(false, label.lowercase())
+                    if (status == AgeSignalsStatus.SHARED) checkSharedSignals(generation)
+                    else finish(false, label.lowercase(), generation)
                 }
                 .addOnFailureListener { error ->
                     recordDiagnostic("age_signals.access_error", error.javaClass.simpleName)
-                    finish(false, "unavailable")
+                    finish(false, "unavailable", generation)
                 }
         } catch (_: Exception) {
             recordDiagnostic("age_signals.access_error", "exception")
@@ -48,7 +52,7 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
         }
     }
 
-    private fun checkSharedSignals() {
+    private fun checkSharedSignals(generation: Int) {
         try {
             manager.checkAgeSignals(AgeSignalsRequest.builder().build())
                 .addOnSuccessListener { result ->
@@ -79,15 +83,15 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                         "age_signals.result",
                         "band=$band;source=$source;eligible=$eligible"
                     )
-                    finish(eligible, if (eligible) "adult_signal" else "restricted")
+                    finish(eligible, if (eligible) "adult_signal" else "restricted", generation)
                 }
                 .addOnFailureListener { error ->
                     recordDiagnostic("age_signals.result_error", error.javaClass.simpleName)
-                    finish(false, "unavailable")
+                    finish(false, "unavailable", generation)
                 }
         } catch (_: Exception) {
             recordDiagnostic("age_signals.result_error", "exception")
-            finish(false, "unavailable")
+            finish(false, "unavailable", generation)
         }
     }
 
@@ -97,7 +101,8 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
         try { TrialumDiagnostics.record(appContext, category, message) } catch (_: Exception) { }
     }
 
-    private fun finish(eligible: Boolean, status: String) {
+    private fun finish(eligible: Boolean, status: String, generation: Int) {
+        if (generation != requestGeneration) return
         adultEligible = eligible
         deliver(JSONObject().put("status", status).put("adultEligible", eligible))
     }
