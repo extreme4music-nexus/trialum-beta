@@ -9,7 +9,126 @@ const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':
 const CODE=/^[A-Za-z0-9_-]{43}$/;
 const PROFILE_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false};
-let credential='',changed=()=>{},pendingRecovery=null;
+let credential='',changed=()=>{},pendingRecovery=null,eligibilityBusy=null;
+let capability=null;
+const integrityPending=new Map();
+const SOCIAL_CONSENT_V1='trialum-social-v1';
+const REVOKE_PENDING_KEY='trialum.social.revoke.pending.v44';
+const validVersion=value=>typeof value==='string'&&value===SOCIAL_CONSENT_V1;
+const nativeAdult=()=>native()?.ageSignalsAdultEligible?.()===true;
+const onlineReady=()=>state.ageAllowed&&state.socialConsented&&state.eligibilityReady&&nativeAdult();
+const savedCredential=()=>String(native()?.socialCredential?.()||'');
+const hasSavedCredential=()=>CODE.test(savedCredential());
+function stopSocialClients(){
+ root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();
+ root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
+}
+function suspendSocial(reason=''){
+ state.eligibilityReady=false;state.ready=false;state.online=false;
+ stopSocialClients();
+ if(reason)state.error=reason;
+ emit();
+}
+function tokenFor(action,version,subject){
+ if(!nativeAdult()||!state.socialConsented||!state.ageAllowed) return Promise.reject(Error('age_gate_required'));
+ if(!validVersion(version))return Promise.reject(Error('social_consent_required'));
+ if(typeof native()?.requestSocialIntegrityToken!=='function')return Promise.reject(Error('integrity_unavailable'));
+ const random=root.crypto?.randomUUID?.();
+ if(!random)return Promise.reject(Error('integrity_unavailable'));
+ const requestId=random.replace(/-/g,'');
+ return new Promise((resolve,reject)=>{
+  const timeout=setTimeout(()=>{integrityPending.delete(requestId);reject(Error('integrity_unavailable'));},85000);
+  integrityPending.set(requestId,{resolve,reject,timeout});
+  try{native().requestSocialIntegrityToken(requestId,action,version,subject);}
+  catch(_){clearTimeout(timeout);integrityPending.delete(requestId);reject(Error('integrity_unavailable'));}
+ });
+}
+root.TrialumSocialIntegrityEvent=event=>{
+ const requestId=String(event?.requestId||''),pending=integrityPending.get(requestId);
+ if(!pending)return;
+ integrityPending.delete(requestId);clearTimeout(pending.timeout);
+ if(!nativeAdult()||!state.socialConsented||!state.ageAllowed) {
+  pending.reject(Error('age_gate_required'));return;
+ }
+ if(event?.ok===true&&typeof event.token==='string'&&event.token.length>100){
+  // Sensitive token exists only in this resolved promise, never in state/storage.
+  pending.resolve(event.token);
+ }else pending.reject(Error('integrity_unavailable'));
+};
+async function revokeOnServer(){
+ const key=savedCredential(),base=String(native()?.socialApiUrl?.()||'').replace(/\\/$/,'');
+ if(!CODE.test(key)||!/^https:\\/\\/[a-z0-9.-]+(?::443)?$/i.test(base))return false;
+ const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),8000);
+ try{
+  const res=await fetch(base+'/v1/social/eligibility/revoke',{
+   method:'POST',headers:{Authorization:'Bearer '+key},signal:ctrl.signal,
+   cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
+  });
+  return res.ok;
+ }catch(_){return false;}finally{clearTimeout(timeout);}
+}
+function revokePending(){try{return root.localStorage?.getItem(REVOKE_PENDING_KEY)==='yes';}catch(_){return false;}}
+function markRevokePending(yes){try{
+ if(yes)root.localStorage?.setItem(REVOKE_PENDING_KEY,'yes');
+ else root.localStorage?.removeItem(REVOKE_PENDING_KEY);
+}catch(_){}}
+async function flushPendingRevoke(){
+ if(!revokePending())return true;
+ const ok=await revokeOnServer();
+ if(ok)markRevokePending(false);
+ return ok;
+}
+function readCapabilities(status){
+ capability=status;
+ const v=status?.socialConsentVersion;
+ if(v!==undefined && !validVersion(v))throw Error('social_consent_required');
+ if(root.TrialumLegal?.setSocialConsentVersion?.(v||SOCIAL_CONSENT_V1)===false)
+   throw Error('social_consent_required');
+ state.serverConsentVersion=v||SOCIAL_CONSENT_V1;
+ state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
+ state.attestationReady=status?.socialAttestationReady===true;
+ state.eligibilityRequired=status?.socialEligibilityRequired===true;
+ state.registrationIntegrityRequired=status?.registrationIntegrityRequired===true;
+}
+async function ensureEligibility(){
+ if(!state.socialConsented||!nativeAdult())throw Error('age_gate_required');
+ if(!state.attestationReady) {
+  // Compatibility mode is explicitly server controlled. Never perform an
+  // attestation when service discovery reports it unavailable.
+  if(state.eligibilityRequired)throw Error('integrity_verification_unavailable');
+  state.eligibilityReady=true;return true;
+ }
+ if(eligibilityBusy)return eligibilityBusy;
+ eligibilityBusy=(async()=>{
+  state.eligibilityReady=false;
+  let status;
+  try{status=await request('eligibility/status');}
+  catch(e){if(e?.message!=='eligibility_attestation_required')throw e;status={eligible:false};}
+  if(status?.eligible===true && (!status.expiresAt || Date.parse(status.expiresAt)>Date.now()+30000)){
+   state.eligibilityReady=true;return true;
+  }
+  let subject=String(status?.profileId||status?.id||state.identity?.id||'');
+  if(!PROFILE_ID.test(subject)){
+   const me=await request('me');
+   subject=String(me?.id||'');
+  }
+  if(!PROFILE_ID.test(subject))throw Error('authentication_required');
+  const version=state.serverConsentVersion;
+  if(!validVersion(version))throw Error('social_consent_required');
+  const integrityToken=await tokenFor('renew',version,subject);
+  await request('eligibility/attest','POST',{
+   socialConsentAccepted:true,socialConsentVersion:version,integrityToken
+  });
+  state.eligibilityReady=true;return true;
+ })().finally(()=>{eligibilityBusy=null;});
+ return eligibilityBusy;
+}
+function onEligibilityError(code){
+ if(!['eligibility_attestation_required','session_revoked','social_consent_required',
+   'eligibility_proof_invalid','integrity_verification_unavailable'].includes(code))return false;
+ suspendSocial('Потврдата за социјалниот профил треба да се обнови. Провери Age Signals и обиди се повторно; зачувувањата се безбедни.');
+ return true;
+}
 const emit=()=>changed();
 function parseCode(text, base=state.server){
   if(typeof text!=='string'||text.length>1024)return '';
@@ -38,7 +157,13 @@ function setError(e){
     recovery_unavailable:'Враќањето не е овозможено на серверот. Профилот не е променет.',
     recovery_unavailable_or_invalid:'ID-то или recovery-клучот се невалидни, профилот е избришан или привремено е заклучен.',
     recovery_kit_required:'Не може безбедно да се создаде профил без серверска recovery-функција.',
-    secure_storage_unavailable:'Android не успеа безбедно да го зачува токенот на уредот.'
+    secure_storage_unavailable:'Android не успеа безбедно да го зачува токенот на уредот.',
+    eligibility_attestation_required:'Потврдата истекла. Повтори ја Google Play проверката.',
+    integrity_verification_unavailable:'Google проверката привремено не е достапна. Офлајн играта останува достапна.',
+    integrity_unavailable:'Play Integrity не е достапен. Пробај повторно со официјалната Play верзија.',
+    eligibility_proof_invalid:'Google проверката не успеа. Повтори Age Signals, па побарај нова потврда.',
+    social_consent_required:'Прегледај ги и прифати ги тековните социјални услови.',
+    client_update_required:'Потребно е ажурирање на апликацијата за новиот договор.'
   };
   state.error=map[e?.message]||'Не успеа поврзувањето. Провери интернет и сервер.';
   emit();
@@ -54,7 +179,12 @@ async function request(path,method='GET',body=null,key=credential){
       ...(body?{body:JSON.stringify(body)}:{}),signal:ctrl.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
     });
     const payload=await res.json().catch(()=>({}));
-    if(!res.ok)throw Error(payload.error||'server_unavailable');
+    if(!res.ok){
+      const code=String(payload.error||'server_unavailable');
+      if(res.status===428||code==='session_revoked')onEligibilityError(code);
+      if(code==='social_consent_required')state.socialConsented=false;
+      throw Object.assign(Error(code),{status:res.status});
+    }
     return payload;
   }finally{clearTimeout(timeout);}
 }
