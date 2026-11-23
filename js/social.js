@@ -66,7 +66,8 @@ root.TrialumSocialIntegrityEvent=event=>{
 };
 async function revokeOnServer(){
  const key=savedCredential(),base=String(native()?.socialApiUrl?.()||'').replace(/\/$/,'');
- if(!CODE.test(key)||!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(base))return false;
+ if(!CODE.test(key))return true;
+ if(!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(base))return false;
  const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),8000);
  try{
   const res=await fetch(base+'/v1/social/eligibility/revoke',{
@@ -185,6 +186,11 @@ async function request(path,method='GET',body=null,key=credential){
   if(!state.socialConsented)throw Error('social_consent_required');
   if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true)throw Error('age_gate_required');
   if(!state.server)throw Error('social_service_disabled');
+  // Only eligibility, recovery and deletion endpoints run before an online session.
+  const preflight=path==='status'||path==='register'||path==='eligibility/status'||
+    path==='eligibility/attest'||path==='recovery/restore'||path==='recovery/issue'||
+    (path==='account'&&method==='DELETE')||path==='me';
+  if(!preflight&&key&&!onlineReady())throw Error('eligibility_attestation_required');
   const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),7000);
   try{
     const res=await fetch(state.server+'/v1/social/'+path,{
@@ -194,7 +200,8 @@ async function request(path,method='GET',body=null,key=credential){
     const payload=await res.json().catch(()=>({}));
     if(!res.ok){
       const code=String(payload.error||'server_unavailable');
-      if(res.status===428||code==='session_revoked'||code==='social_consent_required')onEligibilityError(code);
+      if((res.status===428&&path!=='eligibility/status')||
+         code==='session_revoked'||code==='social_consent_required')onEligibilityError(code);
       throw Object.assign(Error(code),{status:res.status});
     }
     return payload;
@@ -378,7 +385,9 @@ async function acceptPreparedRecovery(id,newKey){
   credential=restored.credential;
   state.identity={id:restored.id,nickname:restored.nickname};
   state.online=true;state.ready=true;
-  const friends=await request('friends');state.friends=friends.friends||[];
+  // A recovered bearer remains saved even if renewed verification is unavailable.
+  state.eligibilityReady=false;state.ready=false;state.friends=[];
+  await init();
   return state.identity;
  });
 }
@@ -387,15 +396,15 @@ root.TrialumRecoveryKitAccepted=(id,key)=>{acceptPreparedRecovery(id,key);};
 function requestAgeCheck(){
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return false;}
   if(!native()?.requestAgeSignals){state.ageStatus='unavailable';state.error='За безбедна потврда е потребна официјалната Android апликација од Google Play.';emit();return false;}
-  state.ageAllowed=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];
-  root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
+  suspendSocial();
+  state.ageAllowed=false;state.online=false;state.ready=false;state.friends=[];
   state.error='';state.ageStatus='checking';emit();native().requestAgeSignals();return true;
 }
 function setAgeSignal(result){
   if(!state.socialConsented){state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;emit();return;}
   const eligible=result?.status==='adult_signal'&&result?.adultEligible===true&&native()?.ageSignalsAdultEligible?.()===true;
   state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
-  if(!eligible){state.online=false;state.ready=false;state.identity=null;state.friends=[];root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.';emit();return;}
+  if(!eligible){suspendSocial('Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.');state.friends=[];return;}
   state.error='';emit();return init();
 }
 async function invite(){
@@ -438,13 +447,30 @@ async function remove(id,block=false){
   });
 }
 async function deleteAccount(){
-  return run(async()=>{
-    await request('account','DELETE');
-    native()?.pushDisable?.();
-    native()?.socialClearCredential?.();
-    credential='';state.identity=null;state.ready=false;state.friends=[];state.code='';state.preview=null;state.pending='';
-    return true;
-  });
+ // Account deletion bypasses expired eligibility, but requires a valid stored
+ // bearer and the user's explicit confirmation in the caller.
+ const key=savedCredential(),base=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
+ if(!CODE.test(key)||!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(base)){
+   setError(Error('authentication_required'));return false;
+ }
+ if(state.busy)return false;
+ state.busy=true;emit();
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+ try{
+   const response=await fetch(base+'/v1/social/account',{
+     method:'DELETE',headers:{Authorization:'Bearer '+key},signal:controller.signal,
+     cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
+   });
+   const payload=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(payload.error||'server_unavailable');
+   suspendSocial();
+   native()?.pushDisable?.();
+   native()?.socialClearCredential?.();
+   credential='';state.identity=null;state.friends=[];state.code='';state.preview=null;state.pending='';
+   markRevokePending(false);state.error='';emit();
+   return true;
+ }catch(e){setError(e);return false;}
+ finally{clearTimeout(timeout);state.busy=false;emit();}
 }
 function receive(raw){const code=parseCode(raw);if(!code)return false;state.pending=code;state.preview=null;emit();return true;}
 // Share sheets / Android intents are OUTSIDE the WebView DOM translator.
@@ -555,11 +581,42 @@ function render(){
   return html+'</section>';
 }
 async function setSocialConsent(enabled){
-  if(enabled){if(!root.TrialumLegal?.grantSocialConsent?.())return false;state.socialConsented=true;state.error='';await init();emit();return true;}
-  if(root.TrialumLegal?.revokeSocialConsent?.()!==true)return false;state.socialConsented=false;state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;state.identity=null;state.friends=[];state.code='';state.preview=null;
-  root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();emit();return true;
+ if(enabled){
+  if(!root.TrialumLegal?.grantSocialConsent?.())return false;
+  state.socialConsented=true;state.error='';
+  await init();emit();return true;
+ }
+ // Stop all social clients BEFORE revoke; keep identity, assets and local world.
+ suspendSocial();
+ state.socialConsented=false;state.ageAllowed=false;state.ageStatus='social_consent_required';
+ state.friends=[];state.code='';state.preview=null;
+ if(root.TrialumLegal?.revokeSocialConsent?.()!==true){
+  state.error='Не успеа локалното повлекување согласност.';
+  emit();return false;
+ }
+ if(hasSavedCredential())markRevokePending(true);
+ const revoked=await flushPendingRevoke();
+ state.error=revoked?'':'Социјалните функции се исклучени. Серверското повлекување чека интернет и повторен обид.';
+ emit();return true;
 }
-root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,isAdultAllowed:()=>state.ageAllowed,isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&native()?.ageSignalsAdultEligible?.()===true,isSocialProfileActive:()=>state.ageAllowed&&state.socialConsented&&native()?.ageSignalsAdultEligible?.()===true&&state.ready&&!!state.identity,
+function handleTransportClose(event){
+ return event?.code===1008 && onEligibilityError(String(event?.reason||''));
+}
+function onForeground(event){
+ if(event==='hidden'){
+  suspendSocial();state.ageAllowed=false;state.ageStatus='unchecked';emit();return;
+ }
+ if(event==='visible'&&state.socialConsented&&state.ageStatus!=='checking'){
+  if(!nativeAdult())requestAgeCheck();
+  else init().catch(setError);
+ }
+}
+function retryEligibility(){
+ if(!state.socialConsented||state.ageStatus==='checking')return false;
+ if(!nativeAdult())return requestAgeCheck();
+ init().catch(setError);return true;
+}
+root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,handleTransportClose,onForeground,retryEligibility,isAdultAllowed:()=>state.ageAllowed&&nativeAdult(),isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&nativeAdult(),isSocialProfileActive:()=>onlineReady()&&state.ready&&!!state.identity,
  setPending(value){state.pending=parseCode(value);state.preview=null;emit();},clearPreview(){state.preview=null;state.pending='';emit();},
  onChange(fn){changed=fn},getState(){return {...state,friends:state.friends.slice()}}};
 if(typeof module==='object'&&module.exports)module.exports={parseCode,inviteMessage};
