@@ -140,6 +140,9 @@ function onEligibilityError(code){
   root.TrialumLegal?.revokeSocialConsent?.();
   state.socialConsented=false;
  }
+ if(code==='eligibility_proof_invalid'){
+  state.ageAllowed=false;state.ageStatus='retry_required';
+ }
  return true;
 }
 const emit=()=>changed();
@@ -201,7 +204,8 @@ async function request(path,method='GET',body=null,key=credential){
     if(!res.ok){
       const code=String(payload.error||'server_unavailable');
       if((res.status===428&&path!=='eligibility/status')||
-         code==='session_revoked'||code==='social_consent_required')onEligibilityError(code);
+         ['session_revoked','social_consent_required','eligibility_proof_invalid',
+          'integrity_verification_unavailable'].includes(code))onEligibilityError(code);
       throw Object.assign(Error(code),{status:res.status});
     }
     return payload;
@@ -511,6 +515,7 @@ function render(){
       (english?'<p>Friends is optional. The offline game remains available if you choose “Not now”. Shared playgrounds and messages are available only after you enable Friends, create a social profile and this client receives an eligible 18+ age signal. If the signal is unavailable or not eligible, social features stay locked.</p><h4>What the service processes</h4><ul><li>Your random social profile ID, chosen nickname, friend links and invitations are sent to the Trialum social server to operate the social profile. Accepted friends may see the nickname and selected pet/profile details; shared-room members can see room activity and pet presence.</li><li>Messages travel over HTTPS, but the Trialum server processes them as readable text; stored records are encrypted at rest. Messages are not end-to-end encrypted. The sender, recipient and service operator can access message content while it is relayed. Message records expire within 7 days. Safety reports may be kept for up to 30 days.</li><li>Google Play may provide an age-range eligibility signal to this device. The app checks it on this device for this client; the signal is not sent to the Trialum server. The app does not send your Google email, date of birth or exact age to the Trialum social server.</li><li>Nearby friend discovery uses Android nearby-device permissions only when you start that action; Trialum does not collect location from it. If you separately enable push, Firebase receives a device push token for generic notifications; message text and friend names are not included in notification payloads. Android asks permission separately.</li><li>Your offline game save and local AI pet memories are not sent to the social server.</li><li>For optional account recovery, Trialum stores a one-way keyed verifier linked to your pseudonymous social ID. Your full recovery key is shown once on your device and is not stored as plaintext by the server or included in any game backup. After recovery, the old key and old device login are revoked. This does not restore the local world.</li></ul><h4>Safety and choices</h4><p>Do not share real names, email, phone, address, school, passwords, verification codes or precise location. Automated filters can miss personal information; other players may see content you send. You can block/report users, delete your social profile, or turn off social access on this device. Turning access off does not itself delete the server profile. Read the full <a href="https://dedopero.servegame.com/privacy-policy">Privacy Policy</a> and <a href="https://dedopero.servegame.com/user-agreement">User Agreement</a>.</p><p>Trialum social messages are not private from the service operator while relayed. Do not use them for sensitive or confidential information.</p>':
       '<p>Пријатели се опционални. Офлајн играта останува достапна ако избереш „Не сега“. Заедничката игротека и пораките се достапни само откако ќе ги вклучиш Пријатели, ќе создадеш профил и овој клиент ќе добие дозволен возрастен сигнал 18+. Ако сигналот не е достапен или не е соодветен, социјалните функции остануваат заклучени.</p><h4>Кои податоци ги обработува услугата</h4><ul><li>Твојот случаен социјален ID, избраниот прекар, пријателствата и поканите се испраќаат до Trialum социјалниот сервер за да работи профилот. Прифатените пријатели може да го видат прекарот и избраните детали за миленичето/профилот; членовите на заедничката игротека може да ја видат активноста и присуството на миленичето.</li><li>Пораките се пренесуваат преку HTTPS, но Trialum серверот ги обработува како читлив текст; зачуваните записи се шифрираат во мирување. Пораките не се end-to-end шифрирани. Испраќачот, примачот и операторот на услугата може да ја видат содржината додека се пренесува. Записите истекуваат најдоцна за 7 дена. Безбедносните пријави може да се чуваат до 30 дена.</li><li>Google Play може да му даде на овој уред сигнал за возрасна група. Апликацијата го проверува на уредот за овој клиент; сигналот не се испраќа до Trialum серверот. Апликацијата не ја испраќа твојата Google е-пошта, датум на раѓање или точна возраст до социјалниот сервер.</li><li>Пронаоѓањето близок пријател користи Android дозволи за блиски уреди само кога самиот ќе ја активираш функцијата; Trialum не собира локација од неа. Ако посебно ги вклучиш push известувањата, Firebase добива токен за уредот за испраќање општи известувања; текстот на пораките и имињата на пријателите не се во payload-от. Android бара дозвола посебно.</li><li>Офлајн зачувувањето и локалните AI-мемории на милениците не се испраќаат до социјалниот сервер.</li><li>За опционално враќање на профилот, Trialum чува само криптографски проверувач поврзан со твоето социјално ID. Целиот recovery-клуч се прикажува еднаш на уредот, не се чува како читлив текст на серверот и не влегува во бекапот. По враќање стариот клуч и старата најава се поништуваат. Локалниот свет се враќа од посебен бекап.</li></ul><h4>Безбедност и избор</h4><p>Не споделувај вистинско име, е-пошта, телефон, адреса, училиште, лозинка, код за потврда или точна локација. Автоматските филтри може да пропуштат лични податоци; другите играчи може да ја видат содржината што ја испраќаш. Можеш да блокираш/пријавиш корисници, да го избришеш социјалниот профил или да го исклучиш социјалниот пристап на овој уред. Исклучувањето само по себе не го брише серверскиот профил. Прочитај ги целосните <a href="https://dedopero.servegame.com/privacy-policy">Правила за приватност</a> и <a href="https://dedopero.servegame.com/user-agreement">Услови за користење</a>.</p><p>Пораките на Trialum не се приватни од операторот на услугата додека се пренесуваат. Не користи ги за чувствителни или доверливи информации.</p>')+
       '<label class="legal-check"><input id="socialConsentCheck" type="checkbox"><span>'+(english?'I understand the data and safety information and voluntarily enable Friends, shared play and messages.':'Ги разбирам податоците и безбедносните информации и доброволно ги вклучувам Пријатели, заедничката игротека и пораките.')+'</span></label><div class="btn-line"><button data-do="socialConsentLater">'+(english?'Not now':'Не сега')+'</button><button id="socialConsentEnable" class="primary" data-do="socialConsentAccept" disabled>'+(english?'I agree and enable social services':'Се согласувам и ги вклучувам социјалните услуги')+'</button></div><p class="small subtle">'+(english?'Your choice is stored only on this device and is not sent to Trialum.':'Изборот се чува само на овој уред и не се испраќа до Trialum.')+'</p></article>';
+    if(hasSavedCredential())html+='<div class="card"><p class="small">Постојниот социјален профил е сочуван. Можеш да го избришеш дури и без нова потврда.</p><button data-do="socialDelete">Избриши го серверскиот профил</button></div>';
     return html+'</section>';
   }
   if(!state.ageAllowed){
@@ -520,10 +525,17 @@ function render(){
       (credential?'<p class="small">Постоен социјален профил е сочуван, но не се поврзува додека проверката не дозволи пристап.</p>':'')+'</div>';
     if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
     html+='<div class="btn-line"><button data-do="socialConsentDisable">Исклучи социјални услуги на овој уред</button></div>';
+    if(hasSavedCredential())html+='<div class="card"><button data-do="socialDelete">Избриши го серверскиот профил (без Age Signals)</button></div>';
     return html+'</section>';
   }
   if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
   if(!state.enabled){html+='<div class="notice">🔒 Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса. Дотогаш твоите миленици остануваат локално зачувани.</div>';}
+  else if(hasSavedCredential()&&!state.ready){
+    html+='<div class="card"><h3>🔐 Постоечкиот социјален профил е зачуван</h3>'+
+      '<p>Серверската дозвола мора да се потврди пред онлајн дружба. Не е потребна нова регистрација; локалниот свет не е променет.</p>'+
+      '<div class="btn-line"><button class="primary" data-do="socialEligibilityRetry">Провери повторно / обнови</button>'+
+      '<button data-do="socialDelete">Избриши серверски профил</button></div></div>';
+  }
   else if(!state.identity){
     html+='<div class="card social-hero"><h3>✨ Создај приватен профил за дружба</h3>'+
       '<p class="desc">Користи измислен прекар, не вистинско име, контакт, училиште или локација. Пријателството се воспоставува само со двострана потврда. Таен клуч се чува во Android Keystore, не во светот или JSON бекап.</p>'+ 
@@ -613,7 +625,7 @@ function onForeground(event){
 }
 function retryEligibility(){
  if(!state.socialConsented||state.ageStatus==='checking')return false;
- if(!nativeAdult())return requestAgeCheck();
+ if(!nativeAdult()||state.ageStatus==='retry_required')return requestAgeCheck();
  init().catch(setError);return true;
 }
 root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,handleTransportClose,onForeground,retryEligibility,isAdultAllowed:()=>state.ageAllowed&&nativeAdult(),isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&nativeAdult(),isSocialProfileActive:()=>onlineReady()&&state.ready&&!!state.identity,
