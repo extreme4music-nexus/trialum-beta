@@ -5,6 +5,13 @@ on:
       - fix/v44-android-social-attestation-20261123
     paths:
       - '.github/workflows/v44-social-attestation-internal-aab.yml'
+      - 'android-template/**'
+      - 'js/social.js'
+      - 'js/legal-consent.js'
+      - 'js/messages.js'
+      - 'js/shared-playground.js'
+      - 'js/app.js'
+      - 'tests/v44-social-attestation.test.cjs'
   workflow_dispatch:
 permissions:
   contents: read
