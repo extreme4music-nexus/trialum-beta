@@ -11,6 +11,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: trialum-v44-android-bundle-smoke-${{ github.ref_name }}
+  cancel-in-progress: true
 jobs:
   release-variant-smoke:
     runs-on: ubuntu-latest
