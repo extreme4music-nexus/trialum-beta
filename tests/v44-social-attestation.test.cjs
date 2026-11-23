@@ -12,7 +12,8 @@ const KEY = 'B'.repeat(43);
 const TOKEN = 'T'.repeat(220);
 
 function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
-                alreadyEligible=false, errorOnAttest='', failRevoke=false}={}) {
+                alreadyEligible=false, errorOnAttest='', failRevoke=false, failRegistrationTransport=false,
+                eligibilityStatus428=false}={}) {
  let age=adult, agreed=consent, saved=credential, counter=0;
  let eligible=alreadyEligible;
  const requests=[], events=[], storage = new Map();
@@ -62,16 +63,20 @@ function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
      registrationIntegrityRequired:false,socialConsentVersion:'trialum-social-v1',
      eligibilityTtlSeconds:86400
    };
-   else if(route==='eligibility/status')response={
-     eligible,profileId:UUID,
-     expiresAt:eligible?new Date(Date.now()+86400000).toISOString():null
-   };
+   else if(route==='eligibility/status'){
+     if(eligibilityStatus428){status=428;response={error:'eligibility_attestation_required'}}
+     else response={eligible,profileId:UUID,
+       expiresAt:eligible?new Date(Date.now()+86400000).toISOString():null};
+   }
    else if(route==='eligibility/attest') {
      if(errorOnAttest){status=503;response={error:errorOnAttest}}
      else {eligible=true;response={eligible:true};}
    }else if(route==='me') response={id:UUID,nickname:'Nova'};
    else if(route==='friends') response={friends:[]};
-   else if(route==='register') response={id:UUID,nickname:body.nickname,credential:'R'.repeat(43),recoveryKey:'K'.repeat(43),recoveryKitVersion:1};
+   else if(route==='register') {
+     if(failRegistrationTransport)throw Error('transport_interrupted');
+     response={id:UUID,nickname:body.nickname,credential:'R'.repeat(43),recoveryKey:'K'.repeat(43),recoveryKitVersion:1};
+   }
    else if(route==='recovery/restore') response={id:UUID,nickname:'Nova',credential:'S'.repeat(43),recoveryKitRotated:true};
    else if(route==='eligibility/revoke') {
      events.push(['server-revoke']);eligible=false;
@@ -176,6 +181,46 @@ test('profile recovery rotates bearer then verifies renewed eligibility',async()
  assert(h.requests.some(v=>v.route==='recovery/restore'));
  assert(h.requests.some(v=>v.route==='eligibility/attest'));
 });
+
+test('ambiguous registration network outcome is persisted and must not silently retry',async()=>{
+ const h=setup({credential:'',failRegistrationTransport:true});
+ await h.social.init();
+ const first=await h.social.register('Nova');
+ assert.equal(first,null);
+ assert.equal(h.storage.get('trialum.social.registration.uncertain.v44'),'yes');
+ assert.equal(h.social.getState().registrationOutcomeUnknown,true);
+ const registered=h.requests.filter(x=>x.route==='register').length;
+ await h.social.init();
+ await h.social.register('Nova');
+ assert.equal(h.requests.filter(x=>x.route==='register').length,registered,
+  'no duplicate registration until user explicitly reviews the outcome');
+ assert.equal(h.social.confirmReviewedRegistration(),true);
+ assert.equal(h.storage.has('trialum.social.registration.uncertain.v44'),false);
+});
+test('HTTP 428 eligibility status is a recoverable renew, not account deletion',async()=>{
+ const h=setup({eligibilityStatus428:true});
+ await h.social.init();
+ assert.equal(h.social.isSocialProfileActive(),true);
+ assert(h.requests.some(x=>x.route==='eligibility/attest'));
+ assert.equal(h.saved(),KEY);
+});
+test('failed revoke persists a pending server-revocation marker and keeps offline play',async()=>{
+ const h=setup({failRevoke:true});
+ await h.social.init();
+ assert.equal(await h.social.setSocialConsent(false),true);
+ assert.equal(h.social.isSocialProfileActive(),false);
+ assert.equal(h.storage.get('trialum.social.revoke.pending.v44'),'yes');
+ assert.equal(h.saved(),KEY);
+});
+test('WSS 1008 session_revoked suspends social connections without deleting identity',async()=>{
+ const h=setup();
+ await h.social.init();
+ assert.equal(h.social.handleTransportClose({code:1008,reason:'session_revoked'}),true);
+ assert.equal(h.social.isSocialProfileActive(),false);
+ assert.equal(h.saved(),KEY);
+ assert.equal(h.social.handleTransportClose({code:1000,reason:''}),false);
+});
+
 test('request hash contract is four newline-delimited fields without trailing newline',()=>{
  const crypto=require('node:crypto');
  const raw='trialum-social-integrity-v1\nregister\ntrialum-social-v1\nTest';
