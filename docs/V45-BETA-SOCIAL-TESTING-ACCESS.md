@@ -1,4 +1,4 @@
-# v45 Internal Beta Social Access
+# v46 Internal Beta Social Access
 
 **Status:** isolated internal-beta change; not a production authorization policy.
 
@@ -17,7 +17,7 @@ The internal beta must let invited testers exercise Friends, messages, and share
 
 ## Device test
 
-1. Install the owner-signed v45 internal-beta APK with the existing release signer.
+1. Install the owner-signed v46 internal-beta APK with the existing release signer.
 2. Open Friends and accept the social disclosure.
 3. Confirm that Friends/profile access is available even if Age Signals is unavailable on a sideloaded install.
 4. Use **Test Age Signals** to verify the API separately; an ineligible result must not relock this beta build.
