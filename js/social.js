@@ -10,7 +10,7 @@ const CODE=/^[A-Za-z0-9_-]{43}$/;
 const PROFILE_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false,eligibilityReady:false,attestationReady:false,serverConsentVersion:'trialum-social-v1',eligibilityRequired:false,registrationIntegrityRequired:false};
 let credential='',changed=()=>{},pendingRecovery=null,eligibilityBusy=null;
-let capability=null,sessionGeneration=0;
+let capability=null,sessionGeneration=0,autoRenewPending=false;
 const integrityPending=new Map();
 const SOCIAL_CONSENT_V1='trialum-social-v1';
 const REVOKE_PENDING_KEY='trialum.social.revoke.pending.v44';
@@ -142,6 +142,8 @@ async function ensureEligibility(){
 function onEligibilityError(code){
  if(!['eligibility_attestation_required','session_revoked','social_consent_required',
    'eligibility_proof_invalid','integrity_verification_unavailable'].includes(code))return false;
+ const canAutoRenew=code==='eligibility_attestation_required' &&
+   state.socialConsented && nativeAdult() && !autoRenewPending;
  suspendSocial('Потврдата треба повторно да се провери. Офлајн играта и зачувувањата остануваат достапни.');
  if(code==='social_consent_required'){
   root.TrialumLegal?.revokeSocialConsent?.();
@@ -149,6 +151,12 @@ function onEligibilityError(code){
  }
  if(code==='eligibility_proof_invalid'){
   state.ageAllowed=false;state.ageStatus='retry_required';
+ }
+ if(canAutoRenew){
+  // One bounded automatic recovery attempt; no WSS reconnect storm on errors.
+  autoRenewPending=true;
+  Promise.resolve().then(()=>init()).catch(setError)
+    .finally(()=>{autoRenewPending=false;});
  }
  return true;
 }
