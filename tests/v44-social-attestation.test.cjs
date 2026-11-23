@@ -13,8 +13,8 @@ const TOKEN = 'T'.repeat(220);
 
 function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
                 alreadyEligible=false, errorOnAttest='', failRevoke=false, failRegistrationTransport=false,
-                eligibilityStatus428=false}={}) {
- let age=adult, agreed=consent, saved=credential, counter=0;
+                eligibilityStatus428=false, friends428Once=false}={}) {
+ let age=adult, agreed=consent, saved=credential, counter=0, friendsFirst428=friends428Once;
  let eligible=alreadyEligible;
  const requests=[], events=[], storage = new Map();
  const native = {
@@ -72,7 +72,10 @@ function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
      if(errorOnAttest){status=503;response={error:errorOnAttest}}
      else {eligible=true;response={eligible:true};}
    }else if(route==='me') response={id:UUID,nickname:'Nova'};
-   else if(route==='friends') response={friends:[]};
+   else if(route==='friends') {
+     if(friendsFirst428){friendsFirst428=false;status=428;response={error:'eligibility_attestation_required'}}
+     else response={friends:[]};
+   }
    else if(route==='register') {
      if(failRegistrationTransport)throw Error('transport_interrupted');
      response={id:UUID,nickname:body.nickname,credential:'R'.repeat(43),recoveryKey:'K'.repeat(43),recoveryKitVersion:1};
@@ -202,6 +205,15 @@ test('HTTP 428 eligibility status is a recoverable renew, not account deletion',
  await h.social.init();
  assert.equal(h.social.isSocialProfileActive(),true);
  assert(h.requests.some(x=>x.route==='eligibility/attest'));
+ assert.equal(h.saved(),KEY);
+});
+test('online HTTP 428 triggers one bounded eligibility recovery without reconnect loop',async()=>{
+ const h=setup({friends428Once:true});
+ await h.social.init();
+ for(let i=0;i<8&&!h.social.isSocialProfileActive();i++)
+   await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.social.isSocialProfileActive(),true);
+ assert.equal(h.requests.filter(v=>v.route==='friends').length,2);
  assert.equal(h.saved(),KEY);
 });
 test('failed revoke persists a pending server-revocation marker and keeps offline play',async()=>{
