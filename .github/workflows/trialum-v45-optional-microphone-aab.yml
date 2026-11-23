@@ -1,0 +1,116 @@
+name: Trialum v45 internal beta AAB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-internal-beta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
+      TRIALUM_PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+      TRIALUM_PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
+      TRIALUM_PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
+      TRIALUM_PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
+      TRIALUM_PGS_ACH_ADVANCED: ${{ vars.TRIALUM_PGS_ACH_ADVANCED }}
+      TRIALUM_PGS_ACH_ECOLOGY: ${{ vars.TRIALUM_PGS_ACH_ECOLOGY }}
+      TRIALUM_PGS_ACH_LAB6: ${{ vars.TRIALUM_PGS_ACH_LAB6 }}
+      TRIALUM_PGS_ACH_DNA: ${{ vars.TRIALUM_PGS_ACH_DNA }}
+      TRIALUM_PGS_BOARD_XP: ${{ vars.TRIALUM_PGS_BOARD_XP }}
+      TRIALUM_PGS_BOARD_SPECIES: ${{ vars.TRIALUM_PGS_BOARD_SPECIES }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build unsigned Play internal-beta bundle
+        run: |
+          set -euo pipefail
+          : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
+          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing Firebase client API key}"
+          : "${TRIALUM_FIREBASE_APP_ID:?Missing release Firebase app ID}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNQA:?Missing SignQA Firebase app ID}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNDEBUG:?Missing SignDebug Firebase app ID}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing Firebase project ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing Firebase sender ID}"
+          args=(
+            "-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
+            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
+            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
+            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
+            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
+          )
+          [[ -n "$TRIALUM_PGS_PROJECT_ID" ]] && args+=("-PtrialumPgsProjectId=$TRIALUM_PGS_PROJECT_ID")
+          [[ -n "$TRIALUM_PGS_ACH_FIRST_PET" ]] && args+=("-PtrialumPgsAchievement_first_pet=$TRIALUM_PGS_ACH_FIRST_PET")
+          [[ -n "$TRIALUM_PGS_ACH_FIRST_PLANT" ]] && args+=("-PtrialumPgsAchievement_first_plant=$TRIALUM_PGS_ACH_FIRST_PLANT")
+          [[ -n "$TRIALUM_PGS_ACH_LEARNED" ]] && args+=("-PtrialumPgsAchievement_learned=$TRIALUM_PGS_ACH_LEARNED")
+          [[ -n "$TRIALUM_PGS_ACH_ADVANCED" ]] && args+=("-PtrialumPgsAchievement_advanced=$TRIALUM_PGS_ACH_ADVANCED")
+          [[ -n "$TRIALUM_PGS_ACH_ECOLOGY" ]] && args+=("-PtrialumPgsAchievement_ecology=$TRIALUM_PGS_ACH_ECOLOGY")
+          [[ -n "$TRIALUM_PGS_ACH_LAB6" ]] && args+=("-PtrialumPgsAchievement_lab6=$TRIALUM_PGS_ACH_LAB6")
+          [[ -n "$TRIALUM_PGS_ACH_DNA" ]] && args+=("-PtrialumPgsAchievement_dna=$TRIALUM_PGS_ACH_DNA")
+          [[ -n "$TRIALUM_PGS_BOARD_XP" ]] && args+=("-PtrialumPgsLeaderboard_xp=$TRIALUM_PGS_BOARD_XP")
+          [[ -n "$TRIALUM_PGS_BOARD_SPECIES" ]] && args+=("-PtrialumPgsLeaderboard_species=$TRIALUM_PGS_BOARD_SPECIES")
+          gradle -p android-template :app:assembleInternalBeta :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+
+      - name: Verify package version and optional microphone feature
+        run: |
+          set -euo pipefail
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          APK=android-template/app/build/outputs/apk/internalBeta/app-internalBeta-unsigned.apk
+          AAB=android-template/app/build/outputs/bundle/internalBeta/app-internalBeta.aab
+          MAPPING=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
+          test -s "$APK" && test -s "$AAB" && test -s "$MAPPING"
+          BADGING=$("$AAPT" dump badging "$APK")
+          printf '%s\n' "$BADGING" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='45' versionName='1.4 v45'"
+          MANIFEST=$(find android-template/app/build/intermediates/merged_manifest -path '*internalBeta*' -name AndroidManifest.xml -type f | head -n 1)
+          test -n "$MANIFEST"
+          grep -Eq '<uses-feature[^>]*android:name="android.hardware.microphone"[^>]*android:required="false"' "$MANIFEST"
+          mkdir -p candidates
+          cp "$AAB" candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab
+          cp "$MAPPING" candidates/mapping.txt
+          sha256sum candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab candidates/mapping.txt > candidates/SHA256SUMS.txt
+          {
+            echo "package=com.trialum.ziivaiskra"
+            echo "version_code=45"
+            echo "version_name=1.4 v45"
+            echo "source_commit=$(git rev-parse HEAD)"
+            echo "microphone_hardware=optional"
+            echo "bundle_signing=UNSIGNED; owner must sign locally with the existing Play upload key"
+            echo "secrets=none embedded; only configured public client IDs and HTTPS endpoint used"
+          } > candidates/BUILD-INFO.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trialum-1.4-v45-internalBeta-unsigned-AAB-and-mapping
+          path: candidates/
+          if-no-files-found: error
+          retention-days: 14
