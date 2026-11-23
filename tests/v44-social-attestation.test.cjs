@@ -15,7 +15,7 @@ function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
                 alreadyEligible=false, errorOnAttest='', failRevoke=false, failRegistrationTransport=false,
                 eligibilityStatus428=false, friends428Once=false}={}) {
  let age=adult, agreed=consent, saved=credential, counter=0, friendsFirst428=friends428Once;
- let eligible=alreadyEligible;
+ let eligible=alreadyEligible, revokeFails=failRevoke;
  const requests=[], events=[], storage = new Map();
  const native = {
    ageSignalsAdultEligible:()=>age,
@@ -83,7 +83,7 @@ function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
    else if(route==='recovery/restore') response={id:UUID,nickname:'Nova',credential:'S'.repeat(43),recoveryKitRotated:true};
    else if(route==='eligibility/revoke') {
      events.push(['server-revoke']);eligible=false;
-     if(failRevoke){status=503;response={error:'integrity_verification_unavailable'}} else response={revoked:true};
+     if(revokeFails){status=503;response={error:'integrity_verification_unavailable'}} else response={revoked:true};
    } else if(route==='account') response={deleted:true};
    return {ok:status<400,status,json:async()=>response};
  };
@@ -92,7 +92,7 @@ function setup({adult=true, consent=true, credential=KEY, attestationReady=true,
  vm.runInContext(source,ctx,{filename:'social.js'});
  return {
    social:ctx.TrialumSocial,requests,events,storage,
-   saved:()=>saved,setAge:value=>age=value
+   saved:()=>saved,setAge:value=>age=value,setRevokeFailure:value=>revokeFails=value
  };
 }
 
@@ -223,6 +223,19 @@ test('failed revoke persists a pending server-revocation marker and keeps offlin
  assert.equal(h.social.isSocialProfileActive(),false);
  assert.equal(h.storage.get('trialum.social.revoke.pending.v44'),'yes');
  assert.equal(h.saved(),KEY);
+});
+test('failed revoke is retried on next launch even when consent remains withdrawn',async()=>{
+ const h=setup({failRevoke:true});
+ await h.social.init();
+ assert.equal(await h.social.setSocialConsent(false),true);
+ assert.equal(h.storage.get('trialum.social.revoke.pending.v44'),'yes');
+ h.setRevokeFailure(false);
+ const before=h.requests.length;
+ await h.social.init();
+ assert.equal(h.storage.has('trialum.social.revoke.pending.v44'),false);
+ assert.equal(h.saved(),KEY);
+ assert.deepEqual(h.requests.slice(before).map(v=>v.route),['eligibility/revoke']);
+ assert.equal(h.social.isSocialProfileActive(),false);
 });
 test('WSS 1008 session_revoked suspends social connections without deleting identity',async()=>{
  const h=setup();
