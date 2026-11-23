@@ -5,6 +5,7 @@ on:
     branches:
       - fix/v44-optional-microphone-feature-20261123
       - fix/v45-beta-social-access-20261123
+      - feature/v46-social-eligibility-controller-20261123
   workflow_dispatch:
 
 permissions:
@@ -37,8 +38,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify beta social access and release Age Signals gates
-        run: node --test tests/v44-friends-age-signals.test.cjs
+      - name: Verify v46 eligibility gates and server policy
+        run: |
+          node --test tests/v44-friends-age-signals.test.cjs
+          node --test server-patch/v46/tests/social-eligibility.test.mjs
 
       - uses: actions/setup-java@v4
         with:
