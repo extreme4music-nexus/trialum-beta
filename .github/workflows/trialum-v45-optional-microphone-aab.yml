@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/v44-optional-microphone-feature-20261123
+      - fix/v45-beta-social-access-20261123
   workflow_dispatch:
 
 permissions:
@@ -35,6 +36,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Verify beta social access and release Age Signals gates
+        run: node --test tests/v44-friends-age-signals.test.cjs
 
       - uses: actions/setup-java@v4
         with:
