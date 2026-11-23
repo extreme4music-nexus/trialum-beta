@@ -24,7 +24,7 @@ const randomId=()=>{
 };
 function config(){
  const api=server(),token=credential();
- state.enabled=root.TrialumAndroid?.betaTesterToolsEnabled?.()===true&&root.TrialumSocial?.isSocialProfileActive?.()===true&&
+ state.enabled=root.TrialumSocial?.isSocialProfileActive?.()===true&&
   /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(api)&&/^[A-Za-z0-9_-]{43}$/.test(token);
  return state.enabled;
 }
@@ -114,7 +114,7 @@ function connect(){
 }
 function activate(){
  if(state.active)return;
- if(!root.TrialumAndroid?.betaTesterToolsEnabled?.()||!root.TrialumSocial?.isSocialProfileActive?.()){state.active=false;state.ready=false;emit();return;}
+ if(root.TrialumSocial?.isSocialProfileActive?.()!==true){state.active=false;state.ready=false;emit();return;}
  state.active=true;
  if(config())refresh();
  timer=setInterval(()=>{if(state.active && !root.document?.hidden)refresh()},25000);

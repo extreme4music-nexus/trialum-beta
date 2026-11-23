@@ -2,11 +2,14 @@
 (function(root){
 'use strict';
 const P=()=>root.TrialumPresence;
+const Shop=()=>root.TrialumSharedShop;
+const t=(en,mk)=>root.TrialumI18n?.language?.()==='mk'?mk:en;
 let worldRef=null,presenceChanged=()=>{};
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const toy={sandbox:['🏖️','Песочник',0],seesaw:['⚖️','Клацкалка',0],slide:['🛝','Лизгалка',8],pool:['🏊','Базенче',10],obstacle:['🧩','Патека',12],trampoline:['✨','Трамболина',14]};
+const toy=Object.fromEntries((Shop()?.ITEMS||[]).map(i=>[i.id,[i.icon,i.mk,i.cost]]));
 const st={active:false,ready:false,enabled:false,online:false,rooms:[],invitations:[],visits:[],presenceEnabled:false,aiRelayEnabled:false,speechTranslationEnabled:false,speechTranslationLanguages:[],presences:[],selected:'',snapshot:null,roomNoticeUntil:0,roomNoticeName:'',roomNoticeKind:'',error:'',busy:false};
 let base='',token='',ws=null,timer=null,scheduled=null,inflight=false,refreshAgain=false,changed=()=>{},wsReady=false,subscribed='',subscribedLanguage='';
+let storeOpen=false,selectedToy='',shopEnabled=false,serverCatalog=[];
 const say=()=>changed();
 const self=()=>root.TrialumSocial?.getState?.()?.identity||null;
 const friends=()=>root.TrialumSocial?.getState?.()?.friends||[];
@@ -32,17 +35,21 @@ function profile(p){
 function config(){
  const n=root.TrialumAndroid,url=String(n?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
  const pass=String(n?.socialCredential?.()||'');
- st.enabled=n?.betaTesterToolsEnabled?.()===true&&root.TrialumSocial?.isSocialProfileActive?.()===true&&
+ st.enabled=root.TrialumSocial?.isSocialProfileActive?.()===true&&
   /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(url)&&/^[A-Za-z0-9_-]{43}$/.test(pass);
  base=st.enabled?url:'';token=st.enabled?pass:'';
  return st.enabled;
 }
 const errors={
+ toy_not_owned:'Справата не е купена во заедничката игротека.',
+ invalid_placement:'Невалидно поставување на справа.',
+ toy_already_unlocked:'Справата веќе е купена.',
+ room_max_tier:'Игротеката е на највисокото ниво.',
  shared_disabled:'Заедничката игротека сè уште не е овозможена на серверот.',pending_visit_limit:'Пријателот веќе има три покани за посета. Почекај одговор.',local_locked:'Прво отклучи ја локалната игротека.',
  friendship_required:'Потребно е активно пријателство.',room_access_denied:'Немаш пристап до овој простор.',
  owner_required:'Само сопственикот одобрува надградби.',room_limit:'Можеш да создадеш две заеднички игротеки.',
  room_full:'Групата има најмногу шест членови.',already_member:'Овој пријател веќе е член.',
- not_enough_shared_points:'Нема доволно заеднички поени.',expand_first:'Прво проширете го просторот.',
+ not_enough_shared_points:'Нема доволно заеднички кредити.',expand_first:'Прво проширете го просторот.',
  toy_locked:'Оваа играчка сè уште е заклучена.',play_cooldown:'Почекај осум секунди пред нова игра.',
  daily_play_limit:'Денес се искористени шесте заеднички игри.',invitation_expired:'Поканата е истечена.',
  visit_expired:'Посетата истекла.',pet_required:'Прво избери милениче.',
@@ -54,7 +61,7 @@ const errors={
 };
 function problem(e){st.error=errors[e?.message]||'Проблем со врската или дозволата. Пробај повторно.';say();}
 async function req(path,method='GET',body=null){
- if(root.TrialumAndroid?.betaTesterToolsEnabled?.()!==true||root.TrialumSocial?.isSocialProfileActive?.()!==true||!base||!token)throw Error('shared_disabled');
+ if(root.TrialumSocial?.isSocialProfileActive?.()!==true||!base||!token)throw Error('shared_disabled');
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
  try{
   const r=await fetch(base+'/v1/shared/'+path,{method,
@@ -84,6 +91,17 @@ async function refresh(){
   st.ready=true;st.online=true;st.error='';
   st.rooms=rooms.rooms||[];st.invitations=invitations.invitations||[];st.visits=visits.visits||[];
   st.presenceEnabled=true;st.aiRelayEnabled=!!status.playgroundAiEnabled;
+  shopEnabled=false;serverCatalog=[];
+  if(status.sharedShopEnabled===true&&status.sharedShopVersion===1){
+   try{
+    const catalog=await req('catalog');
+    if(catalog.version===1&&catalog.currency==='sharedCredits'&&Array.isArray(catalog.items)){
+     serverCatalog=catalog.items.filter(x=>Shop()?.isSupported?.(x.id)&&
+      Number.isInteger(x.cost)&&x.cost===Shop()?.BY_ID?.[x.id]?.cost);
+     shopEnabled=serverCatalog.length>=6;
+    }
+   }catch(_){shopEnabled=false;serverCatalog=[];} // Existing social play remains usable.
+  }
    st.speechTranslationEnabled=!!status.speechTranslationEnabled;
    st.speechTranslationLanguages=Array.isArray(status.speechTranslationLanguages)?status.speechTranslationLanguages:[];
   st.presences=await flushPendingReturns(confirmed.presence||[]);
@@ -328,7 +346,7 @@ function select(id){
  if(!st.rooms.some(r=>r.id===id))return false;
  if(st.selected&&st.selected!==id)stopNativeBackground(worldRef);
  root.TrialumPlaygroundAI?.stop?.();
- st.selected=id;st.snapshot=null;st.roomNoticeUntil=0;st.roomNoticeName='';st.roomNoticeKind='';
+ st.selected=id;st.snapshot=null;selectedToy='';storeOpen=false;st.roomNoticeUntil=0;st.roomNoticeName='';st.roomNoticeKind='';
  say();refresh().catch(()=>{});return true;
 }
 async function run(fn){
@@ -355,6 +373,30 @@ const decision=(id,accept)=>run(async()=>{
 const remove=id=>run(()=>req('rooms/'+st.selected+'/members/'+(id==='me'?'me':id),'DELETE'));
 const drop=()=>run(async()=>{const v=await req('rooms/'+st.selected,'DELETE');st.selected='';return v;});
 const upgrade=(kind,toyId)=>run(()=>req('rooms/'+st.selected+'/upgrade','POST',{eventKey:uuid(),kind,toyId}));
+const canManage=()=>st.online&&shopEnabled&&st.snapshot?.room?.role==='owner'&&
+ !!st.snapshot?.room?.id&&st.selected===st.snapshot.room.id;
+function selectToy(id){
+ if(!canManage()||!Shop()?.isSupported?.(id)||!(st.snapshot?.toys||[]).includes(id))return false;
+ selectedToy=id;storeOpen=true;say();return true;
+}
+function toggleStore(){storeOpen=!storeOpen;selectedToy='';say();return true;}
+function purchaseToy(id){
+ const item=Shop()?.BY_ID?.[id],inv=Shop()?.inventory?.(st.snapshot);
+ if(!canManage()||!item||!inv||!serverCatalog.some(x=>x.id===id&&x.cost===item.cost)||
+  inv.ownedSet.has(id)||item.cost>inv.credits)return Promise.resolve(null);
+ return run(()=>req('rooms/'+st.selected+'/upgrade','POST',
+   {eventKey:uuid(),kind:'toy',toyId:id})).then(value=>{
+   if(value){storeOpen=true;selectedToy=id;}return value;
+ });
+}
+function placement(id,placed){
+ const inv=Shop()?.inventory?.(st.snapshot);
+ if(!canManage()||!Shop()?.isSupported?.(id)||!inv?.ownedSet?.has(id)||
+  (!!placed&&inv.active.length>=inv.capacity&&!inv.activeSet.has(id)))return Promise.resolve(null);
+ return run(()=>req('rooms/'+st.selected+'/placement','POST',{toyId:id,placed})).then(value=>{
+  if(value){storeOpen=true;selectedToy=placed?id:'';}return value;
+ });
+}
 function enterRoom(world){
  worldRef=world;
  return run(async()=>{
@@ -484,9 +526,20 @@ function render(world){
  if(!st.rooms.length)return out+(!st.online?offlineReturnPanel(world):'')+'<p>Нема заеднички простор. Испрати или прифати покана.</p>'+visitsView(world)+'</div>';
  out+='<div class="shared-tabs">'+st.rooms.map(r=>'<button data-do="shSelect" data-id="'+escape(r.id)+'"'+(r.id===st.selected?' class="primary"':'')+'>🌿 '+escape(r.title)+'</button>').join('')+'</div>';
  if(room){
-  out+='<div class="card shared-stage"><div class="shared-heading"><div><h3>'+escape(room.title)+'</h3><p>Простор '+room.tier+'/5 · '+snap.members.length+'/6 членови</p></div><strong>💠 '+snap.points+' поени</strong></div>'+
-   '<canvas id="sharedScene" width="1000" height="520" role="img" aria-label="Синхронизиран заеднички простор со миленици и играчки"></canvas>'+
-   '<p class="small subtle" id="sharedAutoTalk" aria-live="polite">🐾 Присутните миленичиња сами истражуваат и разменуваат кратки разговори.</p></div>';
+  out+='<div class="card shared-stage"><div class="shared-heading"><div><h3>'+escape(room.title)+'</h3><p>Простор '+room.tier+'/5 · '+snap.members.length+'/6 членови</p></div><strong data-no-translate>💠 '+(Shop()?.inventory?.(snap)?.credits??snap.points)+' '+t('Shared credits','Заеднички кредити')+'</strong></div>'+
+   '<canvas id="sharedScene" width="1000" height="520" '+
+   (room.role==='owner'&&shopEnabled?'tabindex="0" role="button" aria-label="'+t('Select a toy on the scene','Избери справа на сцената')+'"':
+     'role="img" aria-label="Shared playground with pets and toys"')+'></canvas>'+
+   (room.role==='owner'&&shopEnabled&&selectedToy&&(snap.toys||[]).includes(selectedToy)?
+      '<div class="shared-toy-popup" role="group" data-no-translate>'+
+       '<b>'+escape(Shop().localName(selectedToy,root.TrialumI18n?.language?.()))+'</b>'+
+       '<button data-do="shToyRemove" data-toy="'+escape(selectedToy)+'">↩ '+
+        t('Put in storage','Врати во складиште')+'</button>'+
+       '<button data-do="shShopToggle" aria-label="'+t('Close toy actions','Затвори управување')+'">✕</button>'+
+      '</div>':'')+
+   '<p class="small subtle" id="sharedAutoTalk" aria-live="polite">🐾 Присутните миленичиња сами истражуваат и разменуваат кратки разговори.</p></div>'+
+   (root.TrialumSharedStoreUI?.render?.(snap,{owner:room.role==='owner',enabled:shopEnabled,
+     catalog:serverCatalog,open:storeOpen,selectedToy})||'');
   const p=current(world),loc=p&&P()?.get(world,p.id);
   const verified=st.presences.find(x=>x.petId===p?.id&&x.sessionId===loc?.sessionId&&
    x.kind==='shared'&&x.roomId===room.id);
@@ -514,14 +567,12 @@ function render(world){
    loc?.kind===P()?.SHARED&&loc.ref===room.id&&loc.status==='pending'?
    '⏳ Се потврдува заминувањето':!st.online?'📡 Се чека повторно поврзување':
    'Миленичето е на друга локација.')+'</div>';
-  out+='<div class="card"><h3>🎠 Групни активности</h3><p>Секое потврдено играње носи 1 групен поен, максимум 6 дневно. Гледањето не носи награди.</p><p class="small subtle">🐾 Во заедничката игротека потврдените миленичиња самостојно играат и разговараат веднаш. Групни поени се доделуваат само за потврдени активности преку копчињата; разговорите сами по себе не создаваат XP.</p><div class="btn-line">'+snap.toys.map(t=>
+  out+='<div class="card"><h3>🎠 Групни активности</h3><p>Секое потврдено играње носи 1 заеднички кредит, максимум 6 дневно. Гледањето не носи награди.</p><p class="small subtle">🐾 Во заедничката игротека потврдените миленичиња самостојно играат и разговараат веднаш. Заеднички кредити се доделуваат само за потврдени активности преку копчињата; разговорите сами по себе не создаваат XP.</p><div class="btn-line">'+snap.toys.map(t=>
    '<button data-do="shPlay" data-toy="'+escape(t)+'"'+(!inRoom?' disabled':'')+'>'+(toy[t]?.[0]||'🎠')+' '+escape(toy[t]?.[1]||t)+'</button>').join('')+'</div></div>';
   if(room.role==='owner'){
    const available=friends().filter(f=>!snap.members.some(m=>m.id===f.id));
    out+='<div class="card"><h3>👑 Управување</h3><div class="btn-line"><select id="sharedInviteFriend" aria-label="Покани пријател">'+available.map(f=>'<option value="'+escape(f.id)+'">'+escape(f.nickname)+'</option>').join('')+'</select><button data-do="shInvite"'+(!available.length?' disabled':'')+'>📩 Покани</button></div>'+
-   '<div class="btn-line"><button data-do="shUpgrade" data-kind="expand"'+(room.tier>=5||snap.points<10+5*(room.tier-1)?' disabled':'')+'>🌳 Прошири · '+(10+5*(room.tier-1))+'</button>'+
-   Object.entries(toy).filter(([id,v])=>v[2]&&!snap.toys.includes(id)).map(([id,v])=>
-    '<button data-do="shUpgrade" data-kind="toy" data-toy="'+id+'"'+(snap.points<v[2]||snap.toys.length>=Math.min(6,2+room.tier)?' disabled':'')+'>'+v[0]+' '+v[1]+' · '+v[2]+'</button>').join('')+
+   '<div class="btn-line"><button data-do="shUpgrade" data-kind="expand"'+(room.tier>=5||(Shop()?.inventory?.(snap)?.credits??snap.points)<10+5*(room.tier-1)?' disabled':'')+'>🌳 Прошири · '+(10+5*(room.tier-1))+'</button>'+
    '</div><p class="small subtle">Само сопственикот ги одобрува трошоците; сите членови придонесуваат.</p><button data-do="shDelete">Избриши простор</button></div>';
   }
   out+='<div class="card"><h3>👥 Членови</h3>'+snap.members.map(m=>'<div class="friend-item social-friend"><b>'+escape(m.nickname)+(m.role==='owner'?' 👑':'')+'</b>'+
@@ -533,5 +584,7 @@ function render(world){
  return out+visitsView(world)+'</div>';
 }
 root.TrialumShared={activate,deactivate,refresh,reconcileAway,bindWorld(world){worldRef=world;},select,create,invite,decision,remove,drop,upgrade,enterRoom,leaveRoom,play,sendVisit,changeVisit,
- render,profile,sendPetSpeech,onChange(fn){changed=fn;},onPresenceChange(fn){presenceChanged=fn;},getWorld(){return worldRef;},getState(){return {...st,rooms:st.rooms.slice(),visits:st.visits.slice()}}};
+ render,profile,sendPetSpeech,toggleStore,selectToy,purchaseToy,placement,
+ getShopState(){return {shopEnabled,storeOpen,selectedToy,catalog:serverCatalog.slice()};},
+ onChange(fn){changed=fn;},onPresenceChange(fn){presenceChanged=fn;},getWorld(){return worldRef;},getState(){return {...st,speechReady:!!(wsReady&&ws&&ws.readyState===1&&subscribed===st.selected),rooms:st.rooms.slice(),visits:st.visits.slice()}}};
 })(typeof globalThis!=='undefined'?globalThis:this);

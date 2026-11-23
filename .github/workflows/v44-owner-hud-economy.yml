@@ -1,0 +1,83 @@
+name: V44 Owner HUD Economy - new action-refill gate
+on:
+  push:
+    branches:
+      - feature/v44-owner-hud-economy-guidance-20261122
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: owner-v44-economy-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  action-refill:
+    name: One-credit action refill and mobile HUD checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax of changed JavaScript only
+        run: |
+          node --check js/action-economy.js
+          node --check js/action-topup-ui.js
+          node --check js/day-passes.js
+          node --check js/day-passes-ui.js
+          node --check js/resource-hud-ui.js
+          node --check js/player-guide.js
+          node --check js/player-guide-ui.js
+          node --check js/pet-chat-ui.js
+          node --check js/locked-billing.js
+          node --check js/longplay-ui.js
+          node --check js/playground-ai.js
+          node --check js/shared-playground-art.js
+          node --check js/shared-shop.js
+          node --check js/shared-store-ui.js
+          node --check server-patch/v44/src/shared.mjs
+          node --check js/shared-scene.js
+          node --check js/social.js
+          node --check js/messages.js
+          node --check js/shared-playground.js
+          node --check js/ai-context.js
+          node --check js/engine.js
+          node --check js/longplay.js
+          node --check js/app.js
+          node --check tests/v44-action-economy.test.cjs
+          node --check tests/v44-day-passes.test.cjs
+          node --check tests/v44-hud-details.test.cjs
+          node --check tests/v44-player-guide.test.cjs
+          node --check tests/v44-pet-helper.test.cjs
+          node --check tests/v44-locked-billing.test.cjs
+          node --check tests/v44-ai-lifecycle.test.cjs
+          node --check tests/v44-shared-visual.test.cjs
+          node --check tests/v44-shared-community-store.test.cjs
+          node --check tests/v44-friends-age-signals.test.cjs
+          node --check tests/v44-version-and-licenses.test.cjs
+          node --check tests/v44-social-account-recovery.test.cjs
+          node --check tests/v44-phone-ai-animation-locale.test.cjs
+      - name: New engine and UI action purchase regressions
+        run: |
+          node tests/v44-action-economy.test.cjs
+          node tests/v44-day-passes.test.cjs
+          node tests/v44-hud-details.test.cjs
+          node tests/v44-player-guide.test.cjs
+          node tests/v44-pet-helper.test.cjs
+          node tests/v44-locked-billing.test.cjs
+          node tests/v44-ai-lifecycle.test.cjs
+          node tests/v44-shared-visual.test.cjs
+          node --test tests/v44-shared-community-store.test.cjs
+          node --test tests/v44-phone-ai-animation-locale.test.cjs
+          node --test tests/v44-friends-age-signals.test.cjs tests/social-ui.test.cjs
+          node --test tests/v44-version-and-licenses.test.cjs
+          node --test tests/v44-social-account-recovery.test.cjs
+          # The two historical FCM tests depend on absent server and signing-workflow
+          # files in this client-only branch. Run only actual social/message client
+          # regressions impacted here, not unrelated unavailable server assertions.
+          node --test --test-name-pattern='(no account|messages do not|configured opt-in|reflected server|preset send|Android-only)' tests/messages-client.test.cjs
+          node --test tests/shared-client.test.cjs
+          node --test tests/playground-ai.test.cjs
+          # Existing suites are rerun only where the pet-chat and AI-context files changed.
+          node --test tests/v44-chat-privacy-release.test.cjs tests/ai-context-v44.test.cjs
+          node tests/longplay.test.cjs

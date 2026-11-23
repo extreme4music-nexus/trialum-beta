@@ -54,14 +54,14 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                 .addOnSuccessListener { result ->
                     val ageLower = result.ageLower() ?: -1
                     val ageUpper = result.ageUpper()
+                    // TIER_A is the normal opt-in age-range signal outside regions
+                    // requiring formal verification. It is NOT independent proof of age.
+                    // TIER_C/D are assessment/verification tiers in regulated regions.
+                    // Only a shared Google-reported 18+ range is accepted; TIER_B
+                    // (supervised), unavailable, unknown and under-18 fail closed.
                     val eligibleSource = result.ageRangeSource() == AgeRangeSource.TIER_A ||
                         result.ageRangeSource() == AgeRangeSource.TIER_C ||
                         result.ageRangeSource() == AgeRangeSource.TIER_D
-                    // This is restricted to owner-curated 18+ internal testers by
-                    // the internalBeta build and Play's private tester allowlist.
-                    // TIER_A is only a Google-reported, self-declared age; it is not
-                    // treated as proof for general availability. TIER_B (supervised),
-                    // child bands, unknowns, declined sharing and errors fail closed.
                     val eligible = eligibleSource && ageLower >= 18 && ageUpper == null
                     val source = when (result.ageRangeSource()) {
                         AgeRangeSource.TIER_A -> "TIER_A"

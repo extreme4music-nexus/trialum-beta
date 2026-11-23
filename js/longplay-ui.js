@@ -172,7 +172,7 @@ function settings(s){
  '<div class="settings-group"><h3>💾 '+(en?'Backup & restore':'Бекап и враќање')+'</h3><div class="btn-line">'+b(en?'🔐 Encrypted migration archive':'🔐 Шифрирана архива за пренос','encryptedExport','class="primary"')+
  b(en?'🔓 Restore Backup':'🔓 Врати бекап','import')+b(en?'⬇ Plain JSON (no private chats)':'⬇ JSON без приватни разговори','export')+b(en?'🛟 Rescue copies':'🛟 Спасувачки копии','rescueList')+'</div>'+
  '<div id="backupVaultList" class="backup-vault-list" role="status" aria-live="polite"></div>'+
- '<p class="small subtle">'+(en?'The encrypted archive includes the complete world, AI memory and locally saved friend conversations. It is encrypted on-device with a recovery code shown only once. Without that code, nobody can decrypt it. Trialum’s server does not receive it.':'Шифрираната архива го содржи целиот свет, AI-меморијата и локалната историја со пријателите. Се шифрира на уредот со recovery-код што се прикажува само еднаш. Без тој код никој не може да ја дешифрира. Серверот на Trialum не ја прима.')+'</p>'+
+ '<p class="small subtle">'+(en?'The encrypted archive includes the complete world, AI memory and locally saved friend conversations. It is encrypted on-device with a recovery code shown only once. Without that code, nobody can decrypt it. Trialum’s server does not receive it. This archive code is DIFFERENT from the separate one-time Friends profile recovery key.':'Шифрираната архива го содржи целиот свет, AI-меморијата и локалната историја со пријателите. Се шифрира на уредот со recovery-код што се прикажува само еднаш. Без тој код никој не може да ја дешифрира. Серверот на Trialum не ја прима. Овој код е РАЗЛИЧЕН од посебниот recovery-клуч за серверскиот профил „Пријатели“.')+'</p>'+
  '<p class="small subtle">'+(en?'Plain JSON includes the world and development history but excludes private AI memories and conversations. Restore replaces local data after confirmation. Store the encrypted archive off-device before uninstalling.':'Обичниот JSON содржи свет и развојна историја, но ги изоставува приватните AI-мемории и разговорите. Враќањето заменува локални податоци по потврда. Зачувај ја шифрираната архива надвор од телефонот пред деинсталација.')+'</p>'+
  '<p id="backupFeedback" class="small" role="status" aria-live="polite"></p>'+
  '<p class="small">Состојба: <span id="saveStatus">Локално автоматско зачувување</span></p></div>'+
@@ -184,6 +184,12 @@ function settings(s){
  b('🏝️ Биосвет +1 акција · 8','longBoost','data-boost="habitat"',s.longplay.credits<8)+
  b('🧬 Скратување на ран период · 20','longBoost','data-boost="phase"',s.longplay.credits<20||s.stage>=7)+'</div>'+
  '<p class="small subtle">Нема наплата, реклами ниту активна продавница.</p></div>'+
+ '<div class="settings-group future-credit-store" aria-label="Future credit packs - beta locked">'+
+ '<h3>🔒 '+(en?'Future credit packs (beta locked)':'Идни пакети кредити (заклучени во бета)')+'</h3>'+
+ '<p class="small subtle">'+(en?'Planned packages only. No payment service or credit grant is active. Prices are proposed USD prices and could vary in Google Play.':'Само планирани пакети. Нема активна наплата ниту доделување кредити. Цените се планирани во USD и може да се разликуваат на Google Play.')+'</p>'+
+ '<div class="future-credit-packs">'+(root.TrialumBillingCatalog?.list?.()||[]).map(item=>
+ '<div class="card future-credit-pack"><b>💠 '+fmt(item.credits)+' '+(en?'credits':'кредити')+'</b><strong>'+esc(item.displayPrice)+'</strong><button disabled aria-disabled="true" type="button">'+(en?'Unavailable in beta':'Недостапно во бета')+'</button></div>').join('')+'</div>'+
+ '<p class="small subtle">'+(en?'All credits currently used in the game are earned through gameplay.':'Сите кредити што сега се користат во играта се заработуваат преку играње.')+'</p></div>'+
  (beta?'<div class="settings-group debug-zone"><h3>🧭 '+(en?'Beta Tester Center':'Бета-тестерски центар')+'</h3>'+
  '<p class="small">'+(en?'These tools are included only in the Google Play internal-testing build. Google Play controls who can install it. Social features require a shared adult age signal; unknown, declined or managed-child profiles stay offline.':'Овие алатки се вклучени само во изданието за Google Play интерно тестирање. Google Play го контролира списокот кој може да го инсталира. Социјалните функции бараат споделен сигнал за полнолетност; непознат, одбиен или родителски управуван профил останува офлајн.')+'</p>'+
  '<div class="btn-line">'+b(en?'Export diagnostic report':'Извези краш/дијагностички извештај','exportCrashLog')+b(en?'Test local notification':'Пробај локално известување','betaNotify')+'</div>'+
@@ -312,6 +318,7 @@ root.TrialumExpansion={
  handle(action,b,s,ctx){
  if(!actions.has(action))return previous.handle(action,b,s,ctx);
  const pet=E.currentPet(s);
+ if(action==='petChatAsk'&&root.TrialumPetChat?.handle?.('petChatAsk',s,pet,ctx))return;
  if(action==='petChatAsk')action=root.TrialumPetChat?.tier?.(pet)==='mini'?'llmAsk':'mindAsk';
  if(root.TrialumPetChat?.handle?.(action,s,pet,ctx))return;
  if(root.TrialumMind?.handle(action,b,s,ctx))return;

@@ -4,12 +4,13 @@
 let active=null,frame=null,viewportObserver=null,inViewport=true;
 const TAU=Math.PI*2;
 const DIALOGUE=Object.freeze([
- ['Еј, да пробаме заедно?', 'Да! Јас ќе тргнам прв.'],
- ['Што има зад таа лизгалка?', 'Ајде да откриеме!'],
- ['Гледаш колку шарена е полјаната?', 'Да, многу ми се допаѓа.'],
- ['Ќе се менуваме на клацкалката?', 'Секако, по ред!'],
- ['Сакаш да истражуваме?', 'Сакам! Ти покажи го патот.']
+ {en:['Hey, shall we play together?','Yes! You can choose the first toy.'],mk:['Еј, да пробаме заедно?', 'Да! Ти избери прва справа.']},
+ {en:['What is beyond that slide?','Let’s explore it together!'],mk:['Што има зад таа лизгалка?', 'Ајде да откриеме заедно!']},
+ {en:['Look at this colorful meadow!','I love it!'],mk:['Гледаш колку шарена е полјаната?', 'Да, многу ми се допаѓа!']},
+ {en:['Can we take turns on the seesaw?','Of course, one at a time!'],mk:['Ќе се менуваме на клацкалката?', 'Секако, по ред!']},
+ {en:['Shall we explore something new?','Yes! Show me the way.'],mk:['Сакаш да истражуваме?', 'Сакам! Ти покажи го патот.']}
 ]);
+const ui=(en,mk)=>root.TrialumI18n?.language?.()==='mk'?mk:en;
 function hash(text){let n=2166136261;for(const ch of String(text)){n^=ch.charCodeAt(0);n=Math.imul(n,16777619);}return n>>>0;}
 function dialogue(s,now=Date.now()){
  const ai=root.TrialumPlaygroundAI?.speech?.('shared',s?.room?.id);
@@ -27,38 +28,43 @@ function dialogue(s,now=Date.now()){
  if(pets.length<2)return null;
  const turn=Math.floor(now/3500),pairIndex=Math.floor(turn/2),pair=DIALOGUE[
   hash(s.room.id+'|'+pets[0].pet.id+'|'+pets[1].pet.id+'|'+pairIndex)%DIALOGUE.length];
- const who=pets[turn%2].pet;
- return {speaker:String(who.name||'Милениче').slice(0,32),text:pair[turn%2],turn,
+ const who=pets[turn%2].pet,which=turn%2;
+ return {speaker:String(who.name||ui('Pet','Милениче')).slice(0,32),
+  text:ui(pair.en[which],pair.mk[which]),englishText:pair.en[which],turn,
   ids:pets.slice(0,2).map(x=>x.pet.id)};
 }
 function refreshCaption(s,now=Date.now()){
  const caption=root.document?.getElementById?.('sharedAutoTalk');
  if(!caption)return;
  const item=dialogue(s,now);
+ const twoConfirmed=!!s?.presenceEnabled&&(s.occupants||[]).filter(x=>x?.pet?.id).length>=2;
  caption.textContent=item?'🐾 '+item.speaker+': '+item.text:
-  '🐾 Миленичињата ќе комуницираат кога двајца пријатели ќе бидат потврдени во истата игротека.';
+  twoConfirmed?ui(
+   '🐾 Two pets are present. Waiting for a real Mini AI reply…',
+   '🐾 Двете миленичиња се присутни. Се чека вистински одговор од Mini AI…'):
+  ui('🐾 Pets will talk when two friends have confirmed pets in the same playground.',
+     '🐾 Миленичињата ќе комуницираат кога двајца пријатели ќе бидат потврдени во истата игротека.');
 }
 
 function draw(ctx,s,t){
- ctx.clearRect(0,0,1000,520);
- const sky=ctx.createLinearGradient(0,0,0,520);
- sky.addColorStop(0,'#102d53');sky.addColorStop(.59,'#298f9c');sky.addColorStop(1,'#448b65');
- ctx.fillStyle=sky;ctx.fillRect(0,0,1000,520);
- ctx.fillStyle='#297b5b';ctx.fillRect(0,377,1000,143);
- for(let n=0;n<28;n++){
-  ctx.fillStyle=n%2?'#b7f6c9':'#ffe0a4';ctx.beginPath();
-  ctx.arc(n*40+20,469+(n%3)*12,2.5+n%3,0,TAU);ctx.fill();
+ // Cached, layered 2D scene with tangible garden equipment; no emoji placeholders.
+ if(root.TrialumSharedArt?.paint)root.TrialumSharedArt.paint(ctx,s,t);
+ else{
+  ctx.clearRect(0,0,1000,520);
+  ctx.fillStyle='#18465d';ctx.fillRect(0,0,1000,520);
  }
- const items={sandbox:'🏖️',seesaw:'⚖️',slide:'🛝',pool:'🏊',obstacle:'🧩',trampoline:'✨'};
- ctx.font='48px system-ui';ctx.textAlign='center';
- s.toys.forEach((id,i)=>ctx.fillText(items[id]||'🎠',110+(i%6)*155,422+Math.sin(t*.8+i)*5));
+ const toySlots=root.TrialumSharedArt?.TOYS||{};
  // Pet sprites come from live server leases, NEVER from historical play events.
  const cast=new Map();
  if(s.presenceEnabled){
   for(const [i,o] of (s.occupants||[]).entries()){
    if(!o.pet?.id)continue;
-   cast.set('member:'+i,{...o.pet,display:o.pet.name||o.display,
-    latest:Date.now(),toy:'seesaw'});
+   // Owner/session scope is part of visual identity: two devices restoring
+   // the same world may carry identical pet UUIDs without synchronized motion.
+   const identity=String(o.ownerId||o.userId||o.memberId||o.display||i);
+   cast.set('member:'+identity+':'+o.pet.id,{...o.pet,
+    motionKey:identity+'|'+o.pet.id+'|'+(o.pet.seed||0),
+    display:o.pet.name||o.display,latest:Date.now(),toy:'seesaw'});
   }
  }else{
   // Disabled legacy fallback is used only in older private test servers.
@@ -78,13 +84,29 @@ function draw(ctx,s,t){
  }
  const pets=[...cast.values()].slice(-6);
  for(let i=0;i<pets.length;i++){
-  const p=pets[i],period=Math.floor(Date.now()/6000),
-   toys=(s.toys||[]).filter(id=>Object.prototype.hasOwnProperty.call(items,id)),
-   toyId=toys.length?toys[hash((s.room?.id||'')+'|'+p.id+'|'+period)%toys.length]:'seesaw',
-   offset=Math.sin(t*1.4+i+period)*16;
-  const x=1000*(i+1)/(pets.length+1)+offset,y=283+Math.sin(t*1.5+i)*17;
-  const action={skill:toyId==='slide'?'leap':toyId==='trampoline'?'spin':toyId==='seesaw'?'wave':'symbols',
-   start:t-1.5,duration:3.2};
+  const p=pets[i],id=String(p.motionKey||p.id||'member-'+i),
+   seed=hash((s.room?.id||'')+'|'+id),
+   // Each pet owns a different speed, phase and activity window, not the same
+   // constantly reinitialized 1.5-second action every single animation frame.
+   cycleSeconds=8+(seed%9),phaseOffset=((seed>>>8)%1000)/1000*cycleSeconds,
+   cycleIndex=Math.floor((t+phaseOffset)/cycleSeconds),
+   elapsed=(t+phaseOffset)%cycleSeconds,
+   toys=(s.toys||[]).filter(id=>Object.prototype.hasOwnProperty.call(toySlots,id)),
+   toyId=toys.length?toys[hash(id+'|toy|'+cycleIndex)%toys.length]:'seesaw',
+   slot=root.TrialumSharedArt?.slot?.(toyId,s.toys),
+   phase=seed%628/100,
+   moveSpeed=0.55+(seed%70)/100,
+   offset=Math.sin(t*moveSpeed+phase)*21;
+  const baseX=slot?.x||1000*(i+1)/(pets.length+1);
+  // Distinct paths and lane offsets prevent pets from appearing superimposed.
+  const x=baseX+offset+((seed>>>16)%5-2)*18,
+   y=Math.max(151,(slot?.y||411)-121)+Math.sin(t*(moveSpeed+.37)+phase)*15;
+  const duration=cycleSeconds*.66;
+  const action=elapsed<duration?{
+    skill:toyId==='slide'?'leap':toyId==='trampoline'?'spin':
+      toyId==='seesaw'?'wave':toyId==='obstacle'?'logic':'symbols',
+    start:t-elapsed,duration
+   }:null;
   if(root.TrialumCreatureArt?.draw){
    // Level is visual style only. Server does not trust or transfer real XP.
    root.TrialumCreatureArt.draw(ctx,p,{x,y,size:.38},t,false,{level:28},action);
@@ -94,7 +116,7 @@ function draw(ctx,s,t){
    ctx.fillStyle='white';ctx.fillRect(x-24,y-13,12,12);ctx.fillRect(x+12,y-13,12,12);
   }
   ctx.fillStyle='#edfff5';ctx.textAlign='center';ctx.font='bold 14px system-ui';
-  ctx.fillText(String(p.display||p.name).slice(0,32),x,356);
+  ctx.fillText(String(p.display||p.name).slice(0,24),x,Math.min(482,y+75));
  }
  const speech=dialogue(s);
  if(speech){
@@ -102,9 +124,8 @@ function draw(ctx,s,t){
   ctx.fillStyle='#f0fff5';ctx.font='bold 19px system-ui';ctx.textAlign='center';
   ctx.fillText((speech.speaker+': '+speech.text).slice(0,68),500,103);
  }
- ctx.fillStyle='rgba(11,36,56,.7)';ctx.fillRect(10,12,260,32);
- ctx.fillStyle='#e9fff5';ctx.font='bold 14px system-ui';ctx.textAlign='left';
- ctx.fillText('🔐 Потврдени присутни миленичиња',18,33);
+ ctx.fillStyle='#e9fff5';ctx.font='bold 12px system-ui';ctx.textAlign='left';
+ ctx.fillText(ui('🔐 Verified present pets','🔐 Потврдени присутни миленичиња'),20,69);
 }
 // LW-B: independent shared room scene paints only if genuinely visible.
 function canPaint(){return Boolean(active&&active.isConnected&&inViewport&&
@@ -123,11 +144,30 @@ function paint(now){
  const ctx=active?.getContext?.('2d');if(snap&&ctx)draw(ctx,snap,now/1000);
  if(!root.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)scheduleFrame();
 }
+function ownerSelectAt(node,event){
+ const rect=node?.getBoundingClientRect?.();
+ if(!rect||rect.width<=0||rect.height<=0)return false;
+ const x=(event.clientX-rect.left)*node.width/rect.width;
+ const y=(event.clientY-rect.top)*node.height/rect.height;
+ const snap=root.TrialumShared?.getState?.()?.snapshot;
+ const id=root.TrialumSharedArt?.hitTest?.(x,y,snap?.toys||[]);
+ if(!id)return false;
+ return root.TrialumShared?.selectToy?.(id)===true;
+}
+function onCanvasClick(event){ownerSelectAt(event.currentTarget,event);}
+function onCanvasKey(event){
+ if(event.key!=='Enter'&&event.key!==' ')return;
+ const snap=root.TrialumShared?.getState?.()?.snapshot;
+ const first=(snap?.toys||[])[0];
+ if(first&&root.TrialumShared?.selectToy?.(first)){event.preventDefault();}
+}
 function mount(){
  const node=root.document?.getElementById('sharedScene');
  if(!node){stop();return;}
  if(active!==node){
   stop();active=node;
+  node.addEventListener?.('click',onCanvasClick);
+  node.addEventListener?.('keydown',onCanvasKey);
   if(typeof root.IntersectionObserver==='function'){
    viewportObserver=new root.IntersectionObserver(entries=>{
     inViewport=Boolean(entries[0]?.isIntersecting);
@@ -139,6 +179,8 @@ function mount(){
  scheduleFrame();
 }
 function stop(){
+ active?.removeEventListener?.('click',onCanvasClick);
+ active?.removeEventListener?.('keydown',onCanvasKey);
  if(frame!==null)root.cancelAnimationFrame?.(frame);
  frame=null;viewportObserver?.disconnect?.();viewportObserver=null;
  active=null;inViewport=true;

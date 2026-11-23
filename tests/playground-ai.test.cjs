@@ -12,7 +12,7 @@ const backgroundCalls=[];
 // Locale is explicit: server Macedonian captions are shown only for mk.
 let uiLanguage='mk';
 globalThis.TrialumI18n={language:()=>uiLanguage,t:text=>text};
-const state={active:true,online:true,aiRelayEnabled:true,speechTranslationEnabled:false,
+const state={active:true,online:true,aiRelayEnabled:true,speechReady:true,speechTranslationEnabled:false,
  speechTranslationLanguages:['mk','sq','en'],selected:ROOM,
  snapshot:{presenceEnabled:true,room:{id:ROOM},
  occupants:[{pet:{id:pet.id,name:pet.name}},{pet:{id:'other',name:'Другар'}}]},
@@ -105,20 +105,20 @@ test('real room messages are only shown in currently visible authorized room',()
  assert.equal(AI.onPeerSpeech({type:'pet_speech',roomId:ROOM,petId:'other',text:'No'}),false);
 });
 
-test('explicit background AI opt-in requires the translator and room lease',()=>{
+test('background AI always disables on owner beta policy, even with old opt-in saved',()=>{
  sharedEnabled=true;state.speechTranslationEnabled=true;
  modelStatus='installed';pet.playgroundAiShared=true;
- assert.equal(AI.toggleBackground(world,()=>{},()=>saves++,()=>{}),true);
- assert.equal(pet.playgroundAiBackgroundShared,true);
- assert.equal(bgOn,true);
- assert.deepEqual(backgroundCalls.at(-1),
-  {enabled:true,roomId:ROOM,petId:pet.id,sessionId:SESSION,petName:pet.name});
+ pet.playgroundAiBackgroundShared=true;
+ const beforeSaves=saves;
  assert.equal(AI.toggleBackground(world,()=>{},()=>saves++,()=>{}),true);
  assert.equal(pet.playgroundAiBackgroundShared,false);
  assert.equal(bgOn,false);
+ assert.deepEqual(backgroundCalls.at(-1),
+  {enabled:false,roomId:'',petId:'',sessionId:'',petName:''});
+ assert(saves>beforeSaves,'removing old opt-in must be persisted');
  state.speechTranslationEnabled=false;
  AI.toggleBackground(world,()=>{},()=>saves++,()=>{});
- assert.equal(bgOn,false,'no background AI when server English pivot is not enabled');
+ assert.equal(bgOn,false,'no background AI even when translation is unavailable');
  state.speechTranslationEnabled=false;
 });
 

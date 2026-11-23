@@ -1,0 +1,142 @@
+name: V44 Shared Store isolated PostgreSQL integration
+on:
+  push:
+    branches:
+      - feature/v44-owner-hud-economy-guidance-20261122
+    paths:
+      - 'server-patch/v44/**'
+      - '.github/workflows/v44-shared-store-server-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: trialum
+          POSTGRES_DB: trialum_social
+          POSTGRES_PASSWORD: local_test_pw
+        options: >-
+          --health-cmd "pg_isready -U trialum -d trialum_social"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: trialum
+      PGDATABASE: trialum_social
+      PGPASSWORD: local_test_pw
+      POSTGRES_USER: trialum
+      POSTGRES_DB: trialum_social
+      TRIALUM_APP_PASSWORD: test_app_pw
+      TRIALUM_TEST_DATABASE_URL: postgresql://trialum:local_test_pw@127.0.0.1:5432/trialum_social
+      TRIALUM_SHARED_BASE: http://127.0.0.1:8787
+    steps:
+      - name: Checkout v44 client + staged server patch
+        uses: actions/checkout@v4
+      - name: Read-only checkout of pinned public Trialum server baseline
+        uses: actions/checkout@v4
+        with:
+          repository: extreme4music-nexus/Trialum
+          ref: e32e9189d20c002f5547bfe22775eae2752ee72d
+          path: server-baseline
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify staged shared store server grammar and isolated database
+        run: |
+          set -euo pipefail
+          node --check server-patch/v44/src/shared.mjs
+          node --check server-patch/v44/tests/store.integration.mjs
+          node --check server-patch/v44/src/social.mjs
+          node --check server-patch/v44/src/account-recovery.mjs
+          node --check server-patch/v44/src/live.mjs
+          node --check server-patch/v44/tests/account-recovery.integration.mjs
+          psql -v ON_ERROR_STOP=1 -f server-baseline/server/sql/001_schema.sql
+          sh server-baseline/server/sql/003_social_role.sh
+          sh server-baseline/server/sql/004_shared_playgrounds.sh
+          sh server-baseline/server/sql/006_pet_presence.sh
+          sh server-patch/v44/sql/007_v44_shared_store.sh
+          sh server-patch/v44/sql/008_social_account_recovery.sh
+          # Both migrations must be repeatable and preserve stored balances.
+          sh server-patch/v44/sql/007_v44_shared_store.sh
+          sh server-patch/v44/sql/008_social_account_recovery.sh
+          echo "SOCIAL_RECOVERY_PEPPER_B64=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64url'))")" >> "$GITHUB_ENV"
+          psql -v ON_ERROR_STOP=1 -c "SELECT COUNT(*) AS toy_constraint_count FROM pg_constraint WHERE conname='playground_toys_toy_id_check';"
+          psql -v ON_ERROR_STOP=1 -c "SELECT column_name FROM information_schema.columns WHERE table_name='playground_toys' AND column_name='placed';"
+      - name: Install server dependencies and overlay ONLY the CI checkout
+        run: |
+          npm install --prefix server-baseline/server --ignore-scripts --no-audit --no-fund
+          cp server-patch/v44/src/shared.mjs server-baseline/server/src/shared.mjs
+          cp server-patch/v44/src/social.mjs server-baseline/server/src/social.mjs
+          cp server-patch/v44/src/account-recovery.mjs server-baseline/server/src/account-recovery.mjs
+          cp server-patch/v44/src/live.mjs server-baseline/server/src/live.mjs
+          cp server-patch/v44/tests/store.integration.mjs server-baseline/server/tests/v44-store.integration.mjs
+          cp server-patch/v44/tests/account-recovery.integration.mjs server-baseline/server/tests/v44-recovery.integration.mjs
+      - name: Boot isolated server and verify healthy status
+        env:
+          HOST: 127.0.0.1
+          PORT: '8787'
+          DATABASE_URL: postgresql://trialum:local_test_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_DATABASE_URL: postgresql://trialum_app:test_app_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_ENABLED: 'true'
+          SHARED_ENABLED: 'true'
+          PRESENCE_ENABLED: 'false'
+          PLAYGROUND_AI_ENABLED: 'false'
+          MESSAGES_ENABLED: 'false'
+          PUSH_ENABLED: 'false'
+        run: |
+          node server-baseline/server/src/index.mjs >/tmp/trialum-v44-test.log 2>&1 &
+          echo "$!" >/tmp/trialum-v44-test.pid
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8787/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/trialum-v44-test.log
+          exit 1
+      - name: New store PostgreSQL integration — owner ACL, 14 toys and no double charging
+        run: |
+          node server-baseline/server/tests/v44-store.integration.mjs
+      - name: Recover same account across installations; preserve ownership and revoke old credentials
+        run: |
+          node server-baseline/server/tests/v44-recovery.integration.mjs
+      - name: Restart disposable server to isolate historical API rate-limit buckets
+        env:
+          HOST: 127.0.0.1
+          PORT: '8787'
+          DATABASE_URL: postgresql://trialum:local_test_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_DATABASE_URL: postgresql://trialum_app:test_app_pw@127.0.0.1:5432/trialum_social
+          SOCIAL_ENABLED: 'true'
+          SHARED_ENABLED: 'true'
+          PRESENCE_ENABLED: 'false'
+          PLAYGROUND_AI_ENABLED: 'false'
+          MESSAGES_ENABLED: 'false'
+          PUSH_ENABLED: 'false'
+        run: |
+          kill "$(cat /tmp/trialum-v44-test.pid)"
+          for i in $(seq 1 30); do
+            if ! curl -fsS --max-time 1 http://127.0.0.1:8787/healthz >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          node server-baseline/server/src/index.mjs >/tmp/trialum-v44-test.log 2>&1 &
+          echo "$!" >/tmp/trialum-v44-test.pid
+          for i in $(seq 1 45); do
+            if curl -fsS --max-time 2 http://127.0.0.1:8787/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/trialum-v44-test.log
+          exit 1
+      - name: Existing authenticated shared playground server integration regression
+        run: |
+          node server-baseline/server/tests/shared.integration.mjs
+      - name: Verify private server process remained healthy
+        if: always()
+        run: |
+          curl -fsS http://127.0.0.1:8787/healthz || cat /tmp/trialum-v44-test.log || true
+          if test -f /tmp/trialum-v44-test.pid; then kill "$(cat /tmp/trialum-v44-test.pid)" || true; fi

@@ -214,8 +214,8 @@ android {
             resValue("string", "trialum_firebase_sender_id", "")
         }
     }
-    // Owner-only server smoke test. The age gate is bypassed only for this
-    // isolated package; the official and internal-beta variants remain fail-closed.
+    // Legacy owner-only server smoke package. Age Signals is never bypassed,
+    // including this isolated package; Play registration is still required.
     // Friends still require explicit profile creation and nickname confirmation.
     buildTypes {
         create("qa39social") {
@@ -224,7 +224,7 @@ android {
             versionNameSuffix = "-qa39social"
             isDebuggable = false
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
-            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "true")
+            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
             manifestPlaceholders["trialumInviteScheme"] = "trialum-qa39social"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
@@ -244,6 +244,26 @@ android {
             isDebuggable = false
             buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
             manifestPlaceholders["trialumInviteScheme"] = "trialum-qa41"
+            resValue("string", "game_services_project_id", "0")
+            resValue("string", "trialum_firebase_app_id", "")
+            resValue("string", "trialum_firebase_api_key", "")
+            resValue("string", "trialum_firebase_project_id", "")
+            resValue("string", "trialum_firebase_sender_id", "")
+        }
+    }
+    // One-time owner verification APK for Trialum 1.4 v44, signed with a
+    // disposable CI-generated Android debug key. Its separate package prevents
+    // replacement of the installed Play release and loss of private worlds.
+    // It does NOT prove Play Age Signals or live social-server authorization.
+    buildTypes {
+        create("qa44") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa44"
+            versionNameSuffix = "-qa44"
+            isDebuggable = true
+            buildConfigField("Boolean", "BETA_TESTER_TOOLS", "true")
+            buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
+            manifestPlaceholders["trialumInviteScheme"] = "trialum-qa44"
             resValue("string", "game_services_project_id", "0")
             resValue("string", "trialum_firebase_app_id", "")
             resValue("string", "trialum_firebase_api_key", "")
@@ -283,7 +303,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("dev.ffmpegkit-maintained:llama-android:0.1.1")
     implementation("com.google.android.gms:play-services-games-v2:22.1.0")
-    implementation("com.google.android.play:age-signals:0.0.4")
+    implementation("com.google.android.play:age-signals:0.0.6")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     implementation("com.google.firebase:firebase-messaging:25.1.3")
 }
@@ -294,4 +314,17 @@ val syncWebAssets by tasks.registering(Copy::class) {
     }
     into(layout.projectDirectory.dir("src/main/assets/web"))
 }
-tasks.named("preBuild") { dependsOn(syncWebAssets) }
+// License notices are a mandatory OFFLINE asset in every APK/AAB variant,
+// not an optional report generated only by a historical release workflow.
+// The inventory is generated from the same resolved runtime dependency graph
+// used by the internal beta. No licenses are fetched at runtime.
+val bundleOfflineLicenseNotices by tasks.registering(Copy::class) {
+    dependsOn("generateLicenseReport")
+    from(rootDir.parentFile.resolve("docs/licenses/MODEL-LICENSES.md"))
+    from(rootDir.parentFile.resolve("docs/licenses/THIRD-PARTY-NOTICES.txt"))
+    from(layout.buildDirectory.file("reports/licenses/licenses.json")) {
+        rename { "ANDROID-DEPENDENCY-LICENSES.json" }
+    }
+    into(layout.projectDirectory.dir("src/main/assets/licenses"))
+}
+tasks.named("preBuild") { dependsOn(syncWebAssets, bundleOfflineLicenseNotices) }

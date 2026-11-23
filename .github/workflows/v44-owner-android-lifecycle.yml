@@ -1,0 +1,38 @@
+name: V44 Owner Android AI lifecycle compile
+on:
+  push:
+    branches:
+      - feature/v44-owner-hud-economy-guidance-20261122
+    paths:
+      - 'android-template/app/src/main/**/*.kt'
+      - '.github/workflows/v44-owner-android-lifecycle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v44-owner-android-lifecycle-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  android-compile:
+    name: Compile changed Android Kotlin lifecycle, no APK/signing
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Compile Kotlin only, no APK or signing
+        run: gradle -p android-template :app:compileDebugKotlin --no-daemon --stacktrace

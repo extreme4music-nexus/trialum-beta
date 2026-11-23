@@ -548,3 +548,103 @@
 :root[data-theme="light"] .pet-chat-bubble.outgoing{background:#cef2e6;border-color:#95c9bd}
 :root[data-theme="light"] .pet-chat-bubble p{color:#173a4a}
 :root[data-theme="light"] .pet-chat-config select,:root[data-theme="light"] .pet-chat-compose textarea{background:#fff;color:#12384d}
+
+/* v44 — in-context action refill: mobile-first, no changes to legacy Free Credits panel */
+.action-refill-trigger{min-height:38px;margin:5px 0 0;padding:8px 12px;background:linear-gradient(145deg,#246b66,#214769);border:1px solid #70dfd0;color:#e5fffa;font-size:.91rem;font-weight:700;border-radius:12px}
+.action-refill-trigger:focus-visible,.action-refill-modal button:focus-visible{outline:3px solid #f3d08a;outline-offset:2px}
+.action-refill-modal{background:#0d2235;color:#eaf7fb;width:min(94vw,480px);max-height:min(86dvh,700px);overflow-y:auto;border:1px solid #6bd3c7;border-radius:20px;padding:0;box-shadow:0 24px 70px #000b}
+.action-refill-modal::backdrop{background:#000b;backdrop-filter:blur(3px)}
+.action-refill-body{padding:18px 18px 20px}
+.action-refill-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.action-refill-head h2{margin:0;font-size:1.3rem}
+.action-refill-head button{min-width:40px;min-height:40px;font-size:1.6rem;padding:0 10px}
+.action-refill-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.action-refill-stats span{background:#17384b;border:1px solid #477487;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:3px}
+.action-refill-stats b{font-size:1.25rem;color:#d4f9ea;font-variant-numeric:tabular-nums}
+.action-refill-packs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}
+.action-refill-packs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:70px;padding:7px;background:#1a4553;border:1px solid #66d9c5;border-radius:12px;font-weight:700}
+.action-refill-packs button:disabled{opacity:.36;cursor:not-allowed}
+.action-refill-packs small{font-size:.8rem;font-weight:500}
+.action-refill-help{padding:12px;border-left:3px solid #f3c883;background:#263449;border-radius:8px;line-height:1.5}
+.action-refill-modal footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+@media(max-width:360px){.action-refill-body{padding:12px}.action-refill-packs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v44 — tapping the Day chip opens a separate saved day-pass economy */
+.day-interactive{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.2;border:1px solid #477a83;font:inherit;font-weight:700;cursor:pointer}
+.day-interactive:focus-visible{outline:3px solid #f4ce8c;outline-offset:2px}
+.day-pass-body{padding:18px}
+.day-pass-body h3{margin:16px 0 9px;font-size:1.08rem}
+.day-pass-pack-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 14px}
+.day-pass-pack-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:80px;padding:7px;border-radius:12px;background:linear-gradient(145deg,#24404e,#273a59);border:1px solid #7291bc;font-variant-numeric:tabular-nums}
+.day-pass-pack-grid button:disabled{opacity:.40;cursor:not-allowed}
+.day-pass-pack-grid strong{font-size:1rem}
+.day-pass-pack-grid span{font-size:.94rem;color:#ddf7fa;font-weight:700}
+.day-pass-pack-grid small{color:#a5f1ce}
+.day-pass-warning{padding:11px 12px;border-left:4px solid #eab779;border-radius:9px;background:#3b2f29;color:#ffe6c7;line-height:1.52}
+.day-pass-use-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.day-pass-use-grid button{min-height:46px;border:1px solid #75ccb9;background:#28505a;padding:8px;border-radius:10px}
+.day-pass-body footer{display:flex;justify-content:flex-end;margin-top:13px}
+@media(max-width:360px){.day-pass-body{padding:12px}.day-pass-pack-grid,.day-pass-use-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v44 — interactive top resource indicators, same compact HUD footprint */
+.resource-hud .hud-stat{appearance:none;text-align:inherit;font:inherit;cursor:pointer;min-height:44px}
+.resource-hud .hud-stat:focus-visible{outline:3px solid #f4ce8c;outline-offset:2px}
+.resource-hud .hud-stat:hover{filter:brightness(1.13)}
+.resource-hud-details{padding:18px}
+.resource-hud-details h2{font-size:1.25rem;margin:0}
+.resource-hud-value{font-size:1.9rem;font-weight:800;color:#c6fae8;margin:9px 0;font-variant-numeric:tabular-nums}
+.resource-hud-value span{font-size:.85rem;font-weight:400}
+.resource-hud-details ul{padding-left:22px;line-height:1.7;overflow-wrap:anywhere}
+.resource-hud-details li{margin:7px 0}
+.resource-hud-details footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:360px){.resource-hud-details{padding:12px}.resource-hud-details footer button{flex:1 1 120px}}
+
+/* v44 — compact contextual guide, present on every gameplay tab */
+.guide-float{position:fixed;right:14px;bottom:calc(102px + env(safe-area-inset-bottom));z-index:48;display:flex;gap:5px;align-items:center;justify-content:center;width:48px;height:48px;min-height:48px;padding:0;border:1px solid #a4e7db;border-radius:50%;font-size:1.1rem;background:linear-gradient(145deg,#2f695f,#194861);box-shadow:0 5px 16px #0007}
+.guide-float span{font-size:1rem;font-weight:800}
+.guide-float:focus-visible{outline:3px solid #f4ce8c;outline-offset:2px}
+.guide-modal{width:min(96vw,640px);max-height:86dvh}
+.guide-body{padding:18px}
+.guide-body h2{margin:0;font-size:1.3rem}
+.guide-body label{display:block;font-weight:700;margin:13px 0 5px}
+.guide-body input,.guide-body select{display:block;width:100%;min-height:44px;border-radius:9px;border:1px solid #587b91;background:#152c43;color:#eefafd;padding:9px}
+.guide-version{color:#a8c7ce;font-size:.85rem;margin:3px 0 10px}
+.guide-next{padding:11px;background:#143d40;border-radius:13px}
+.guide-next h3{margin:0 0 7px}
+.guide-next button{display:flex;justify-content:space-between;gap:7px;align-items:center;width:100%;text-align:left;min-height:44px;padding:8px;margin:4px 0;border-radius:9px;background:#1f4654;border:1px solid #49877f}
+.guide-search-results{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+.guide-search-results button{min-height:36px;border-radius:8px;padding:7px 9px;font-size:.87rem}
+.guide-detail{border:1px solid #3b6477;border-radius:13px;background:#132e43;padding:12px 14px;margin-top:12px}
+.guide-detail h3{margin:0 0 7px}
+.guide-detail li{margin:8px 0;line-height:1.5}
+.guide-body footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:16px}
+.guide-full{padding:12px;display:flex;flex-direction:column;gap:9px;min-height:76dvh}
+.guide-full iframe{width:100%;flex:1;border:1px solid #42697f;border-radius:10px;background:#081c2d}
+.guide-full>button{align-self:flex-end}
+@media(max-width:370px){.guide-float{right:8px;bottom:calc(94px + env(safe-area-inset-bottom))}.guide-body{padding:12px}}
+
+/* v44 — future Play Billing catalog is always non-purchasable in beta */
+.future-credit-packs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.future-credit-pack{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:13px 8px}
+.future-credit-pack b{font-size:.96rem}
+.future-credit-pack strong{font-size:1.1rem;color:#dbeffb}
+.future-credit-pack button{width:100%;opacity:.53;cursor:not-allowed;font-size:.83rem}
+@media(max-width:480px){.future-credit-packs{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}}
+
+/* V44 shared equipment store and tap-to-manage scene action surface. */
+.shared-stage{position:relative}
+.shared-toy-popup{position:absolute;z-index:3;left:16px;right:16px;bottom:44px;
+ display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+ padding:9px 12px;border:1px solid rgba(137,240,218,.7);border-radius:13px;
+ background:rgba(8,37,54,.94);box-shadow:0 8px 24px rgba(0,0,0,.32);color:#edfff6}
+.shared-toy-popup b{flex:1;min-width:70px}
+.shared-toy-popup button{min-height:38px;white-space:normal}
+.shared-store{display:grid;gap:10px}
+.shared-store-catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.shared-shop-item{display:flex;flex-direction:column;gap:8px;min-width:0}
+.shared-shop-item button{margin-top:auto;min-height:44px}
+.shared-stage canvas[role="button"]{cursor:pointer;touch-action:manipulation;outline-offset:3px}
+.shared-stage canvas[role="button"]:focus-visible{outline:3px solid #70ddd0}
+@media(max-width:520px){.shared-toy-popup{left:7px;right:7px;bottom:42px;padding:6px;gap:5px}
+ .shared-toy-popup button{font-size:12px;padding:6px 10px}
+ .shared-store-catalog{grid-template-columns:1fr}}
