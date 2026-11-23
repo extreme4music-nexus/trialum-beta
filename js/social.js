@@ -257,11 +257,16 @@ async function init(){
     }
     state.online=true;state.error='';
   }catch(e){suspendSocial();setError(e);return;}
-  if(credential)await refresh();
+  if(credential){
+    // Recovery is already inside run(); calling another run() here would
+    // silently skip identity loading because the busy flag is still set.
+    if(state.busy){
+      try{await loadProfile();}catch(e){suspendSocial();setError(e);}
+    }else await refresh();
+  }
   emit();
 }
-async function refresh(){
- return run(async()=>{
+async function loadProfile(){
   if(!credential){state.identity=null;state.friends=[];state.ready=false;return null;}
   if(!state.attestationReady)throw Error('integrity_verification_unavailable');
   await ensureEligibility();
@@ -271,8 +276,8 @@ async function refresh(){
   if(!onlineReady())throw Error('age_gate_required');
   state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;
   state.error='';emit();return me;
- });
 }
+async function refresh(){return run(loadProfile);}
 async function register(name){
  return run(async()=>{
   const registrationSession=sessionGeneration;
