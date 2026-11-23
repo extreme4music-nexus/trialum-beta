@@ -14,6 +14,7 @@ let capability=null,sessionGeneration=0;
 const integrityPending=new Map();
 const SOCIAL_CONSENT_V1='trialum-social-v1';
 const REVOKE_PENDING_KEY='trialum.social.revoke.pending.v44';
+const REGISTRATION_UNCERTAIN_KEY='trialum.social.registration.uncertain.v44';
 const validVersion=value=>typeof value==='string'&&value===SOCIAL_CONSENT_V1;
 const nativeAdult=()=>native()?.ageSignalsAdultEligible?.()===true;
 const onlineReady=()=>state.ageAllowed&&state.socialConsented&&state.eligibilityReady&&nativeAdult();
@@ -77,6 +78,11 @@ async function revokeOnServer(){
   return res.ok;
  }catch(_){return false;}finally{clearTimeout(timeout);}
 }
+function registrationUncertain(){try{return root.localStorage?.getItem(REGISTRATION_UNCERTAIN_KEY)==='yes';}catch(_){return false;}}
+function markRegistrationUncertain(pending){try{
+ if(pending)root.localStorage?.setItem(REGISTRATION_UNCERTAIN_KEY,'yes');
+ else root.localStorage?.removeItem(REGISTRATION_UNCERTAIN_KEY);
+}catch(_){}}
 function revokePending(){try{return root.localStorage?.getItem(REVOKE_PENDING_KEY)==='yes';}catch(_){return false;}}
 function markRevokePending(yes){try{
  if(yes)root.localStorage?.setItem(REVOKE_PENDING_KEY,'yes');
@@ -237,6 +243,7 @@ async function runRecovery(fn){
  finally{state.busy=false;emit();}
 }
 async function init(){
+  state.registrationOutcomeUnknown=registrationUncertain();
   state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
@@ -330,6 +337,7 @@ async function register(name){
     // created a profile. Lock in-session re-registration until a deliberate review.
     if(!Number.isInteger(e?.status)||e?.name==='AbortError'){
       state.registrationOutcomeUnknown=true;
+      markRegistrationUncertain(true);
       throw Error('registration_outcome_unknown');
     }
     throw e;
@@ -345,6 +353,7 @@ async function register(name){
   credential=secret;
   state.identity={id:response.id,nickname:response.nickname};
   state.recoveryEnabled=true;state.registrationOutcomeUnknown=false;
+  markRegistrationUncertain(false);
   state.eligibilityReady=false;state.ready=false;state.friends=[];
   if(registrationSession!==sessionGeneration||!state.socialConsented||!nativeAdult()){
     // If consent was revoked while the POST was in flight, the newly returned
@@ -429,6 +438,7 @@ async function acceptPreparedRecovery(id,newKey){
    throw Error('secure_storage_unavailable');
   }
   credential=restored.credential;state.authRecoveryNeeded=false;
+  state.registrationOutcomeUnknown=false;markRegistrationUncertain(false);
   state.identity={id:restored.id,nickname:restored.nickname};
   state.online=true;state.ready=true;
   // A recovered bearer remains saved even if renewed verification is unavailable.
@@ -585,7 +595,7 @@ function render(){
     return html+'</section>';
   }
   if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
-  if(state.registrationOutcomeUnknown)html+='<div class="notice social-warning">Претходната регистрација можеби успеала. Не повторувај регистрација во оваа сесија; прво провери го профилот и recovery податоците.</div>';
+  if(state.registrationOutcomeUnknown)html+='<div class="notice social-warning">Претходната регистрација можеби успеала, но одговорот се изгубил. Не повторувај автоматски. Прво обиди се со recovery или контактирај ја поддршката. Ова предупредување останува и по рестарт. <button data-do="socialRegistrationReviewed">Го проверив случајот — отклучи рачен обид</button></div>';
   if(!state.enabled){html+='<div class="notice">🔒 Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса. Дотогаш твоите миленици остануваат локално зачувани.</div>';}
   else if(hasSavedCredential()&&!state.ready){
     html+='<div class="card"><h3>🔐 Постоечкиот социјален профил е зачуван</h3>'+
@@ -689,7 +699,13 @@ function retryEligibility(){
  if(!nativeAdult()||state.ageStatus==='retry_required')return requestAgeCheck();
  init().catch(setError);return true;
 }
-root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,handleTransportClose,onForeground,retryEligibility,isAdultAllowed:()=>state.ageAllowed&&nativeAdult(),isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&nativeAdult(),isSocialProfileActive:()=>onlineReady()&&state.ready&&!!state.identity,
+function confirmReviewedRegistration(){
+ if(!state.registrationOutcomeUnknown||hasSavedCredential()||state.busy)return false;
+ const message='Претходната регистрација можеби веќе создала серверски профил, но recovery-клучот не е примен. Пред нов обид, провери ја можноста за враќање и контактирај со поддршката. Повторна регистрација може да создаде втор профил. Дали свесно го прифаќаш тој ризик и сакаш да го отклучиш копчето?';
+ if(root.confirm?.(root.TrialumI18n?.t?.(message)||message)!==true)return false;
+ markRegistrationUncertain(false);state.registrationOutcomeUnknown=false;emit();return true;
+}
+root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,handleTransportClose,onForeground,retryEligibility,confirmReviewedRegistration,isAdultAllowed:()=>state.ageAllowed&&nativeAdult(),isSocialAllowed:()=>state.ageAllowed&&state.socialConsented&&nativeAdult(),isSocialProfileActive:()=>onlineReady()&&state.ready&&!!state.identity,
  setPending(value){state.pending=parseCode(value);state.preview=null;emit();},clearPreview(){state.preview=null;state.pending='';emit();},
  onChange(fn){changed=fn},getState(){return {...state,friends:state.friends.slice()}}};
 if(typeof module==='object'&&module.exports)module.exports={parseCode,inviteMessage};
