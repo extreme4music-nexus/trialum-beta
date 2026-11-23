@@ -97,15 +97,17 @@ jobs:
           printf '%s\n' "$BADGING" | grep -Fq "uses-feature-not-required: name='android.hardware.microphone'"
           mkdir -p candidates
           cp "$AAB" candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab
+          cp "$APK" candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.apk
           cp "$MAPPING" candidates/mapping.txt
-          sha256sum candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab candidates/mapping.txt > candidates/SHA256SUMS.txt
+          sha256sum candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.apk candidates/mapping.txt > candidates/SHA256SUMS.txt
           {
             echo "package=com.trialum.ziivaiskra"
             echo "version_code=45"
             echo "version_name=1.4 v45"
             echo "source_commit=$(git rev-parse HEAD)"
             echo "microphone_hardware=optional"
-            echo "bundle_signing=UNSIGNED; owner must sign locally with the existing Play upload key"
+            echo "aab_signing=UNSIGNED; owner must sign locally with the existing Play upload key"
+            echo "apk_signing=UNSIGNED; owner must sign locally with the existing release key"
             echo "secrets=none embedded; only configured public client IDs and HTTPS endpoint used"
           } > candidates/BUILD-INFO.txt
 
