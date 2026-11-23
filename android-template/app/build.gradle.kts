@@ -10,6 +10,14 @@ android {
         applicationId = "com.trialum.ziivaiskra"
         buildConfigField("Boolean", "BETA_TESTER_TOOLS", "false")
         buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
+        // Public Cloud project NUMBER, never a server service-account credential.
+        // Not configured => Play Integrity social requests fail closed.
+        val integrityProject = (project.findProperty("trialumPlayIntegrityProjectNumber") as? String)?.trim().orEmpty()
+        require(integrityProject.isEmpty() ||
+            integrityProject.matches(Regex("[1-9][0-9]{5,19}"))) {
+            "trialumPlayIntegrityProjectNumber must be a positive numeric Google Cloud project number"
+        }
+        buildConfigField("long", "SOCIAL_INTEGRITY_CLOUD_PROJECT_NUMBER", (integrityProject.ifEmpty { "0" }) + "L")
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36
@@ -304,6 +312,7 @@ dependencies {
     implementation("dev.ffmpegkit-maintained:llama-android:0.1.1")
     implementation("com.google.android.gms:play-services-games-v2:22.1.0")
     implementation("com.google.android.play:age-signals:0.0.6")
+    implementation("com.google.android.play:integrity:1.6.0")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     implementation("com.google.firebase:firebase-messaging:25.1.3")
 }
