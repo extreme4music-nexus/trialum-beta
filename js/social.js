@@ -8,9 +8,9 @@ const native=()=>root.TrialumAndroid||null;
 const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const CODE=/^[A-Za-z0-9_-]{43}$/;
 const PROFILE_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false};
+const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false,eligibilityReady:false,attestationReady:false,serverConsentVersion:'trialum-social-v1',eligibilityRequired:false,registrationIntegrityRequired:false};
 let credential='',changed=()=>{},pendingRecovery=null,eligibilityBusy=null;
-let capability=null;
+let capability=null,sessionGeneration=0;
 const integrityPending=new Map();
 const SOCIAL_CONSENT_V1='trialum-social-v1';
 const REVOKE_PENDING_KEY='trialum.social.revoke.pending.v44';
@@ -23,9 +23,18 @@ function stopSocialClients(){
  root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();
  root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
 }
+function cancelIntegrityRequests(){
+ for(const [id,pending] of integrityPending) {
+  clearTimeout(pending.timeout);
+  integrityPending.delete(id);
+  pending.reject(Error('age_gate_required'));
+ }
+}
 function suspendSocial(reason=''){
+ sessionGeneration++;
  state.eligibilityReady=false;state.ready=false;state.online=false;
  stopSocialClients();
+ cancelIntegrityRequests();
  if(reason)state.error=reason;
  emit();
 }
@@ -81,7 +90,7 @@ async function flushPendingRevoke(){
 function readCapabilities(status){
  capability=status;
  const v=status?.socialConsentVersion;
- if(v!==undefined && !validVersion(v))throw Error('social_consent_required');
+ if(!validVersion(v))throw Error('client_update_required');
  if(root.TrialumLegal?.setSocialConsentVersion?.(v||SOCIAL_CONSENT_V1)===false)
    throw Error('social_consent_required');
  state.serverConsentVersion=v||SOCIAL_CONSENT_V1;
@@ -92,19 +101,17 @@ function readCapabilities(status){
 }
 async function ensureEligibility(){
  if(!state.socialConsented||!nativeAdult())throw Error('age_gate_required');
- if(!state.attestationReady) {
-  // Compatibility mode is explicitly server controlled. Never perform an
-  // attestation when service discovery reports it unavailable.
-  if(state.eligibilityRequired)throw Error('integrity_verification_unavailable');
-  state.eligibilityReady=true;return true;
- }
+ if(!state.attestationReady)throw Error('integrity_verification_unavailable');
  if(eligibilityBusy)return eligibilityBusy;
  eligibilityBusy=(async()=>{
+  const generation=sessionGeneration;
   state.eligibilityReady=false;
   let status;
   try{status=await request('eligibility/status');}
   catch(e){if(e?.message!=='eligibility_attestation_required')throw e;status={eligible:false};}
-  if(status?.eligible===true && (!status.expiresAt || Date.parse(status.expiresAt)>Date.now()+30000)){
+  const expiry=Date.parse(status?.expiresAt||status?.eligibilityExpiresAt||status?.validUntil||'');
+  if(status?.eligible===true && Number.isFinite(expiry) && expiry>Date.now()+30000){
+   if(generation!==sessionGeneration||!nativeAdult()||!state.socialConsented)throw Error('age_gate_required');
    state.eligibilityReady=true;return true;
   }
   let subject=String(status?.profileId||status?.id||state.identity?.id||'');
@@ -119,6 +126,7 @@ async function ensureEligibility(){
   await request('eligibility/attest','POST',{
    socialConsentAccepted:true,socialConsentVersion:version,integrityToken
   });
+  if(generation!==sessionGeneration||!nativeAdult()||!state.socialConsented)throw Error('age_gate_required');
   state.eligibilityReady=true;return true;
  })().finally(()=>{eligibilityBusy=null;});
  return eligibilityBusy;
@@ -126,7 +134,11 @@ async function ensureEligibility(){
 function onEligibilityError(code){
  if(!['eligibility_attestation_required','session_revoked','social_consent_required',
    'eligibility_proof_invalid','integrity_verification_unavailable'].includes(code))return false;
- suspendSocial('Потврдата за социјалниот профил треба да се обнови. Провери Age Signals и обиди се повторно; зачувувањата се безбедни.');
+ suspendSocial('Потврдата треба повторно да се провери. Офлајн играта и зачувувањата остануваат достапни.');
+ if(code==='social_consent_required'){
+  root.TrialumLegal?.revokeSocialConsent?.();
+  state.socialConsented=false;
+ }
  return true;
 }
 const emit=()=>changed();
@@ -163,7 +175,8 @@ function setError(e){
     integrity_unavailable:'Play Integrity не е достапен. Пробај повторно со официјалната Play верзија.',
     eligibility_proof_invalid:'Google проверката не успеа. Повтори Age Signals, па побарај нова потврда.',
     social_consent_required:'Прегледај ги и прифати ги тековните социјални услови.',
-    client_update_required:'Потребно е ажурирање на апликацијата за новиот договор.'
+    client_update_required:'Потребно е ажурирање на апликацијата за новиот договор.',
+    registration_outcome_unknown:'Не е познато дали регистрацијата успеала. НЕ повторувај автоматски; провери го постојниот профил или recovery клучот.'
   };
   state.error=map[e?.message]||'Не успеа поврзувањето. Провери интернет и сервер.';
   emit();
@@ -181,8 +194,7 @@ async function request(path,method='GET',body=null,key=credential){
     const payload=await res.json().catch(()=>({}));
     if(!res.ok){
       const code=String(payload.error||'server_unavailable');
-      if(res.status===428||code==='session_revoked')onEligibilityError(code);
-      if(code==='social_consent_required')state.socialConsented=false;
+      if(res.status===428||code==='session_revoked'||code==='social_consent_required')onEligibilityError(code);
       throw Object.assign(Error(code),{status:res.status});
     }
     return payload;
@@ -200,65 +212,104 @@ async function init(){
   state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
-  state.ageAllowed=native()?.ageSignalsAdultEligible?.()===true;
-  state.ageStatus=state.ageAllowed?'adult_signal':'unchecked';
-  if(!state.socialConsented){state.online=false;state.ready=false;emit();return;}
-  if(!state.ageAllowed){state.online=false;emit();return;}
-  credential=String(native()?.socialCredential?.()||'');
+  credential=savedCredential();
   if(!CODE.test(credential))credential='';
+  state.ageAllowed=nativeAdult();
+  state.ageStatus=state.ageAllowed?'adult_signal':'unchecked';
+  state.eligibilityReady=false;state.ready=false;state.online=false;
   const deep=native()?.socialPendingInvite?.();
   if(deep)state.pending=parseCode(deep);
-  if(!state.enabled){state.error='Онлајн пријателите ќе се активираат кога серверот ќе добие јавна HTTPS адреса.';emit();return;}
+  if(!state.socialConsented){emit();return;}
+  if(!state.ageAllowed){
+    emit();
+    if(root.document?.visibilityState!=='hidden'&&state.ageStatus!=='checking')requestAgeCheck();
+    return;
+  }
+  if(!state.enabled){
+    state.error='Социјалниот сервер нема безбедна HTTPS адреса. Локалниот свет продолжува офлајн.';
+    emit();return;
+  }
+  if(!await flushPendingRevoke()){
+    suspendSocial('Претходното повлекување согласност чека серверска потврда. Повтори кога ќе има интернет.');
+    return;
+  }
   state.recoveryEnabled=!!(native()?.socialStoreCredential&&native()?.socialShowRecoveryKit&&
     native()?.socialGenerateRecoveryKey&&native()?.socialConfirmPreparedRecovery);
-  // Privacy invariant: no connection to the social server until a player opted in.
-  if(!credential){emit();return;}
-  try{const status=await request('status','GET',null,'');
-    state.online=status.ready===true;
-    state.recoveryEnabled=status.accountRecoveryEnabled===true&&status.recoveryVersion===1;
-  }catch(e){state.online=false;state.recoveryEnabled=false;setError(e);}
-  if(state.online)await refresh();
+  try{
+    const status=await request('status','GET',null,'');
+    readCapabilities(status);
+    state.recoveryEnabled=state.recoveryEnabled&&status.accountRecoveryEnabled===true&&status.recoveryVersion===1;
+    if(status.ready!==true||!state.attestationReady){
+      suspendSocial('Серверската проверка не е подготвена. Профилот е зачуван; пробај повторно подоцна.');
+      return;
+    }
+    state.online=true;state.error='';
+  }catch(e){suspendSocial();setError(e);return;}
+  if(credential)await refresh();
   emit();
 }
 async function refresh(){
-  return run(async()=>{
-    if(!credential){state.identity=null;state.friends=[];state.ready=false;return;}
-    const me=await request('me');
-    const list=await request('friends');
-    state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;
-  });
+ return run(async()=>{
+  if(!credential){state.identity=null;state.friends=[];state.ready=false;return null;}
+  if(!state.attestationReady)throw Error('integrity_verification_unavailable');
+  await ensureEligibility();
+  if(!onlineReady())throw Error('age_gate_required');
+  const me=await request('me');
+  const list=await request('friends');
+  if(!onlineReady())throw Error('age_gate_required');
+  state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;
+  state.error='';emit();return me;
+ });
 }
 async function register(name){
-  return run(async()=>{
-    if(!state.ageAllowed)throw Error('age_gate_required');
-    if(!state.enabled||!native()?.socialStoreCredential)throw Error('social_service_disabled');
-    const nickname=String(name||'').trim();
-    const privacy=root.TrialumPrivacyGuard?.inspect?.(nickname)||{};
-    if(privacy.blocked)throw Error('personal_data_blocked');
-    const source='Користи само измислен прекар. Прекарот и имињата на милениците може да се испратат до социјалниот сервер на Trialum и да им се прикажат на прифатените пријатели. Не внесувај вистинско име, контактни податоци, училиште или локација. Автоматската проверка не може да го препознае секое вистинско име. Продолжи?';
-    const warning=root.TrialumI18n?.t?.(source)||source;
-    if(!root.confirm?.(warning))return null;
-    // Fail closed with older servers: profile registration without recovery
-    // would leave users permanently locked out after an uninstall.
-    const support=await request('status','GET',null,'');
-    if(support.accountRecoveryEnabled!==true||support.recoveryVersion!==1||
-       !native()?.socialShowRecoveryKit)throw Error('recovery_kit_required');
-    const response=await request('register','POST',{nickname,nicknamePrivacyConfirmed:true});
-    const secret=response.credential;
-    if(!CODE.test(secret)||!PROFILE_ID.test(response.id)||!CODE.test(response.recoveryKey))
-      throw Error('recovery_kit_required');
-    if(!native().socialStoreCredential(secret)){
-      await request('account','DELETE',null,secret).catch(()=>{});
-      throw Error('secure_storage_unavailable');
-    }
-    credential=secret;state.identity={id:response.id,nickname:response.nickname};
-    state.ready=true;state.online=true;state.recoveryEnabled=true;
-    // Native Dialog is screenshot-protected, not part of the HTML world.
-    // The code is never persisted in the encrypted game archive or web storage.
-    native().socialShowRecoveryKit(response.id,response.recoveryKey);
-    const list=await request('friends');state.friends=list.friends||[];
-    return state.identity;
-  });
+ return run(async()=>{
+  if(!state.enabled||!native()?.socialStoreCredential||!state.attestationReady)
+    throw Error('integrity_verification_unavailable');
+  if(credential||hasSavedCredential())throw Error('authentication_required');
+  if(!await flushPendingRevoke())throw Error('integrity_verification_unavailable');
+  const nickname=String(name||'').trim();
+  if(!nickname||nickname.length>32||nickname.includes('\n')||nickname.includes('\r'))
+    throw Error('invalid_nickname');
+  const privacy=root.TrialumPrivacyGuard?.inspect?.(nickname)||{};
+  if(privacy.blocked)throw Error('personal_data_blocked');
+  const source='Користи само измислен прекар. Прекарот и имињата на милениците може да се испратат до социјалниот сервер на Trialum и да им се прикажат на прифатените пријатели. Не внесувај вистинско име, контактни податоци, училиште или локација. Автоматската проверка не може да го препознае секое вистинско име. Продолжи?';
+  if(!root.confirm?.(root.TrialumI18n?.t?.(source)||source))return null;
+  const support=await request('status','GET',null,'');
+  readCapabilities(support);
+  if(!state.socialConsented)throw Error('social_consent_required');
+  if(support.accountRecoveryEnabled!==true||support.recoveryVersion!==1||
+     !native()?.socialShowRecoveryKit)throw Error('recovery_kit_required');
+  if(!state.attestationReady)throw Error('integrity_verification_unavailable');
+  const integrityToken=await tokenFor('register',state.serverConsentVersion,nickname);
+  // NEVER retry this POST automatically after a timeout. A created profile may
+  // already have a one-time recovery kit that the response did not deliver.
+  let response;
+  try{
+    response=await request('register','POST',{
+      nickname,socialConsentAccepted:true,
+      socialConsentVersion:state.serverConsentVersion,
+      nicknamePrivacyConfirmed:true,integrityToken
+    });
+  }catch(e){
+    if(e?.name==='AbortError'||e?.message==='server_unavailable')
+      throw Error('registration_outcome_unknown');
+    throw e;
+  }
+  const secret=response.credential;
+  if(!CODE.test(secret)||!PROFILE_ID.test(response.id)||!CODE.test(response.recoveryKey))
+    throw Error('recovery_kit_required');
+  // Always present the one-time recovery kit, even if secure bearer storage fails.
+  // Never silently delete a freshly created profile or any local world.
+  const stored=native().socialStoreCredential(secret);
+  native().socialShowRecoveryKit(response.id,response.recoveryKey);
+  if(!stored)throw Error('secure_storage_unavailable');
+  credential=secret;
+  state.identity={id:response.id,nickname:response.nickname};
+  state.eligibilityReady=true;state.ready=true;state.online=true;state.recoveryEnabled=true;
+  const list=await request('friends').catch(()=>({friends:[]}));
+  state.friends=list.friends||[];emit();
+  return state.identity;
+ });
 }
 // A currently authenticated owner can rotate/reissue a lost kit. Pre-v44
 // accounts must use this on their existing device before uninstalling.
