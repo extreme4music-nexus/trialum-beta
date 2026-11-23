@@ -48,7 +48,7 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                 }
         } catch (_: Exception) {
             recordDiagnostic("age_signals.access_error", "exception")
-            finish(false, "unavailable")
+            finish(false, "unavailable", generation)
         }
     }
 
