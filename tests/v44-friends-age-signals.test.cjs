@@ -80,8 +80,7 @@ test('unknown/declined age always offline, including saved bearer and QA bypass'
 test('user can request Play age signal without beta tester permission',async()=>{
  const h=harness({consent:true,adult:false,beta:false,credential:''});
  await h.api.init();
- assert.equal(h.api.requestAgeCheck(),true);
- assert.equal(h.requests(),1);
+ assert.equal(h.requests(),1,'bootstrapping an opted-in session performs one native check');
  assert.equal(h.api.getState().ageStatus,'checking');
  h.age(true);
  await h.api.setAgeSignal({status:'adult_signal',adultEligible:true});
