@@ -1,0 +1,114 @@
+name: V44 Play-internal unsigned AAB candidate
+on:
+  push:
+    branches:
+      - fix/v44-android-social-attestation-20261123
+    paths:
+      - '.github/workflows/v44-social-attestation-internal-aab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: trialum-v44-internal-aab-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  android-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      TRIALUM_SOCIAL_API_URL: ${{ vars.TRIALUM_SOCIAL_API_URL }}
+      TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER: ${{ vars.TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER }}
+      TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
+      TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
+      TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
+      TRIALUM_PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Verify production-package configuration (no secret keys)
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${TRIALUM_SOCIAL_API_URL:?Missing GitHub Actions variable TRIALUM_SOCIAL_API_URL}"
+          [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]] ||
+            { echo "::error::Configure a valid HTTPS-only social server URL"; exit 1; }
+          : "${TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER:?Set GitHub Actions variable TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER to the public numeric project number linked in Play Console}"
+          [[ "$TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER" =~ ^[1-9][0-9]{5,18}$ ]] ||
+            { echo "::error::Play Integrity project number must be a positive signed 64-bit decimal"; exit 1; }
+          : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
+          : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
+          : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
+          : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
+          [[ "$TRIALUM_FIREBASE_APP_ID" =~ ^1:[0-9]+:android:[0-9a-fA-F]+$ ]] ||
+            { echo "::error::Invalid public Firebase Android app ID"; exit 1; }
+          echo "Checked public client configuration. Secret/service-account material must remain on owner and server environments."
+      - name: Build v44 unsigned Play-internal AAB plus package-inspection APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            "-PtrialumSocialApiUrl=$TRIALUM_SOCIAL_API_URL"
+            "-PtrialumPlayIntegrityProjectNumber=$TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER"
+            "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
+            "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
+            "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
+          )
+          [[ -n "$TRIALUM_PGS_PROJECT_ID" ]] && args+=("-PtrialumPgsProjectId=$TRIALUM_PGS_PROJECT_ID")
+          gradle -p android-template :app:assembleInternalBeta :app:bundleInternalBeta --no-daemon --stacktrace "${args[@]}"
+      - name: Verify v44 package, Integrity configuration and AAB integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find android-template/app/build/outputs/apk/internalBeta -name '*.apk' -print -quit)
+          AAB=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
+          test -s "$APK" && test -s "$AAB"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)
+          BADGING=$("$AAPT" dump badging "$APK")
+          grep -Fq "package: name='com.trialum.ziivaiskra'" <<< "$BADGING"
+          grep -Fq "versionCode='44'" <<< "$BADGING"
+          grep -Fq "versionName='1.4 v44'" <<< "$BADGING"
+          unzip -t "$AAB" >/dev/null
+          BUILD_CONFIG=$(find android-template/app/build/generated/source/buildConfig/internalBeta -name BuildConfig.java -print -quit)
+          test -s "$BUILD_CONFIG"
+          grep -Fq "SOCIAL_INTEGRITY_CLOUD_PROJECT_NUMBER = ${TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER}L" "$BUILD_CONFIG"
+          RESOURCES=$("$AAPT" dump --values resources "$APK")
+          grep -Fq "$TRIALUM_SOCIAL_API_URL" <<< "$RESOURCES"
+          grep -Fq "$TRIALUM_FIREBASE_APP_ID" <<< "$RESOURCES"
+          mkdir -p candidates/play-internal-v44
+          cp "$AAB" candidates/play-internal-v44/Trialum-1.4-v44-internalBeta-UNSIGNED.aab
+          MAPPING=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
+          if [[ -s "$MAPPING" ]]; then cp "$MAPPING" candidates/play-internal-v44/mapping.txt; fi
+          sha256sum candidates/play-internal-v44/* > candidates/play-internal-v44/SHA256SUMS.txt
+          {
+            echo "source_commit=$GITHUB_SHA"
+            echo "package=com.trialum.ziivaiskra"
+            echo "version_code=44"
+            echo "version_name=1.4 v44"
+            echo "play_integrity=Standard API; Cloud project public number embedded"
+            echo "age_signals=fail-closed native decision"
+            echo "signing=UNSIGNED: owner must sign with existing Play UPLOAD KEY before Play Console accepts bundle"
+            echo "deployment=NOT UPLOADED to Play Console by this workflow"
+            echo "server_enforcement=NOT CHANGED"
+          } > candidates/play-internal-v44/BUILD-INFO.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trialum-v44-play-internal-unsigned-aab-and-mapping
+          path: candidates/play-internal-v44/
+          retention-days: 14
+          if-no-files-found: error
