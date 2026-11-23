@@ -27,6 +27,8 @@ jobs:
       TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER: ${{ vars.TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER }}
       TRIALUM_FIREBASE_API_KEY: ${{ vars.TRIALUM_FIREBASE_API_KEY }}
       TRIALUM_FIREBASE_APP_ID: ${{ vars.TRIALUM_FIREBASE_APP_ID }}
+      TRIALUM_FIREBASE_APP_ID_SIGNQA: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNQA }}
+      TRIALUM_FIREBASE_APP_ID_SIGNDEBUG: ${{ vars.TRIALUM_FIREBASE_APP_ID_SIGNDEBUG }}
       TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
       TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
       TRIALUM_PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
@@ -59,6 +61,8 @@ jobs:
             { echo "::error::Play Integrity project number must be a positive signed 64-bit decimal"; exit 1; }
           : "${TRIALUM_FIREBASE_API_KEY:?Missing TRIALUM_FIREBASE_API_KEY}"
           : "${TRIALUM_FIREBASE_APP_ID:?Missing TRIALUM_FIREBASE_APP_ID}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNQA:?Missing existing TRIALUM_FIREBASE_APP_ID_SIGNQA}"
+          : "${TRIALUM_FIREBASE_APP_ID_SIGNDEBUG:?Missing existing TRIALUM_FIREBASE_APP_ID_SIGNDEBUG}"
           : "${TRIALUM_FIREBASE_PROJECT_ID:?Missing TRIALUM_FIREBASE_PROJECT_ID}"
           : "${TRIALUM_FIREBASE_SENDER_ID:?Missing TRIALUM_FIREBASE_SENDER_ID}"
           [[ "$TRIALUM_FIREBASE_APP_ID" =~ ^1:[0-9]+:android:[0-9a-fA-F]+$ ]] ||
@@ -73,6 +77,8 @@ jobs:
             "-PtrialumPlayIntegrityProjectNumber=$TRIALUM_PLAY_INTEGRITY_PROJECT_NUMBER"
             "-PtrialumFirebaseApiKey=$TRIALUM_FIREBASE_API_KEY"
             "-PtrialumFirebaseAppId=$TRIALUM_FIREBASE_APP_ID"
+            "-PtrialumFirebaseAppIdSignqa=$TRIALUM_FIREBASE_APP_ID_SIGNQA"
+            "-PtrialumFirebaseAppIdSigndebug=$TRIALUM_FIREBASE_APP_ID_SIGNDEBUG"
             "-PtrialumFirebaseProjectId=$TRIALUM_FIREBASE_PROJECT_ID"
             "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
           )
