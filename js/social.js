@@ -56,8 +56,8 @@ root.TrialumSocialIntegrityEvent=event=>{
  }else pending.reject(Error('integrity_unavailable'));
 };
 async function revokeOnServer(){
- const key=savedCredential(),base=String(native()?.socialApiUrl?.()||'').replace(/\\/$/,'');
- if(!CODE.test(key)||!/^https:\\/\\/[a-z0-9.-]+(?::443)?$/i.test(base))return false;
+ const key=savedCredential(),base=String(native()?.socialApiUrl?.()||'').replace(/\/$/,'');
+ if(!CODE.test(key)||!/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(base))return false;
  const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),8000);
  try{
   const res=await fetch(base+'/v1/social/eligibility/revoke',{
