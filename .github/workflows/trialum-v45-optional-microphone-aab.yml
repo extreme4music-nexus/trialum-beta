@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - fix/v44-optional-microphone-feature-20261123
-      - fix/v46-beta-social-access-20261123
+      - fix/v45-beta-social-access-20261123
   workflow_dispatch:
 
 permissions:
