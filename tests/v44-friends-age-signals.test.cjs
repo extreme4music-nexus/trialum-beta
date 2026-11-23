@@ -92,17 +92,18 @@ test('reject unsupported status and native revoked eligibility after result',asy
  h.age(false);
  assert.equal(h.api.isSocialAllowed(),false,'native state is checked again on access');
 });
-test('internal beta unlocks social after consent without granting an adult signal',async()=>{
+test('internal beta tools never bypass Age Signals',async()=>{
  const h=harness({consent:true,adult:false,beta:true,credential:'x'.repeat(43)});
  await h.api.init();
- assert.equal(h.api.isAdultAllowed(),false,'beta access is not represented as a Google age result');
- assert.equal(h.api.getState().ageStatus,'beta_test_access');
- assert.equal(h.api.isSocialAllowed(),true);
- assert.equal(h.api.isSocialProfileActive(),true,JSON.stringify({state:h.api.getState(),calls:h.calls}));
- assert(h.calls.some(x=>x.url.endsWith('/v1/social/me')));
+ assert.equal(h.api.isAdultAllowed(),false);
+ assert.equal(h.api.getState().ageStatus,'unchecked');
+ assert.equal(h.api.isSocialAllowed(),false);
+ assert.equal(h.api.isSocialProfileActive(),false);
+ assert.equal(h.calls.length,0);
  await h.api.setAgeSignal({status:'not_shared',adultEligible:false});
- assert.equal(h.api.isSocialAllowed(),true,'a failed optional signal must not relock the internal beta');
- assert.equal(h.api.isSocialProfileActive(),true);
+ assert.equal(h.api.isSocialAllowed(),false);
+ assert.equal(h.api.isSocialProfileActive(),false);
+ assert.equal(h.calls.length,0);
 });
 test('internal beta still requires explicit social consent',async()=>{
  const h=harness({consent:false,adult:false,beta:true,credential:'x'.repeat(43)});
@@ -111,10 +112,12 @@ test('internal beta still requires explicit social consent',async()=>{
  assert.equal(h.api.isSocialProfileActive(),false);
  assert.equal(h.calls.length,0,'no social-server request before consent');
 });
-test('only the internal-beta build can bypass Age Signals; release and shared clients keep their gates',()=>{
+test('internal beta tools do not grant social access',()=>{
  const social=source('js/social.js');
  const gradle=source('android-template/app/build.gradle.kts');
  assert(social.includes('betaTestBuild=()=>native()?.betaTesterToolsEnabled?.()===true'));
+ assert(social.includes('socialAccessAllowed=()=>state.ageAllowed===true&&native()?.ageSignalsAdultEligible?.()===true'));
+ assert(!social.includes('||betaTestBuild()'));
  assert(gradle.includes('buildConfigField("Boolean", "BETA_TESTER_TOOLS", "false")'));
  assert(gradle.includes('create("internalBeta")'));
  for(const file of ['js/messages.js','js/shared-playground.js']){

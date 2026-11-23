@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const TERMS_KEY='trialum.terms.accepted.v44';
-const SOCIAL_KEY='trialum.social.consent.v39';
+const SOCIAL_KEY='trialum.social.consent.v46';
 const AGREEMENT_VERSION=44;
 const accepted=()=>{try{const value=JSON.parse(localStorage.getItem(TERMS_KEY)||'null');return value?.version===AGREEMENT_VERSION&&typeof value?.acceptedAt==='string';}catch(_){return false;}};
 const socialAccepted=()=>{try{return localStorage.getItem(SOCIAL_KEY)==='accepted';}catch(_){return false;}};
