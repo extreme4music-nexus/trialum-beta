@@ -94,11 +94,20 @@ test('same-ID recovery makes no request until NEW key was shown and acknowledged
  assert(!JSON.stringify(s.api.getState()).includes(KEY));
  assert(!JSON.stringify(s.api.getState()).includes(NEXT));
 });
-test('unknown age or missing consent denies recovery and makes no network request',async()=>{
+test('recovery kit restores identity without granting age/consent-gated social access',async()=>{
  for(const options of [{adult:false},{consent:false}]){
   const s=scenario(options);await s.api.init();
-  assert.equal(s.api.startRecovery(UUID,KEY),false);
-  assert.equal(s.requests.length,0);
+  assert.equal(s.api.startRecovery(UUID,KEY),true);
+  assert.equal(s.requests.some(x=>x.route==='recovery/restore'),false,
+    'no restore before user acknowledges the next key');
+  const restored=await s.api.acceptPreparedRecovery(UUID,NEXT);
+  assert.equal(restored.id,UUID);
+  assert.equal(s.getCredential(),TOKEN);
+  assert.equal(s.api.isSocialProfileActive(),false,
+    'recovery does not grant Friends eligibility');
+  assert(s.requests.some(x=>x.route==='recovery/restore'));
+  assert(!s.requests.some(x=>x.route==='friends'),
+    'no social requests while native Age Signals or consent is unavailable');
  }
 });
 test('old server cannot create unrecoverable new profile',async()=>{
