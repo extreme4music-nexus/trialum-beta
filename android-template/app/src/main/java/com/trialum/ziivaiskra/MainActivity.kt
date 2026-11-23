@@ -56,6 +56,7 @@ private fun nativeText(macedonian: String, english: String): String =
     private lateinit var petVoice: TrialumPetVoice
     private lateinit var playGames: TrialumPlayGames
     private lateinit var ageSignals: TrialumAgeSignals
+    private lateinit var socialIntegrity: TrialumSocialIntegrity
     private lateinit var nearby: TrialumNearby
     private lateinit var push: TrialumPush
     private val host = "appassets.androidplatform.net"
@@ -345,6 +346,18 @@ private fun nativeText(macedonian: String, english: String): String =
                     )
             }
         }
+        socialIntegrity = TrialumSocialIntegrity(this, {
+            foregroundStarted && ageSignals.isAdultEligible()
+        }) { event ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && ::web.isInitialized) {
+                    web.evaluateJavascript(
+                        "window.TrialumSocialIntegrityEvent && window.TrialumSocialIntegrityEvent(" +
+                            event.toString() + ");", null
+                    )
+                }
+            }
+        }
         petVoice = TrialumPetVoice(this) { event ->
             runOnUiThread {
                 if (!isFinishing && !isDestroyed)
@@ -541,7 +554,17 @@ private fun nativeText(macedonian: String, english: String): String =
             runOnUiThread { ageSignals.request(this@MainActivity) }
         }
         @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
-            ageSignals.isAdultEligible()
+            foregroundStarted && ageSignals.isAdultEligible()
+        @JavascriptInterface fun requestSocialIntegrityToken(
+            requestId: String, action: String, consentVersion: String, subject: String
+        ) {
+            // Native gate is checked again at token issue, not only by WebView JS.
+            runOnUiThread {
+                if (::socialIntegrity.isInitialized) {
+                    socialIntegrity.request(requestId, action, consentVersion, subject)
+                }
+            }
+        }
         // Legacy QA bridge remains for binary compatibility, but can never bypass Age Signals.
         @JavascriptInterface fun qaSocialAgeBypass(): Boolean = false
         @JavascriptInterface fun betaTesterToolsEnabled(): Boolean = BuildConfig.BETA_TESTER_TOOLS
@@ -1049,9 +1072,17 @@ private fun nativeText(macedonian: String, english: String): String =
         }
         TrialumPush.syncRevocation(applicationContext)
         if (::modelRuntime.isInitialized) modelRuntime.onVisible()
+        if (::web.isInitialized && !isFinishing && !isDestroyed) {
+            web.evaluateJavascript("window.TrialumSocialForegroundEvent && window.TrialumSocialForegroundEvent('visible');", null)
+        }
     }
     override fun onStop() {
         foregroundStarted = false
+        if (::socialIntegrity.isInitialized) socialIntegrity.cancel()
+        if (::ageSignals.isInitialized) ageSignals.invalidate()
+        if (::web.isInitialized && !isFinishing && !isDestroyed) {
+            web.evaluateJavascript("window.TrialumSocialForegroundEvent && window.TrialumSocialForegroundEvent('hidden');", null)
+        }
         if (::petVoice.isInitialized) petVoice.stop()
         if (TrialumBackgroundSpeechService.running) {
             // No independent GGUF inference may continue when the game is closed/hidden.
