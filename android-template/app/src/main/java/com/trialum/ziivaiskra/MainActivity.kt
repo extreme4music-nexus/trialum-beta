@@ -56,6 +56,7 @@ private fun nativeText(macedonian: String, english: String): String =
     private lateinit var petVoice: TrialumPetVoice
     private lateinit var playGames: TrialumPlayGames
     private lateinit var ageSignals: TrialumAgeSignals
+    private lateinit var socialIntegrity: TrialumPlayIntegrity
     private lateinit var nearby: TrialumNearby
     private lateinit var push: TrialumPush
     private val host = "appassets.androidplatform.net"
@@ -288,9 +289,23 @@ private fun nativeText(macedonian: String, english: String): String =
         }
     }
 
+    private fun dispatchSocialLifecycle(foreground: Boolean) {
+        if (!::web.isInitialized) return
+        val state = if (foreground) "true" else "false"
+        web.post {
+            if (!isFinishing && !isDestroyed) {
+                web.evaluateJavascript(
+                    "window.TrialumSocialLifecycle && window.TrialumSocialLifecycle($state);",
+                    null
+                )
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         applyFullscreenImmersiveMode()
+        if (foregroundStarted) dispatchSocialLifecycle(true)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -345,6 +360,19 @@ private fun nativeText(macedonian: String, english: String): String =
                     )
             }
         }
+        socialIntegrity = TrialumPlayIntegrity(
+            applicationContext,
+            BuildConfig.TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER
+        ) { event ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed)
+                    web.evaluateJavascript(
+                        "window.TrialumSocialIntegrityEvent && window.TrialumSocialIntegrityEvent(" +
+                            event.toString() + ");", null
+                    )
+            }
+        }
+        socialIntegrity.prepare()
         petVoice = TrialumPetVoice(this) { event ->
             runOnUiThread {
                 if (!isFinishing && !isDestroyed)
@@ -536,9 +564,19 @@ private fun nativeText(macedonian: String, english: String): String =
         @JavascriptInterface fun nearbyScan() { runOnUiThread { nearby.startScanning() } }
         @JavascriptInterface fun nearbyStop() { runOnUiThread { nearby.stop() } }
         @JavascriptInterface fun socialApiUrl(): String = getString(R.string.trialum_social_api_url)
-        @JavascriptInterface fun requestAgeSignals() {
-            // Adult eligibility is distinct from tester/debug tools. User-triggered only.
-            runOnUiThread { ageSignals.request(this@MainActivity) }
+        @JavascriptInterface fun requestAgeSignals(): Long {
+            // The returned request ID lets JS reject stale or duplicate callbacks.
+            val requestId = ageSignals.beginRequest()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) ageSignals.request(this@MainActivity, requestId)
+            }
+            return requestId
+        }
+        @JavascriptInterface fun socialForegroundActive(): Boolean = foregroundStarted
+        @JavascriptInterface fun requestSocialIntegrity(requestId: Long, requestHash: String): Boolean {
+            if (requestId <= 0L || requestHash.length !in 1..500) return false
+            socialIntegrity.request(requestId, requestHash)
+            return true
         }
         @JavascriptInterface fun ageSignalsAdultEligible(): Boolean =
             ageSignals.isAdultEligible()
@@ -1043,6 +1081,7 @@ private fun nativeText(macedonian: String, english: String): String =
     override fun onStart() {
         super.onStart()
         foregroundStarted = true
+        dispatchSocialLifecycle(true)
         if (TrialumBackgroundSpeechService.running) {
             startService(Intent(this, TrialumBackgroundSpeechService::class.java)
                 .setAction(TrialumBackgroundSpeechService.STOP))
@@ -1052,6 +1091,7 @@ private fun nativeText(macedonian: String, english: String): String =
     }
     override fun onStop() {
         foregroundStarted = false
+        dispatchSocialLifecycle(false)
         if (::petVoice.isInitialized) petVoice.stop()
         if (TrialumBackgroundSpeechService.running) {
             // No independent GGUF inference may continue when the game is closed/hidden.

@@ -8,25 +8,38 @@ import com.google.android.play.agesignals.AgeSignalsRequest
 import com.google.android.play.agesignals.model.AgeRangeSource
 import com.google.android.play.agesignals.model.AgeSignalsStatus
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Privacy-minimal Play age check. Never returns DOB, age bounds, source tier,
- * install ID, or significant-change identifiers to JavaScript or the server.
+ * Privacy-minimal Play age check. DOB, exact age bounds, source tier,
+ * install ID, and significant-change identifiers never leave this class.
+ *
+ * An Activity stop caused by Google-owned UI does not invalidate a request.
+ * Only a newer request supersedes an older callback.
  */
 class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) -> Unit) {
     private val appContext = activity.applicationContext
-    private val manager: AgeSignalsManager =
-        AgeSignalsManagerFactory.create(appContext)
+    private val manager: AgeSignalsManager = AgeSignalsManagerFactory.create(appContext)
+    private val requestSequence = AtomicLong(0)
+    @Volatile private var activeRequestId = 0L
     @Volatile private var adultEligible = false
 
     fun isAdultEligible(): Boolean = adultEligible
 
-    fun request(activity: Activity) {
+    fun beginRequest(): Long {
+        val id = requestSequence.incrementAndGet()
+        activeRequestId = id
         adultEligible = false
+        return id
+    }
+
+    fun request(activity: Activity, requestId: Long) {
+        if (!isCurrent(requestId)) return
         try {
             val access = AgeSignalsAccessRequest.builder().setActivity(activity).build()
             manager.requestAgeSignalsAccess(access)
                 .addOnSuccessListener { result ->
+                    if (!isCurrent(requestId)) return@addOnSuccessListener
                     val status = result.ageSignalsStatus()
                     val label = when (status) {
                         AgeSignalsStatus.SHARED -> "SHARED"
@@ -35,35 +48,36 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                         else -> "UNKNOWN"
                     }
                     recordDiagnostic("age_signals.access", label)
-                    if (status == AgeSignalsStatus.SHARED) checkSharedSignals()
-                    else finish(false, label.lowercase())
+                    if (status == AgeSignalsStatus.SHARED) checkSharedSignals(requestId)
+                    else finish(requestId, false, label.lowercase())
                 }
                 .addOnFailureListener { error ->
+                    if (!isCurrent(requestId)) return@addOnFailureListener
                     recordDiagnostic("age_signals.access_error", error.javaClass.simpleName)
-                    finish(false, "unavailable")
+                    finish(requestId, false, "unavailable")
                 }
         } catch (_: Exception) {
-            recordDiagnostic("age_signals.access_error", "exception")
-            finish(false, "unavailable")
+            if (isCurrent(requestId)) {
+                recordDiagnostic("age_signals.access_error", "exception")
+                finish(requestId, false, "unavailable")
+            }
         }
     }
 
-    private fun checkSharedSignals() {
+    private fun checkSharedSignals(requestId: Long) {
+        if (!isCurrent(requestId)) return
         try {
             manager.checkAgeSignals(AgeSignalsRequest.builder().build())
                 .addOnSuccessListener { result ->
+                    if (!isCurrent(requestId)) return@addOnSuccessListener
                     val ageLower = result.ageLower() ?: -1
                     val ageUpper = result.ageUpper()
-                    // TIER_A is the normal opt-in age-range signal outside regions
-                    // requiring formal verification. It is NOT independent proof of age.
-                    // TIER_C/D are assessment/verification tiers in regulated regions.
-                    // Only a shared Google-reported 18+ range is accepted; TIER_B
-                    // (supervised), unavailable, unknown and under-18 fail closed.
-                    val eligibleSource = result.ageRangeSource() == AgeRangeSource.TIER_A ||
-                        result.ageRangeSource() == AgeRangeSource.TIER_C ||
-                        result.ageRangeSource() == AgeRangeSource.TIER_D
+                    val sourceValue = result.ageRangeSource()
+                    val eligibleSource = sourceValue == AgeRangeSource.TIER_A ||
+                        sourceValue == AgeRangeSource.TIER_C ||
+                        sourceValue == AgeRangeSource.TIER_D
                     val eligible = eligibleSource && ageLower >= 18 && ageUpper == null
-                    val source = when (result.ageRangeSource()) {
+                    val source = when (sourceValue) {
                         AgeRangeSource.TIER_A -> "TIER_A"
                         AgeRangeSource.TIER_B -> "TIER_B"
                         AgeRangeSource.TIER_C -> "TIER_C"
@@ -75,30 +89,36 @@ class TrialumAgeSignals(activity: Activity, private val deliver: (JSONObject) ->
                         ageLower >= 18 && ageUpper == null -> "18_plus"
                         else -> "under_18_or_closed_range"
                     }
-                    recordDiagnostic(
-                        "age_signals.result",
-                        "band=$band;source=$source;eligible=$eligible"
-                    )
-                    finish(eligible, if (eligible) "adult_signal" else "restricted")
+                    recordDiagnostic("age_signals.result", "band=$band;source=$source;eligible=$eligible")
+                    finish(requestId, eligible, if (eligible) "adult_signal" else "restricted")
                 }
                 .addOnFailureListener { error ->
+                    if (!isCurrent(requestId)) return@addOnFailureListener
                     recordDiagnostic("age_signals.result_error", error.javaClass.simpleName)
-                    finish(false, "unavailable")
+                    finish(requestId, false, "unavailable")
                 }
         } catch (_: Exception) {
-            recordDiagnostic("age_signals.result_error", "exception")
-            finish(false, "unavailable")
+            if (isCurrent(requestId)) {
+                recordDiagnostic("age_signals.result_error", "exception")
+                finish(requestId, false, "unavailable")
+            }
         }
     }
 
+    private fun isCurrent(requestId: Long): Boolean =
+        requestId > 0L && activeRequestId == requestId
+
     private fun recordDiagnostic(category: String, message: String) {
-        // Keep only coarse status/source metadata in the opt-in local debug export.
-        // Never persist a date of birth, exact age bounds, install ID, or exception text.
+        // Keep coarse status only; never persist DOB or exact age boundaries.
         try { TrialumDiagnostics.record(appContext, category, message) } catch (_: Exception) { }
     }
 
-    private fun finish(eligible: Boolean, status: String) {
+    private fun finish(requestId: Long, eligible: Boolean, status: String) {
+        if (!isCurrent(requestId)) return
         adultEligible = eligible
-        deliver(JSONObject().put("status", status).put("adultEligible", eligible))
+        deliver(JSONObject()
+            .put("requestId", requestId)
+            .put("status", status)
+            .put("adultEligible", eligible))
     }
 }

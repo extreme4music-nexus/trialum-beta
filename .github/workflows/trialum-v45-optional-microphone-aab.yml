@@ -6,6 +6,7 @@ on:
       - fix/v44-optional-microphone-feature-20261123
       - fix/v45-beta-social-access-20261123
       - feature/v46-social-eligibility-controller-20261123
+      - feature/v46-social-eligibility-controller-20261123
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,7 @@ jobs:
       TRIALUM_FIREBASE_PROJECT_ID: ${{ vars.TRIALUM_FIREBASE_PROJECT_ID }}
       TRIALUM_FIREBASE_SENDER_ID: ${{ vars.TRIALUM_FIREBASE_SENDER_ID }}
       TRIALUM_PGS_PROJECT_ID: ${{ vars.TRIALUM_PGS_PROJECT_ID }}
+      TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER: ${{ vars.TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER }}
       TRIALUM_PGS_ACH_FIRST_PET: ${{ vars.TRIALUM_PGS_ACH_FIRST_PET }}
       TRIALUM_PGS_ACH_FIRST_PLANT: ${{ vars.TRIALUM_PGS_ACH_FIRST_PLANT }}
       TRIALUM_PGS_ACH_LEARNED: ${{ vars.TRIALUM_PGS_ACH_LEARNED }}
@@ -80,6 +82,7 @@ jobs:
             "-PtrialumFirebaseSenderId=$TRIALUM_FIREBASE_SENDER_ID"
           )
           [[ -n "$TRIALUM_PGS_PROJECT_ID" ]] && args+=("-PtrialumPgsProjectId=$TRIALUM_PGS_PROJECT_ID")
+          [[ -n "$TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER" ]] && args+=("-PtrialumIntegrityCloudProjectNumber=$TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER")
           [[ -n "$TRIALUM_PGS_ACH_FIRST_PET" ]] && args+=("-PtrialumPgsAchievement_first_pet=$TRIALUM_PGS_ACH_FIRST_PET")
           [[ -n "$TRIALUM_PGS_ACH_FIRST_PLANT" ]] && args+=("-PtrialumPgsAchievement_first_plant=$TRIALUM_PGS_ACH_FIRST_PLANT")
           [[ -n "$TRIALUM_PGS_ACH_LEARNED" ]] && args+=("-PtrialumPgsAchievement_learned=$TRIALUM_PGS_ACH_LEARNED")
