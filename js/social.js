@@ -305,7 +305,7 @@ function setAgeSignal(result){
   if(!state.socialConsented){state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;emit();return;}
   const eligible=result?.status==='adult_signal'&&result?.adultEligible===true&&native()?.ageSignalsAdultEligible?.()===true;
   state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
-  if(!eligible){eligibilityToken='';eligibilityExpiresAt=0;eligibilityGeneration++;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;state.eligibilityStatus='age_required';state.online=false;state.ready=false;root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрастна група 18+.';emit();return false;}
+  if(!eligible){eligibilityToken='';eligibilityExpiresAt=0;eligibilityGeneration++;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;state.eligibilityStatus='age_required';state.online=false;state.ready=false;root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрасна група 18+.';emit();return false;}
   state.error='';emit();if(state.foreground)return init();return true;
 }
 function setForeground(active){
