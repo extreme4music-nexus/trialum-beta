@@ -60,7 +60,13 @@ export function createSocialEligibilityService({
        VALUES($1,$2,$3,$4,$5,$6,$7)`,
       [challengeId, sha256(nonce), input.action, consentVersion, packageName, Number(versionCode), expiresAt]
     );
-    return { challengeId, nonce, expiresAt: expiresAt.toISOString() };
+    const integrityRequestHash = requestHash({
+      action: input.action, challengeId, nonce, consentVersion, packageName, versionCode
+    });
+    return {
+      challengeId, nonce, requestHash: integrityRequestHash,
+      expiresAt: expiresAt.toISOString(), consentVersion
+    };
   }
 
   async function verifyChallenge(input, installationId = null) {
@@ -123,12 +129,12 @@ export function createSocialEligibilityService({
     return { eligible: true, eligibilityToken, expiresAt: expiresAt.toISOString(), consentVersion };
   }
 
-  async function requireEligibility(req, installationId) {
+  async function requireEligibility(req, installationId, queryable = pool) {
     const token = req.headers['x-trialum-eligibility'];
     if (typeof token !== 'string' || !TOKEN.test(token)) {
       throw Object.assign(new Error('server_eligibility_required'), { status: 403 });
     }
-    const found = await pool.query(
+    const found = await queryable.query(
       `SELECT 1 FROM social_eligibility_sessions
        WHERE token_hash=$1 AND installation_id=$2
          AND consent_version=$3 AND expires_at>now()`,
@@ -138,12 +144,12 @@ export function createSocialEligibilityService({
     return true;
   }
 
-  async function bindUnboundToken(req, installationId) {
+  async function bindUnboundToken(req, installationId, queryable = pool) {
     const token = req.headers['x-trialum-eligibility'];
     if (typeof token !== 'string' || !TOKEN.test(token)) {
       throw Object.assign(new Error('server_eligibility_required'), { status: 403 });
     }
-    const result = await pool.query(
+    const result = await queryable.query(
       `UPDATE social_eligibility_sessions SET installation_id=$2
        WHERE token_hash=$1 AND installation_id IS NULL
          AND consent_version=$3 AND expires_at>now()`,

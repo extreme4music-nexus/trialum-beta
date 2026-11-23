@@ -574,7 +574,7 @@ private fun nativeText(macedonian: String, english: String): String =
         }
         @JavascriptInterface fun socialForegroundActive(): Boolean = foregroundStarted
         @JavascriptInterface fun requestSocialIntegrity(requestId: Long, requestHash: String): Boolean {
-            if (requestId <= 0L || requestHash.length !in 1..500) return false
+            if (!foregroundStarted || requestId <= 0L || requestHash.length !in 1..500) return false
             socialIntegrity.request(requestId, requestHash)
             return true
         }

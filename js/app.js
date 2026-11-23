@@ -90,7 +90,7 @@ function sendNative(){if(!s)return;try{if(globalThis.TrialumAndroid&&typeof glob
   }
   W.setSceneVisible?.(home);
  }
-function chooseTab(which){if(['messages','shared'].includes(which)&&!Social?.isSocialAllowed?.()){toast('🔒 Прво прифати ги условите за социјални услуги и заврши ја проверката во Пријатели.');which='friends';}else if(['messages','shared'].includes(which)&&!Social?.isSocialProfileActive?.()){toast('🔒 Пораките и заедничката игротека бараат активен социјален профил. Создај или поврзи профил во Пријатели.');which='friends';}globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
+function chooseTab(which){if(['messages','shared'].includes(which)&&!globalThis.TrialumSocialEligibilityController?.isAllowed?.()){toast('🔒 Прво прифати ги условите за социјални услуги и заврши ја проверката во Пријатели.');which='friends';}else if(['messages','shared'].includes(which)&&!globalThis.TrialumSocialEligibilityController?.isReady?.()){toast('🔒 Пораките и заедничката игротека бараат активен социјален профил. Создај или поврзи профил во Пријатели.');which='friends';}globalThis.TrialumPlaygroundAI?.setTab?.(which);if(which!=='playground')PG?.stop();if(which!=='shared')Shared?.deactivate();if(which!=='messages')Messages?.deactivate();tab=which;if(which==='messages')Messages?.activate();if(which==='shared')Shared?.activate();document.querySelector('.shell')?.setAttribute('data-active-tab',which);const primary=['lab','habitats','pets','research','more'];document.querySelectorAll('[data-tab]').forEach(n=>{
   const target=n.dataset.tab,active=target===which||(target==='more'&&!primary.includes(which));
   n.classList.toggle('active',active);
   if(n.closest('#tabs')){
@@ -343,7 +343,8 @@ function doAction(button){if(restoring||restoreRecoveryBlocked)return;const acti
  if(action?.startsWith('agro'))button.disabled=true;
  if(['debugToggle','debugDays','debugResources','debugPet','betaNotify','betaPgsRefresh','betaSocialRefresh'].includes(action)&&globalThis.TrialumAndroid?.betaTesterToolsEnabled?.()!==true){toast('Овие алатки се достапни само во интерното бета издание.');return;}
  if(action==='socialAgeCheck'){Social?.requestAgeCheck?.();return;}
- if(['socialRegister','socialRestoreStart','socialRecoveryIssue','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialDelete','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозвола за оваа верзија.');return;}
+ if(action==='socialEligibilityRetry'){Social?.retryEligibility?.().then(()=>{if(s)renderTab();});return;}
+ if(['socialRegister','socialRestoreStart','socialRecoveryIssue','socialInvite','socialShare','socialCopy','socialRevoke','socialPreview','socialAccept','socialDecline','socialRefresh','socialRemove','socialBlock','socialNearbyHost','socialNearbyScan','socialNearbyStop','p2pOffer','p2pAnswer','p2pFinish','p2pVisit','p2pAddFriend','p2pRename','p2pCopy','p2pShare','shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialAllowed?.()){chooseTab('friends');toast('🔒 Оваа социјална функција бара претходна согласност и дозвола за оваа верзија.');return;}
  if(['shRefresh','shCreate','shInvite','shDecision','shRemove','shDelete','shUpgrade','shEnter','shPlay','shVisit','shVisitDecision','msgRefresh','msgSend','msgCustomSend','msgRead','msgDelete','msgClearConversation','msgReport','msgEventRead','msgEventDelete','msgMute','msgPushOn','msgPushOff','msgPushTest'].includes(action)&&!Social?.isSocialProfileActive?.()){chooseTab('friends');toast('🔒 Пораките и заедничката игротека бараат активен социјален профил.');return;}
  if(action==='socialConsentAccept'){if(!el('socialConsentCheck')?.checked){toast('Прво означи дека ги разбираш условите.');return;}Social?.setSocialConsent?.(true).then(ok=>{if(ok){renderTab();if(Social?.isSocialAllowed?.())toast('Социјалната согласност е вклучена на овој уред.');}});return;}
  if(action==='socialConsentLater'){chooseTab('lab');toast('Социјалните услуги остануваат исклучени. Офлајн играта е достапна.');return;}
@@ -719,12 +720,14 @@ async function init(){await globalThis.TrialumLegal?.requireTerms?.();globalThis
  Messages?.onChange(()=>{if(s&&tab==='messages')renderTab();});
  globalThis.TrialumPushEvent=event=>{Messages?.pushEvent(event);};
  globalThis.TrialumAgeSignalsEvent=event=>{
-  Promise.resolve(Social?.setAgeSignal?.(event)).then(()=>{
+  Promise.resolve(globalThis.TrialumSocialEligibilityController?.onAgeSignal?.(event)).then(()=>{
    if(s&&Social?.isAdultAllowed?.())Shared?.reconcileAway?.().catch(()=>{});
    if(s)renderTab();
    toast(Social?.isAdultAllowed?.()?'Google Play сподели возрастна група 18+; Friends може доброволно да се активираат.':'Социјалните функции остануваат заклучени; основната игра работи офлајн.');
   });
  };
+ globalThis.TrialumSocialIntegrityEvent=event=>globalThis.TrialumSocialEligibilityController?.onIntegrityResult?.(event);
+ globalThis.TrialumSocialLifecycle=active=>globalThis.TrialumSocialEligibilityController?.onForeground?.(active===true);
  globalThis.TrialumNearbyEvent=event=>{Social?.nearbyEvent(event);if(event?.kind==='invite' && s)chooseTab('friends');};
  globalThis.TrialumSocialInvite=function(code){
   if(Social?.receive(code)){if(s)chooseTab('friends');else toast('Примена е покана за пријателство. Прво започни го светот.');}

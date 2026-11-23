@@ -6,7 +6,6 @@ on:
       - fix/v44-optional-microphone-feature-20261123
       - fix/v45-beta-social-access-20261123
       - feature/v46-social-eligibility-controller-20261123
-      - feature/v46-social-eligibility-controller-20261123
   workflow_dispatch:
 
 permissions:
@@ -42,7 +41,7 @@ jobs:
 
       - name: Verify v46 eligibility gates and server policy
         run: |
-          node --test tests/v44-friends-age-signals.test.cjs
+          node --test tests/v46-social-eligibility.test.cjs
           node --test server-patch/v46/tests/social-eligibility.test.mjs
 
       - uses: actions/setup-java@v4
@@ -66,6 +65,8 @@ jobs:
           set -euo pipefail
           : "${TRIALUM_SOCIAL_API_URL:?Missing TRIALUM_SOCIAL_API_URL}"
           [[ "$TRIALUM_SOCIAL_API_URL" =~ ^https://[A-Za-z0-9.-]+(:443)?$ ]]
+          : "${TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER:?Missing TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER}"
+          [[ "$TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER" =~ ^[0-9]{1,20}$ ]]
           : "${TRIALUM_FIREBASE_API_KEY:?Missing Firebase client API key}"
           : "${TRIALUM_FIREBASE_APP_ID:?Missing release Firebase app ID}"
           : "${TRIALUM_FIREBASE_APP_ID_SIGNQA:?Missing SignQA Firebase app ID}"

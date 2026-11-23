@@ -12,7 +12,7 @@ android {
         buildConfigField("Boolean", "QA_SOCIAL_AGE_BYPASS", "false")
         val integrityProjectNumber = (project.findProperty("trialumIntegrityCloudProjectNumber") as? String)?.trim() ?: ""
         require(integrityProjectNumber.isEmpty() || integrityProjectNumber.matches(Regex("^[0-9]{1,20}$"))) { "Play Integrity Cloud project number must be numeric" }
-        buildConfigField("String", "TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER", "\\"$integrityProjectNumber\\"")
+        buildConfigField("String", "TRIALUM_INTEGRITY_CLOUD_PROJECT_NUMBER", "\"$integrityProjectNumber\"")
         manifestPlaceholders["trialumInviteScheme"] = "trialum"
         minSdk = 26
         targetSdk = 36

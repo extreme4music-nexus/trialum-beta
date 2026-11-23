@@ -35,7 +35,7 @@ function profile(p){
 function config(){
  const n=root.TrialumAndroid,url=String(n?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
  const pass=String(n?.socialCredential?.()||'');
- st.enabled=root.TrialumSocial?.isSocialProfileActive?.()===true&&
+ st.enabled=root.TrialumSocialEligibilityController?.isReady?.()===true&&
   /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(url)&&/^[A-Za-z0-9_-]{43}$/.test(pass);
  base=st.enabled?url:'';token=st.enabled?pass:'';
  return st.enabled;
@@ -61,11 +61,11 @@ const errors={
 };
 function problem(e){st.error=errors[e?.message]||'Проблем со врската или дозволата. Пробај повторно.';say();}
 async function req(path,method='GET',body=null){
- if(root.TrialumSocial?.isSocialProfileActive?.()!==true||!base||!token)throw Error('shared_disabled');
+ if(root.TrialumSocialEligibilityController?.isReady?.()!==true||!base||!token)throw Error('shared_disabled');
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
  try{
   const r=await fetch(base+'/v1/shared/'+path,{method,
-   headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},
+   headers:{Authorization:'Bearer '+token,...(root.TrialumSocial?.eligibilityHeaders?.()||{}),...(body?{'Content-Type':'application/json'}:{})},
    ...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal,
    cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
   const data=await r.json().catch(()=>({}));
@@ -284,10 +284,10 @@ function sendPetSpeech(world,pet,text,language='en',replyToTurnId=''){
  try{ws.send(JSON.stringify(message));return true;}catch(_){return false;}
 }
 function connect(){
- if(!st.active||!st.enabled||!root.WebSocket||ws)return;
+ if(!st.active||root.TrialumSocialEligibilityController?.isReady?.()!==true||!st.enabled||!root.WebSocket||ws)return;
  const socket=new root.WebSocket(base.replace(/^https:/,'wss:')+'/v1/social/live');
  ws=socket;
- socket.addEventListener('open',()=>{if(ws===socket)socket.send(JSON.stringify({type:'auth',credential:token}));});
+ socket.addEventListener('open',()=>{if(ws===socket)socket.send(JSON.stringify({type:'auth',credential:token,eligibilityToken:root.TrialumSocial?.eligibilityHeaders?.()?.['X-Trialum-Eligibility']||''}));});
  socket.addEventListener('message',e=>{
   if(ws!==socket)return;
   let m;try{m=JSON.parse(e.data);}catch(_){return;}

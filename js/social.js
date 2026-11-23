@@ -10,8 +10,9 @@ const socialAccessAllowed=()=>state.ageAllowed===true&&native()?.ageSignalsAdult
 const safe=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const CODE=/^[A-Za-z0-9_-]{43}$/;
 const PROFILE_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false};
-let credential='',changed=()=>{},pendingRecovery=null;
+const state={enabled:false,online:false,ready:false,busy:false,recoveryEnabled:false,identity:null,friends:[],code:'',pending:'',preview:null,nearbyStatus:'',error:'',expiresAt:'',server:'',ageAllowed:false,ageStatus:'unchecked',socialConsented:false,integrityStatus:'unchecked',eligibilityStatus:'unchecked',foreground:true};
+let credential='',changed=()=>{},pendingRecovery=null,eligibilityToken='',eligibilityExpiresAt=0,eligibilityPromise=null,eligibilityGeneration=0,ageRequestId=0,integrityRequestId=0,eligibilityRenewTimer=null;
+const integrityWaiters=new Map();
 const emit=()=>changed();
 function parseCode(text, base=state.server){
   if(typeof text!=='string'||text.length>1024)return '';
@@ -41,18 +42,27 @@ function setError(e){
     recovery_unavailable_or_invalid:'ID-то или recovery-клучот се невалидни, профилот е избришан или привремено е заклучен.',
     recovery_kit_required:'Не може безбедно да се создаде профил без серверска recovery-функција.',
     secure_storage_unavailable:'Android не успеа безбедно да го зачува токенот на уредот.'
+    ,integrity_unavailable:'Play Integrity не е достапен. Провери дека апликацијата е инсталирана преку Play тестирањето и пробај повторно.'
+    ,integrity_timeout:'Play Integrity не одговори навреме. Провери ја врската и пробај повторно.'
+    ,server_eligibility_unavailable:'Серверот привремено не може да ја потврди дозволата. Профилот не е изменет; пробај повторно.'
+    ,server_eligibility_expired:'Серверската дозвола истече. Освежи ја проверката за повторно да се поврзеш.'
+    ,server_eligibility_required:'Серверот бара нова проверка на социјалната дозвола.'
+    ,eligibility_background:'Социјалните функции се паузирани додека Trialum не се врати во преден план.'
+    ,eligibility_stale:'Проверката беше заменета со понова. Пробај повторно.'
+    ,eligibility_invalid:'Серверот врати невалидна дозвола. Социјалните функции остануваат исклучени.'
   };
   state.error=map[e?.message]||'Не успеа поврзувањето. Провери интернет и сервер.';
   emit();
 }
-async function request(path,method='GET',body=null,key=credential){
-  if(!state.socialConsented)throw Error('social_consent_required');
-  if(!socialAccessAllowed())throw Error('age_gate_required');
+async function request(path,method='GET',body=null,key=credential,{allowErase=false}={}){
+  if(!allowErase&&!state.socialConsented)throw Error('social_consent_required');
+  if(!allowErase&&!socialAccessAllowed())throw Error('age_gate_required');
+  if(!allowErase&&(!state.foreground||native()?.socialForegroundActive?.()===false))throw Error('eligibility_background');
   if(!state.server)throw Error('social_service_disabled');
   const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),7000);
   try{
     const res=await fetch(state.server+'/v1/social/'+path,{
-      method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(key?{Authorization:'Bearer '+key}:{})},
+      method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(key?{Authorization:'Bearer '+key}:{}),...(!allowErase&&eligibilityToken?{'X-Trialum-Eligibility':eligibilityToken}:{})},
       ...(body?{body:JSON.stringify(body)}:{}),signal:ctrl.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
     });
     const payload=await res.json().catch(()=>({}));
@@ -60,22 +70,101 @@ async function request(path,method='GET',body=null,key=credential){
     return payload;
   }finally{clearTimeout(timeout);}
 }
+async function ensureServerEligibility(force=false){
+  if(!state.foreground||native()?.socialForegroundActive?.()===false)throw Error('eligibility_background');
+  if(!state.socialConsented)throw Error('social_consent_required');
+  if(!socialAccessAllowed())throw Error('age_gate_required');
+  if(!state.server)throw Error('social_service_disabled');
+  if(!force&&eligibilityToken&&eligibilityExpiresAt>Date.now()+60000){state.eligibilityStatus='active';return eligibilityToken;}
+  if(eligibilityPromise)return eligibilityPromise;
+  const generation=++eligibilityGeneration;
+  eligibilityPromise=(async()=>{
+    state.eligibilityStatus='checking';state.integrityStatus='checking';emit();
+    const endpoint=state.server+'/v1/social/eligibility/';
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+    let challenge;
+    try{
+      const r=await fetch(endpoint+'challenge',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'social_enable',consentVersion:'trialum-social-v46',packageName:'com.trialum.ziivaiskra',versionCode:46}),
+        signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+      challenge=await r.json().catch(()=>({}));
+      if(!r.ok)throw Error(challenge.error||'server_eligibility_unavailable');
+    }finally{clearTimeout(timeout);}
+    if(generation!==eligibilityGeneration||!state.foreground)throw Error('eligibility_stale');
+    if(typeof challenge?.challengeId!=='string'||typeof challenge?.nonce!=='string'||
+       typeof challenge?.requestHash!=='string'||challenge.consentVersion!=='trialum-social-v46')throw Error('server_eligibility_invalid');
+    const nativeBridge=native();
+    if(typeof nativeBridge?.requestSocialIntegrity!=='function')throw Error('integrity_unavailable');
+    const requestId=++integrityRequestId;
+    const tokenPromise=new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{integrityWaiters.delete(requestId);reject(Error('integrity_timeout'));},20000);
+      integrityWaiters.set(requestId,{resolve,reject,timer,generation});
+    });
+    if(nativeBridge.requestSocialIntegrity(requestId,challenge.requestHash)!==true){
+      const pending=integrityWaiters.get(requestId);if(pending){clearTimeout(pending.timer);integrityWaiters.delete(requestId);}
+      throw Error('integrity_unavailable');
+    }
+    const integrity=await tokenPromise;
+    if(generation!==eligibilityGeneration||!state.foreground)throw Error('eligibility_stale');
+    state.integrityStatus='passed';
+    const verifyController=new AbortController(),verifyTimeout=setTimeout(()=>verifyController.abort(),12000);
+    try{
+      const r=await fetch(endpoint+'verify',{method:'POST',headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{})},
+        body:JSON.stringify({challengeId:challenge.challengeId,nonce:challenge.nonce,integrityToken:integrity.token,consentVersion:'trialum-social-v46'}),
+        signal:verifyController.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+      const result=await r.json().catch(()=>({}));
+      if(!r.ok)throw Error(result.error||'server_eligibility_unavailable');
+      if(result.eligible!==true||!CODE.test(result.eligibilityToken)||!Number.isFinite(Date.parse(result.expiresAt)))throw Error('server_eligibility_invalid');
+      if(generation!==eligibilityGeneration||!state.foreground)throw Error('eligibility_stale');
+      eligibilityToken=result.eligibilityToken;eligibilityExpiresAt=Date.parse(result.expiresAt);
+      state.eligibilityStatus='active';state.error='';scheduleEligibilityRenewal();return eligibilityToken;
+    }finally{clearTimeout(verifyTimeout);}
+  })().catch(error=>{
+    if(generation===eligibilityGeneration){eligibilityToken='';eligibilityExpiresAt=0;state.integrityStatus=error.message.startsWith('integrity')?'unavailable':state.integrityStatus;state.eligibilityStatus=error.message==='server_eligibility_expired'?'expired':'unavailable';}
+    throw error;
+  }).finally(()=>{if(generation===eligibilityGeneration){eligibilityPromise=null;emit();}});
+  return eligibilityPromise;
+}
+function scheduleEligibilityRenewal(){
+  clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;
+  if(!eligibilityToken||!state.identity||!state.foreground)return;
+  const wait=Math.max(1000,eligibilityExpiresAt-Date.now()-60000);
+  eligibilityRenewTimer=setTimeout(()=>{
+    eligibilityRenewTimer=null;
+    if(!state.foreground||!state.identity)return;
+    ensureServerEligibility(true).catch(error=>{
+      state.ready=false;state.online=false;
+      root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();
+      setError(error);
+    });
+  },wait);
+}
+function setIntegrityResult(result){
+  const id=Number(result?.requestId),pending=integrityWaiters.get(id);
+  if(!pending||pending.generation!==eligibilityGeneration)return;
+  clearTimeout(pending.timer);integrityWaiters.delete(id);
+  if(result?.status==='ok'&&typeof result.token==='string'&&result.token.length>0){state.integrityStatus='passed';pending.resolve({token:result.token});}
+  else{state.integrityStatus='unavailable';pending.reject(Error('integrity_unavailable'));}
+  emit();
+}
 async function run(fn){
   if(state.busy)return null;
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return null;}
   if(!socialAccessAllowed()){state.error='Социјалните функции бараат потврден Google Play 18+ сигнал и согласност.';emit();return null;}
   state.busy=true;state.error='';emit();
-  try{return await fn();}catch(e){setError(e);return null;}
+  try{await ensureServerEligibility();return await fn();}catch(e){setError(e);return null;}
   finally{state.busy=false;emit();}
 }
 async function init(){
   state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
   state.server=String(native()?.socialApiUrl?.()||'').trim().replace(/\/$/,'');
   state.enabled=/^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(state.server);
+  state.foreground=native()?.socialForegroundActive?.()!==false;
   state.ageAllowed=native()?.ageSignalsAdultEligible?.()===true;
   state.ageStatus=state.ageAllowed?'adult_signal':'unchecked';
-  if(!state.socialConsented){state.online=false;state.ready=false;emit();return;}
-  if(!socialAccessAllowed()){state.online=false;emit();return;}
+  if(!state.socialConsented){state.online=false;state.ready=false;state.eligibilityStatus='consent_required';emit();return;}
+  if(!socialAccessAllowed()){state.online=false;state.ready=false;state.eligibilityStatus='age_required';emit();return;}
+  if(!state.foreground){state.online=false;state.ready=false;state.eligibilityStatus='background';emit();return;}
   credential=String(native()?.socialCredential?.()||'');
   if(!CODE.test(credential))credential='';
   const deep=native()?.socialPendingInvite?.();
@@ -83,12 +172,12 @@ async function init(){
   if(!state.enabled){state.error='Онлајн пријателите ќе се активираат кога серверот ќе добие јавна HTTPS адреса.';emit();return;}
   state.recoveryEnabled=!!(native()?.socialStoreCredential&&native()?.socialShowRecoveryKit&&
     native()?.socialGenerateRecoveryKey&&native()?.socialConfirmPreparedRecovery);
-  // Privacy invariant: no connection to the social server until a player opted in.
-  if(!credential){emit();return;}
-  try{const status=await request('status','GET',null,'');
+  // The server grants a short lease only after Age Signals + consent + Play Integrity.
+  // A fresh install receives an unbound lease which register() binds atomically.
+  try{await ensureServerEligibility();const status=await request('status','GET',null,'');
     state.online=status.ready===true;
     state.recoveryEnabled=status.accountRecoveryEnabled===true&&status.recoveryVersion===1;
-  }catch(e){state.online=false;state.recoveryEnabled=false;setError(e);}
+  }catch(e){state.online=false;state.ready=false;state.recoveryEnabled=false;setError(e);}
   if(state.online)await refresh();
   emit();
 }
@@ -97,7 +186,7 @@ async function refresh(){
     if(!credential){state.identity=null;state.friends=[];state.ready=false;return;}
     const me=await request('me');
     const list=await request('friends');
-    state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;
+    state.identity=me;state.friends=list.friends||[];state.ready=true;state.online=true;scheduleEligibilityRenewal();
   });
 }
 async function register(name){
@@ -124,7 +213,7 @@ async function register(name){
       throw Error('secure_storage_unavailable');
     }
     credential=secret;state.identity={id:response.id,nickname:response.nickname};
-    state.ready=true;state.online=true;state.recoveryEnabled=true;
+    state.ready=true;state.online=true;state.recoveryEnabled=true;scheduleEligibilityRenewal();
     // Native Dialog is screenshot-protected, not part of the HTML world.
     // The code is never persisted in the encrypted game archive or web storage.
     native().socialShowRecoveryKit(response.id,response.recoveryKey);
@@ -197,7 +286,7 @@ async function acceptPreparedRecovery(id,newKey){
   }
   credential=restored.credential;
   state.identity={id:restored.id,nickname:restored.nickname};
-  state.online=true;state.ready=true;
+  state.online=true;state.ready=true;scheduleEligibilityRenewal();
   const friends=await request('friends');state.friends=friends.friends||[];
   return state.identity;
  });
@@ -207,17 +296,51 @@ root.TrialumRecoveryKitAccepted=(id,key)=>{acceptPreparedRecovery(id,key);};
 function requestAgeCheck(){
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return false;}
   if(!native()?.requestAgeSignals){state.ageStatus='unavailable';state.error='За безбедна потврда е потребна официјалната Android апликација од Google Play.';emit();return false;}
-  state.ageAllowed=false;state.online=false;state.ready=false;state.identity=null;state.friends=[];
+  state.ageAllowed=false;state.online=false;state.ready=false;state.eligibilityStatus='age_required';eligibilityToken='';eligibilityExpiresAt=0;eligibilityGeneration++;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;
   root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();
-  state.error='';state.ageStatus='checking';emit();native().requestAgeSignals();return true;
+  state.error='';state.ageStatus='checking';emit();ageRequestId=Number(native().requestAgeSignals())||0;return ageRequestId>0;
 }
 function setAgeSignal(result){
+  if(Number(result?.requestId)!==ageRequestId||ageRequestId<=0)return false;
   if(!state.socialConsented){state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;emit();return;}
   const eligible=result?.status==='adult_signal'&&result?.adultEligible===true&&native()?.ageSignalsAdultEligible?.()===true;
   state.ageAllowed=eligible;state.ageStatus=eligible?'adult_signal':String(result?.status||'unavailable');
-  if(!eligible){state.online=false;state.ready=false;state.identity=null;state.friends=[];root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрастна група 18+.';emit();return;}
-  state.error='';emit();return init();
+  if(!eligible){eligibilityToken='';eligibilityExpiresAt=0;eligibilityGeneration++;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;state.eligibilityStatus='age_required';state.online=false;state.ready=false;root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();state.error='Социјалните функции остануваат заклучени: не е споделен сигнал за возрастна група 18+.';emit();return false;}
+  state.error='';emit();if(state.foreground)return init();return true;
 }
+function setForeground(active){
+  const wasForeground=state.foreground;
+  state.foreground=active===true;
+  if(!state.foreground){
+    eligibilityGeneration++;eligibilityToken='';eligibilityExpiresAt=0;eligibilityPromise=null;
+    clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;
+    for(const [id,pending] of integrityWaiters){clearTimeout(pending.timer);integrityWaiters.delete(id);pending.reject(Error('eligibility_background'));}
+    state.online=false;state.ready=false;state.eligibilityStatus='background';
+    root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();emit();return;
+  }
+  if(wasForeground)return;
+  state.eligibilityStatus='checking';emit();
+  if(state.socialConsented&&socialAccessAllowed())init();
+}
+function eligibilityHeaders(){
+  if(!state.foreground||!eligibilityToken||eligibilityExpiresAt<=Date.now())return {};
+  return {'X-Trialum-Eligibility':eligibilityToken};
+}
+const SocialEligibilityController=Object.freeze({
+  isAllowed:()=>state.foreground&&socialAccessAllowed()&&state.socialConsented&&
+    state.eligibilityStatus==='active'&&eligibilityExpiresAt>Date.now(),
+  isReady:()=>state.foreground&&socialAccessAllowed()&&state.socialConsented&&
+    state.eligibilityStatus==='active'&&eligibilityExpiresAt>Date.now()&&state.ready&&!!state.identity,
+  headers:eligibilityHeaders,
+  onForeground:setForeground,
+  onAgeSignal:setAgeSignal,
+  onIntegrityResult:setIntegrityResult,
+  renew:async()=>{eligibilityToken='';eligibilityExpiresAt=0;return init();},
+  snapshot:()=>({foreground:state.foreground,consent:state.socialConsented,
+    age:state.ageStatus,integrity:state.integrityStatus,eligibility:state.eligibilityStatus,
+    ready:state.ready})
+});
+root.TrialumSocialEligibilityController=SocialEligibilityController;
 async function invite(){
   return run(async()=>{
     if(!credential)throw Error('authentication_required');
@@ -258,13 +381,16 @@ async function remove(id,block=false){
   });
 }
 async function deleteAccount(){
-  return run(async()=>{
-    await request('account','DELETE');
+  if(!credential||!CODE.test(credential)){state.error='Нема активен профил за бришење на овој уред.';emit();return null;}
+  if(state.busy)return null;
+  state.busy=true;state.error='';emit();
+  try{
+    await request('account','DELETE',null,credential,{allowErase:true});
     native()?.pushDisable?.();
     native()?.socialClearCredential?.();
-    credential='';state.identity=null;state.ready=false;state.friends=[];state.code='';state.preview=null;state.pending='';
+    credential='';state.identity=null;state.ready=false;state.friends=[];state.code='';state.preview=null;state.pending='';eligibilityGeneration++;eligibilityToken='';eligibilityExpiresAt=0;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;
     return true;
-  });
+  }catch(e){setError(e);return null;}finally{state.busy=false;emit();}
 }
 function receive(raw){const code=parseCode(raw);if(!code)return false;state.pending=code;state.preview=null;emit();return true;}
 // Share sheets / Android intents are OUTSIDE the WebView DOM translator.
@@ -306,13 +432,14 @@ function render(){
       (english?'<p>Friends is optional. The offline game remains available if you choose “Not now”. Social features require current consent and an eligible 18+ Age Signals result in every build, including internal tests.</p><h4>What the service processes</h4><ul><li>Your random social profile ID, chosen nickname, friend links and invitations are sent to the Trialum social server to operate the social profile. Accepted friends may see the nickname and selected pet/profile details; shared-room members can see room activity and pet presence.</li><li>Messages travel over HTTPS, but the Trialum server processes them as readable text; stored records are encrypted at rest. Messages are not end-to-end encrypted. The sender, recipient and service operator can access message content while it is relayed. Message records expire within 7 days. Safety reports may be kept for up to 30 days.</li><li>Google Play may provide an age-range eligibility signal to this device. The app checks it on this device for this client; the signal is not sent to the Trialum server. The app does not send your Google email, date of birth or exact age to the Trialum social server.</li><li>Nearby friend discovery uses Android nearby-device permissions only when you start that action; Trialum does not collect location from it. If you separately enable push, Firebase receives a device push token for generic notifications; message text and friend names are not included in notification payloads. Android asks permission separately.</li><li>Your offline game save and local AI pet memories are not sent to the social server.</li><li>For optional account recovery, Trialum stores a one-way keyed verifier linked to your pseudonymous social ID. Your full recovery key is shown once on your device and is not stored as plaintext by the server or included in any game backup. After recovery, the old key and old device login are revoked. This does not restore the local world.</li></ul><h4>Safety and choices</h4><p>Do not share real names, email, phone, address, school, passwords, verification codes or precise location. Automated filters can miss personal information; other players may see content you send. You can block/report users, delete your social profile, or turn off social access on this device. Turning access off does not itself delete the server profile. Read the full <a href="https://dedopero.servegame.com/privacy-policy">Privacy Policy</a> and <a href="https://dedopero.servegame.com/user-agreement">User Agreement</a>.</p><p>Trialum social messages are not private from the service operator while relayed. Do not use them for sensitive or confidential information.</p>':
       '<p>Пријатели се опционални. Офлајн играта останува достапна ако избереш „Не сега“. Социјалните функции во сите изданија, вклучувајќи ги и интерните тестови, бараат тековна согласност и дозволен 18+ Age Signals резултат.</p><h4>Кои податоци ги обработува услугата</h4><ul><li>Твојот случаен социјален ID, избраниот прекар, пријателствата и поканите се испраќаат до Trialum социјалниот сервер за да работи профилот. Прифатените пријатели може да го видат прекарот и избраните детали за миленичето/профилот; членовите на заедничката игротека може да ја видат активноста и присуството на миленичето.</li><li>Пораките се пренесуваат преку HTTPS, но Trialum серверот ги обработува како читлив текст; зачуваните записи се шифрираат во мирување. Пораките не се end-to-end шифрирани. Испраќачот, примачот и операторот на услугата може да ја видат содржината додека се пренесува. Записите истекуваат најдоцна за 7 дена. Безбедносните пријави може да се чуваат до 30 дена.</li><li>Google Play може да му даде на овој уред сигнал за возрасна група. Апликацијата го проверува на уредот за овој клиент; сигналот не се испраќа до Trialum серверот. Апликацијата не ја испраќа твојата Google е-пошта, датум на раѓање или точна возраст до социјалниот сервер.</li><li>Пронаоѓањето близок пријател користи Android дозволи за блиски уреди само кога самиот ќе ја активираш функцијата; Trialum не собира локација од неа. Ако посебно ги вклучиш push известувањата, Firebase добива токен за уредот за испраќање општи известувања; текстот на пораките и имињата на пријателите не се во payload-от. Android бара дозвола посебно.</li><li>Офлајн зачувувањето и локалните AI-мемории на милениците не се испраќаат до социјалниот сервер.</li><li>За опционално враќање на профилот, Trialum чува само криптографски проверувач поврзан со твоето социјално ID. Целиот recovery-клуч се прикажува еднаш на уредот, не се чува како читлив текст на серверот и не влегува во бекапот. По враќање стариот клуч и старата најава се поништуваат. Локалниот свет се враќа од посебен бекап.</li></ul><h4>Безбедност и избор</h4><p>Не споделувај вистинско име, е-пошта, телефон, адреса, училиште, лозинка, код за потврда или точна локација. Автоматските филтри може да пропуштат лични податоци; другите играчи може да ја видат содржината што ја испраќаш. Можеш да блокираш/пријавиш корисници, да го избришеш социјалниот профил или да го исклучиш социјалниот пристап на овој уред. Исклучувањето само по себе не го брише серверскиот профил. Прочитај ги целосните <a href="https://dedopero.servegame.com/privacy-policy">Правила за приватност</a> и <a href="https://dedopero.servegame.com/user-agreement">Услови за користење</a>.</p><p>Пораките на Trialum не се приватни од операторот на услугата додека се пренесуваат. Не користи ги за чувствителни или доверливи информации.</p>')+
       '<label class="legal-check"><input id="socialConsentCheck" type="checkbox"><span>'+(english?'I understand the data and safety information and voluntarily enable Friends, shared play and messages.':'Ги разбирам податоците и безбедносните информации и доброволно ги вклучувам Пријатели, заедничката игротека и пораките.')+'</span></label><div class="btn-line"><button data-do="socialConsentLater">'+(english?'Not now':'Не сега')+'</button><button id="socialConsentEnable" class="primary" data-do="socialConsentAccept" disabled>'+(english?'I agree and enable social services':'Се согласувам и ги вклучувам социјалните услуги')+'</button></div><p class="small subtle">'+(english?'Your choice is stored only on this device and is not sent to Trialum.':'Изборот се чува само на овој уред и не се испраќа до Trialum.')+'</p></article>';
+    if(credential)html+='<div class="btn-line"><button data-do="socialDelete">'+(english?'Delete existing social profile':'Избриши го постојниот социјален профил')+'</button></div>';
     return html+'</section>';
   }
   if(!socialAccessAllowed()){
     html+='<div class="card"><h3>🔒 Социјалните функции се заклучени</h3><p class="desc">За онлајн социјални функции Google Play мора да сподели возрастна група 18+. Изворот може да е самопријавена возраст; тоа не е независна проверка на идентитет. Не бараме датум на раѓање, Google е-пошта или документ. Детски управуван, помлад, одбиен или непознат профил останува офлајн. Ако сигналот не е достапен, основната игра продолжува офлајн.</p>'+
       '<button class="primary" data-do="socialAgeCheck"'+(state.ageStatus==='checking'?' disabled':'')+'>🛡️ Провери возраст со Google Play</button>'+
       '<p class="small subtle">Статус: '+safe(state.ageStatus==='checking'?'Се проверува…':state.ageStatus==='adult_signal'?'Google Play пријавува возраст 18+':'Возрастниот сигнал не е достапен')+'</p>'+
-      (credential?'<p class="small">Постоен социјален профил е сочуван, но не се поврзува додека проверката не дозволи пристап.</p>':'')+'</div>';
+      (credential?'<p class="small">Постоен социјален профил е сочуван, но не се поврзува додека проверката не дозволи пристап.</p><div class="btn-line"><button data-do="socialDelete">'+(english?'Delete existing social profile':'Избриши го постојниот социјален профил')+'</button></div>':'')+'</div>';
     if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
     html+='<div class="btn-line"><button data-do="socialConsentDisable">Исклучи социјални услуги на овој уред</button></div>';
     return html+'</section>';
@@ -375,15 +502,23 @@ function render(){
   if(betaBuild&&!state.ageAllowed){
     html+='<div class="card beta-age-check"><h3>🧪 '+(english?'Beta tester tools':'Бета-тестерски алатки')+'</h3><p class="small">'+(english?'Internal tester tools do not bypass Age Signals. Social features stay locked until Google Play reports an eligible 18+ range and current consent is present.':'Бета-тестерските алатки не го заобиколуваат Age Signals. Социјалните функции остануваат заклучени додека Google Play не пријави дозволена возрастна група 18+ и не постои тековна согласност.')+'</p><button data-do="socialAgeCheck"'+(state.ageStatus==='checking'?' disabled':'')+'>'+(english?'Check Age Signals':'Провери Age Signals')+'</button><p class="small subtle">'+safe(state.ageStatus==='checking'?'Checking…':state.ageStatus)+'</p></div>';
   }
+  const gateStatus=state.eligibilityStatus==='active'?(english?'Social services are active':'Социјалните функции се активни'):
+    state.eligibilityStatus==='expired'?(english?'Server permission expired — refresh to reconnect':'Серверската дозвола истече — освежи за повторно поврзување'):
+    state.integrityStatus==='unavailable'?(english?'Play Integrity unavailable — try again':'Play Integrity не е достапен — пробај повторно'):
+    state.socialConsented&&state.ageAllowed?(english?'Waiting for Play Integrity and server confirmation':'Се чека Play Integrity и потврда од серверот'):
+    !state.socialConsented?(english?'Consent required':'Потребна е согласност'):
+    (english?'An eligible 18+ Age Signals result is required':'Потребен е дозволен 18+ резултат од Age Signals');
+  html+='<div class="card social-eligibility-status" role="status"><h3>'+(english?'Social access status':'Статус на социјалниот пристап')+'</h3><p>'+safe(gateStatus)+'</p>'+
+    (state.socialConsented&&state.ageAllowed&&state.eligibilityStatus!=='active'?'<button data-do="socialEligibilityRetry">'+(english?'Refresh eligibility':'Освежи ја проверката')+'</button>':'')+'</div>';
   html+='<div class="card social-consent-control"><h3>'+(english?'Your consent':'Твоја согласност')+'</h3><p class="small subtle">'+(english?'Social services are enabled only on this device. Turning them off stops further network use here; the server profile remains until you delete it using the delete button.':'Социјалните услуги се вклучени само на овој уред. Исклучувањето ја запира понатамошната мрежна употреба тука; серверскиот профил останува сè додека не го избришеш преку копчето за бришење.')+'</p><button data-do="socialConsentDisable">'+(english?'Turn off social services on this device':'Исклучи социјални услуги на овој уред')+'</button></div>';
   return html+'</section>';
 }
 async function setSocialConsent(enabled){
   if(enabled){if(!root.TrialumLegal?.grantSocialConsent?.())return false;state.socialConsented=true;state.error='';await init();emit();return true;}
-  if(root.TrialumLegal?.revokeSocialConsent?.()!==true)return false;state.socialConsented=false;state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;state.identity=null;state.friends=[];state.code='';state.preview=null;
+  if(root.TrialumLegal?.revokeSocialConsent?.()!==true)return false;state.socialConsented=false;state.ageAllowed=false;state.ageStatus='social_consent_required';state.online=false;state.ready=false;state.code='';state.preview=null;eligibilityGeneration++;eligibilityToken='';eligibilityExpiresAt=0;clearTimeout(eligibilityRenewTimer);eligibilityRenewTimer=null;state.eligibilityStatus='consent_required';
   root.TrialumMessages?.deactivate?.();root.TrialumShared?.deactivate?.();root.TrialumPeer?.clear?.();native()?.nearbyStop?.();emit();return true;
 }
-root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setSocialConsent,isAdultAllowed:()=>state.ageAllowed,isSocialAllowed:()=>socialAccessAllowed()&&state.socialConsented,isSocialProfileActive:()=>socialAccessAllowed()&&state.socialConsented&&state.ready&&!!state.identity,
+root.TrialumSocial={init,refresh,register,startRecovery,acceptPreparedRecovery,issueRecoveryKit,invite,revokeInvite,preview,accept,remove,deleteAccount,receive,share,inviteLink,nearbyEvent,render,parseCode,requestAgeCheck,setAgeSignal,setIntegrityResult,setForeground,setSocialConsent,eligibilityHeaders,retryEligibility:SocialEligibilityController.renew,isAdultAllowed:()=>state.ageAllowed,isSocialAllowed:SocialEligibilityController.isAllowed,isSocialProfileActive:SocialEligibilityController.isReady,
  setPending(value){state.pending=parseCode(value);state.preview=null;emit();},clearPreview(){state.preview=null;state.pending='';emit();},
  onChange(fn){changed=fn},getState(){return {...state,friends:state.friends.slice()}}};
 if(typeof module==='object'&&module.exports)module.exports={parseCode,inviteMessage};

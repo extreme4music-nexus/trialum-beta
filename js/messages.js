@@ -24,7 +24,7 @@ const randomId=()=>{
 };
 function config(){
  const api=server(),token=credential();
- state.enabled=root.TrialumSocial?.isSocialProfileActive?.()===true&&
+ state.enabled=root.TrialumSocialEligibilityController?.isReady?.()===true&&
   /^https:\/\/[a-z0-9.-]+(?::443)?$/i.test(api)&&/^[A-Za-z0-9_-]{43}$/.test(token);
  return state.enabled;
 }
@@ -47,7 +47,7 @@ async function req(path,method='GET',body=null){
  const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),8000);
  try{
   const r=await fetch(server()+'/v1/messages/'+path,{
-   method,headers:{Authorization:'Bearer '+credential(),...(body?{'Content-Type':'application/json'}:{})},
+   method,headers:{Authorization:'Bearer '+credential(),...(root.TrialumSocial?.eligibilityHeaders?.()||{}),...(body?{'Content-Type':'application/json'}:{})},
    ...(body?{body:JSON.stringify(body)}:{}),signal:ctrl.signal,
    cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
   });
@@ -102,11 +102,11 @@ async function receiveLive(m){
  await refresh();
 }
 function connect(){
- if(!state.active||!config()||!root.WebSocket||socket||!server())return;
+ if(!state.active||root.TrialumSocialEligibilityController?.isReady?.()!==true||!config()||!root.WebSocket||socket||!server())return;
  try{
   socket=new root.WebSocket(server().replace(/^https:/,'wss:')+'/v1/social/live');
   const current=socket;
-  current.addEventListener('open',()=>{if(socket===current)current.send(JSON.stringify({type:'auth',credential:credential()}));});
+  current.addEventListener('open',()=>{if(socket===current)current.send(JSON.stringify({type:'auth',credential:credential(),eligibilityToken:root.TrialumSocial?.eligibilityHeaders?.()?.['X-Trialum-Eligibility']||''}));});
   current.addEventListener('message',event=>{if(socket!==current)return;let message;try{message=JSON.parse(event.data);}catch(_){return;}receiveLive(message).catch(()=>{});});
   current.addEventListener('close',()=>{if(socket===current){socket=null;socketReady=false;state.transportOnline=false;sending.clear();emit();if(state.active)reconnectTimer=setTimeout(connect,4000);}});
   current.addEventListener('error',()=>{});
@@ -114,7 +114,7 @@ function connect(){
 }
 function activate(){
  if(state.active)return;
- if(root.TrialumSocial?.isSocialProfileActive?.()!==true){state.active=false;state.ready=false;emit();return;}
+ if(root.TrialumSocialEligibilityController?.isReady?.()!==true){state.active=false;state.ready=false;emit();return;}
  state.active=true;
  if(config())refresh();
  timer=setInterval(()=>{if(state.active && !root.document?.hidden)refresh()},25000);
