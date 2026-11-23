@@ -1,0 +1,47 @@
+name: V44 Android release-variant bundle smoke (not for Play)
+on:
+  push:
+    branches:
+      - fix/v44-android-social-attestation-20261123
+    paths:
+      - '.github/workflows/v44-social-attestation-bundle-smoke.yml'
+      - 'android-template/**'
+      - 'js/**'
+      - 'assets/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-variant-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build R8-minified internalBeta bundle (deliberately unconfigured)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This bundle is compile-only. NO Google Play project number or
+          # release signing is included, and NO artifact is published.
+          gradle -p android-template :app:bundleInternalBeta --no-daemon --stacktrace
+          bundle=$(find android-template/app/build/outputs/bundle/internalBeta -name '*.aab' -print -quit)
+          test -s "$bundle"
+          unzip -t "$bundle" >/dev/null
+          mapping=android-template/app/build/outputs/mapping/internalBeta/mapping.txt
+          test -s "$mapping"
+          echo 'R8-minified unsigned bundle compiled and ZIP-validated. Not a Play candidate; production configuration is absent.'
