@@ -68,6 +68,8 @@ The current Classic UI and future 2.5D scenes call the canonical engine. If an a
 
 Offline world simulation should remain local and playable. The social server may authorize online profiles, friends, shared rooms, preset messages, reports, and safety controls. It should not become a second source of truth for the local garden, offline job clock, or pet wallet unless a later, explicit cross-device/cloud-save design requires it. Any server feature must be enforced on the server as well as hidden/disabled in the UI.
 
+**Before exiting Closed Testing, migrate the social service from the private/home host to cloud.** During app-version adoption, old and new endpoints may both be reachable, but they must route to one canonical cloud data plane; do not run two independently writable profile databases. The old server may remain a restricted compatibility gateway until supported clients migrate. See [TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md](TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md).
+
 ## 4. Progression and unlock philosophy
 
 - Unlock the next layer through a mix of research, earned materials, completed goals, and world readiness.
@@ -116,6 +118,8 @@ Use one data-driven production catalogue and one canonical inventory:
 6. Route fruit and vegetables to cold storage; grains and shelf-stable goods to dry storage.
 7. Use facilities to consume exact inputs and create exact outputs: grain → mill → flour → bakery → baked goods, with later chains added through data.
 8. Use prepared food for pet feeding under the existing compatibility and household-reserve rules.
+
+The laboratory grows from basic resource actions into a safe, scientifically grounded research loop: hypothesis → experiment → success/inconclusive/failure → recorded learning and next attempt. Real chemistry principles should be modeled consistently, while fictional species remain fictional and the experience does not become an unsafe real-world synthesis manual. Cloud migration, future AI costs, and the no-ad/data-broker commitments are detailed in [TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md](TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md).
 
 Flora for a habitat and productive crops are distinct plant roles. Transplanting habitat flora must not accidentally consume a food crop. A newly created garden starts empty. Keep legacy planted world state in existing saves; do not grant free harvest or delete old plants during migration. The detailed staged plan is in [V47_GARDEN_CROPS_AND_PRODUCTION_ROADMAP.md](V47_GARDEN_CROPS_AND_PRODUCTION_ROADMAP.md).
 
@@ -204,10 +208,10 @@ Version labels below are **planning labels**, not confirmed Android version code
 
 | Planned increment | Goal | Scope and exit gate |
 | --- | --- | --- |
-| **v47 — Safety and source baseline** | Finish the currently active beta foundation. | Preset-only social client plus matching server enforcement, name localization, UI dropdown state fix, source/engine reconciliation. No claim of full child compliance; no server deployment/build until exact source and gates are verified. |
+| **v47 — Safety and source baseline** | Finish the currently active beta foundation. | Preset-only social client plus matching server enforcement, name localization, UI dropdown state fix, source/engine reconciliation. Cloud migration is a required gate before Closed Testing ends; it can use a separate cloud-migration build if the engine changes are not ready. No claim of full child compliance. |
 | **v48 — Engine contract and 2.5D world foundation** | Stabilize saved state and world navigation. | Source SHA reconciliation; command/event/query contract; save migration; world map and first unlockable spaces; state-driven interactive building panels; fresh garden empty; shared renderer-independent engine. Exit only with old saves and current Classic functionality preserved. |
 | **v49 — Garden and first crops** | Make planting and harvest real. | Seed/seedling production, empty beds, growth/care, first vegetable and fruit crops, duplicate-safe harvest. Actual produce enters typed warehouse storage. |
-| **v50 — Warehouse and first production chain** | Connect harvest to useful goods. | Cold and dry storage, mill/bakery recipe chain, capacity/transactions, food lab and pet-food compatibility. Exit when item conservation and save/restore work. |
+| **v50 — Warehouse, advanced lab, and first production chain** | Connect experiments and harvest to useful goods. | Cold and dry storage, mill/bakery recipe chain, capacity/transactions, food lab and pet-food compatibility; add safe hypothesis/experiment/error/research progression. Exit when item conservation, lab outcomes, and save/restore work. |
 | **v51 — Homes and currency ledgers** | Give player and each pet separate balances. | World Treasury + pet wallets, unlock costs, homes and belongings, auditable transaction ledger, migration from existing global credits. Keep currency name configurable until owner decision. |
 | **v52 — Needs, care, and first jobs** | Start the autonomous weekday simulation. | Hunger/health/rest, free emergency care path, clinic prototype, work eligibility, suitable jobs, eight-hour game shifts and weekends off, bounded offline reconciliation, paid wages from explicit source. |
 | **v53 — Bonds and family** | Make pet relationships persist across generations. | Player-pet and pet-pet bonds, mature-pet pairing, offspring, inherited fictional traits, housing/care capacity, bounded memory summaries and lineage UI. No free-form player chat in this increment. |
@@ -281,6 +285,9 @@ This document uses official policy sources as a planning baseline, not as a lega
 - FTC COPPA FAQ: https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions
 - Google Play Payments policy: https://support.google.com/googleplay/android-developer/answer/9858738?hl=en
 
+The owner's additional hosting, AI, revenue, no-ad, and persistent-time requirements are captured separately in [TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md](TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md).
+
 ## Change log
 
 - 2026-11-24: first consolidated global roadmap from the owner's direction: Classic 2.5D first, shared simulation engine, later 3D adapter, progressive world, wallets/jobs/needs/families/lifespan, future production, and age/parent/social safeguards. Version schedule is provisional and awaits more owner requirements.
+- 2026-11-24: added the pre-Closed-Test cloud-migration gate, one-authority dual-endpoint strategy, free/no-ad/data-broker commitment, local-vs-cloud AI modes, bounded action-unit recommendation, advanced-lab direction, and safe offline catch-up. See [TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md](TRIALUM_CLOUD_MIGRATION_AI_AND_REVENUE_PLAN.md).
