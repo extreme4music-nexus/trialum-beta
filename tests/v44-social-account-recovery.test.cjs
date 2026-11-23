@@ -18,12 +18,16 @@ function scenario({adult=true,consent=true,oldCredential='',serverRecovery=true}
   socialShowRecoveryKit:(id,key)=>shown.push({id,key}),
   socialGenerateRecoveryKey:()=>NEXT,
   socialConfirmPreparedRecovery:(id,key)=>confirmed.push({id,key}),
-  ageSignalsAdultEligible:()=>adult
+  ageSignalsAdultEligible:()=>adult,
+  requestSocialIntegrityToken:(id,action,version,subject)=>context.TrialumSocialIntegrityEvent({
+    requestId:id,ok:true,token:'I'.repeat(220)
+  })
  };
  const context={
   console,URL,AbortController,setTimeout,clearTimeout,
+  crypto:require('node:crypto').webcrypto,
   TrialumAndroid:native,TrialumLegal:{socialAccepted:()=>consent,grantSocialConsent:()=>true,
-   revokeSocialConsent:()=>true},
+   revokeSocialConsent:()=>true,setSocialConsentVersion:version=>version==='trialum-social-v1'},
   TrialumI18n:{language:()=> 'en',t:v=>v},
   TrialumPrivacyGuard:{inspect:()=>({blocked:false})},
   TrialumMessages:{deactivate(){}},TrialumShared:{deactivate(){}},
@@ -32,7 +36,11 @@ function scenario({adult=true,consent=true,oldCredential='',serverRecovery=true}
    const route=url.split('/v1/social/')[1],body=options.body?JSON.parse(options.body):null;
    requests.push({route,method:options.method,body,authorization:options.headers.Authorization||''});
    let data={};
-   if(route==='status')data={ready:true,accountRecoveryEnabled:serverRecovery,recoveryVersion:1};
+   if(route==='status')data={ready:true,accountRecoveryEnabled:serverRecovery,recoveryVersion:1,
+      socialAttestationReady:true,socialConsentVersion:'trialum-social-v1',socialEligibilityRequired:false,
+      registrationIntegrityRequired:false};
+   else if(route==='eligibility/status')data={eligible:true,profileId:UUID,
+      expiresAt:new Date(Date.now()+86400000).toISOString()};
    else if(route==='register'){
     if(!serverRecovery)return {ok:false,json:async()=>({error:'recovery_unavailable'})};
     profile={id:UUID,nickname:'Cris'};
@@ -42,7 +50,7 @@ function scenario({adult=true,consent=true,oldCredential='',serverRecovery=true}
    else if(route==='recovery/restore')data={id:UUID,nickname:'Cris',credential:TOKEN,
      recoveryKitRotated:true};
    else if(route==='recovery/issue')data={id:UUID,recoveryKey:KEY,recoveryKitVersion:1};
-   return {ok:true,json:async()=>data};
+   return {ok:true,status:200,json:async()=>data};
   }
  };
  context.globalThis=context;
@@ -52,7 +60,8 @@ function scenario({adult=true,consent=true,oldCredential='',serverRecovery=true}
 test('new profile displays one-time 256-bit recovery kit in native UI, never world JSON',async()=>{
  const s=scenario();
  await s.api.init();
- assert.equal(s.requests.length,0,'no network when user has not created a profile');
+ assert.deepEqual(s.requests.map(v=>v.route),['status'],
+   'only the consented capability discovery may run before profile creation');
  const profile=await s.api.register('Cris');
  assert.equal(profile.id,UUID);
  assert.equal(s.shown.length,1);
@@ -69,7 +78,8 @@ test('same-ID recovery makes no request until NEW key was shown and acknowledged
  const s=scenario();await s.api.init();
  assert.equal(s.api.startRecovery(UUID,KEY),true);
  assert.deepEqual(s.confirmed,[{id:UUID,key:NEXT}]);
- assert.equal(s.requests.length,0,'no pre-confirm rotation of server credentials');
+ assert.equal(s.requests.some(v=>v.route==='recovery/restore'),false,
+   'no rotation of server credentials until native confirmation');
  s.context.TrialumRecoveryKitAccepted(UUID,NEXT);
  await new Promise(r=>setImmediate(r));
  const restore=s.requests.find(x=>x.route==='recovery/restore');
