@@ -187,8 +187,11 @@ function setError(e){
   emit();
 }
 async function request(path,method='GET',body=null,key=credential){
-  if(!state.socialConsented)throw Error('social_consent_required');
-  if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true)throw Error('age_gate_required');
+  const recoveryOperation=path==='recovery/restore'||path==='recovery/issue';
+  if(!recoveryOperation){
+    if(!state.socialConsented)throw Error('social_consent_required');
+    if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true)throw Error('age_gate_required');
+  }
   if(!state.server)throw Error('social_service_disabled');
   // Only eligibility, recovery and deletion endpoints run before an online session.
   const preflight=path==='status'||path==='register'||path==='eligibility/status'||
@@ -223,6 +226,15 @@ async function run(fn){
   state.busy=true;state.error='';emit();
   try{return await fn();}catch(e){setError(e);return null;}
   finally{state.busy=false;emit();}
+}
+// Explicit recovery uses the 256-bit kit and does not authorize online social play.
+// It stays accessible while Age Signals or server eligibility is unavailable.
+async function runRecovery(fn){
+ if(state.busy)return null;
+ state.busy=true;state.error='';emit();
+ try{return await fn();}
+ catch(e){setError(e);return null;}
+ finally{state.busy=false;emit();}
 }
 async function init(){
   state.socialConsented=root.TrialumLegal?.socialAccepted?.()===true;
@@ -356,7 +368,7 @@ async function register(name){
 // A currently authenticated owner can rotate/reissue a lost kit. Pre-v44
 // accounts must use this on their existing device before uninstalling.
 async function issueRecoveryKit(){
- return run(async()=>{
+ return runRecovery(async()=>{
   if(!state.identity||!credential||!state.recoveryEnabled||
      !native()?.socialShowRecoveryKit)throw Error('recovery_unavailable');
   const en=root.TrialumI18n?.language?.()==='en';
@@ -373,9 +385,8 @@ async function issueRecoveryKit(){
 // Phase 1: display a NEW 256-bit key in native secure UI BEFORE changing
 // anything on the server. The user confirms that it is saved.
 function startRecovery(id,key){
- if(state.busy||!state.socialConsented||!state.ageAllowed||
-   native()?.ageSignalsAdultEligible?.()!==true)return false;
- if(!state.recoveryEnabled||!native()?.socialGenerateRecoveryKey||
+ if(state.busy)return false;
+ if(!native()?.socialGenerateRecoveryKey||
    !native()?.socialConfirmPreparedRecovery||!native()?.socialStoreCredential){
   state.error='Безбедното враќање не е достапно во оваа верзија на Android.';
   emit();return false;
@@ -406,7 +417,7 @@ async function acceptPreparedRecovery(id,newKey){
  pendingRecovery=null;
  if(!pending||Date.now()>pending.expires||pending.id!==id||
    pending.nextKey!==newKey)return null;
- return run(async()=>{
+ return runRecovery(async()=>{
   const restored=await request('recovery/restore','POST',{
    id:pending.id,recoveryKey:pending.oldKey,nextRecoveryKey:pending.nextKey
   },'');
@@ -536,6 +547,18 @@ function nearbyEvent(event){
   }
   emit();
 }
+function recoveryControls(english){
+ if(!native()?.socialGenerateRecoveryKey||!native()?.socialConfirmPreparedRecovery||
+    !native()?.socialStoreCredential)return '';
+ return '<div class="card social-recovery" data-no-translate><h3>🔐 '+
+  (english?'Restore social profile with your recovery kit':'Врати социјален профил со recovery-клуч')+'</h3>'+
+  '<p class="small">'+(english?
+  'Recovery does not enable Friends. Social access still needs a fresh Google Play age check, consent and server attestation.':
+  'Враќањето не ги отклучува Пријатели. За онлајн функции повторно се потребни Google Play возрастна проверка, согласност и серверска потврда.')+'</p>'+
+  '<label for="socialRestoreId">Profile ID</label><input id="socialRestoreId" maxlength="36" autocomplete="off" spellcheck="false">'+
+  '<label for="socialRestoreSecret">Recovery key</label><input id="socialRestoreSecret" type="password" maxlength="43" autocomplete="off" spellcheck="false">'+
+  '<button class="primary" data-do="socialRestoreStart">'+(english?'Restore existing profile':'Врати постоен профил')+'</button></div>';
+}
 function render(){
   const english=root.TrialumI18n?.language?.()==='en';
   const label=state.online?(english?'Connected to the Friends server':'Поврзано со серверот за пријатели'):(state.enabled?(state.identity?(english?'The server is currently unavailable':'Серверот моментално е недостапен'):(english?'Connect to the Friends server voluntarily':'Поврзи се доброволно со серверот за пријатели')):(english?'The online server is not configured for this version':'Онлајн серверот не е конфигуриран за оваа верзија'));
@@ -547,6 +570,7 @@ function render(){
       '<p>Пријатели се опционални. Офлајн играта останува достапна ако избереш „Не сега“. Заедничката игротека и пораките се достапни само откако ќе ги вклучиш Пријатели, ќе создадеш профил и овој клиент ќе добие дозволен возрастен сигнал 18+. Ако сигналот не е достапен или не е соодветен, социјалните функции остануваат заклучени.</p><h4>Кои податоци ги обработува услугата</h4><ul><li>Твојот случаен социјален ID, избраниот прекар, пријателствата и поканите се испраќаат до Trialum социјалниот сервер за да работи профилот. Прифатените пријатели може да го видат прекарот и избраните детали за миленичето/профилот; членовите на заедничката игротека може да ја видат активноста и присуството на миленичето.</li><li>Пораките се пренесуваат преку HTTPS, но Trialum серверот ги обработува како читлив текст; зачуваните записи се шифрираат во мирување. Пораките не се end-to-end шифрирани. Испраќачот, примачот и операторот на услугата може да ја видат содржината додека се пренесува. Записите истекуваат најдоцна за 7 дена. Безбедносните пријави може да се чуваат до 30 дена.</li><li>Google Play може да му даде на овој уред сигнал за возрасна група. Апликацијата го проверува на уредот за овој клиент; сигналот не се испраќа до Trialum серверот. Апликацијата не ја испраќа твојата Google е-пошта, датум на раѓање или точна возраст до социјалниот сервер.</li><li>По посебна согласност и дозволен локален 18+ сигнал, Trialum испраќа краткотраен Google Play Integrity токен до својот сервер, кој го препраќа до Google за проверка на апликацијата, уредот и барањето. Play Integrity НЕ ја докажува возраста. Серверот ги чува верзијата и времето на социјалната согласност и времето на проверката, не Age Signals одговорот или самиот токен. Повлекувањето согласност ја поништува серверската дозвола без бришење на профилот.</li><li>Пронаоѓањето близок пријател користи Android дозволи за блиски уреди само кога самиот ќе ја активираш функцијата; Trialum не собира локација од неа. Ако посебно ги вклучиш push известувањата, Firebase добива токен за уредот за испраќање општи известувања; текстот на пораките и имињата на пријателите не се во payload-от. Android бара дозвола посебно.</li><li>Офлајн зачувувањето и локалните AI-мемории на милениците не се испраќаат до социјалниот сервер.</li><li>За опционално враќање на профилот, Trialum чува само криптографски проверувач поврзан со твоето социјално ID. Целиот recovery-клуч се прикажува еднаш на уредот, не се чува како читлив текст на серверот и не влегува во бекапот. По враќање стариот клуч и старата најава се поништуваат. Локалниот свет се враќа од посебен бекап.</li></ul><h4>Безбедност и избор</h4><p>Не споделувај вистинско име, е-пошта, телефон, адреса, училиште, лозинка, код за потврда или точна локација. Автоматските филтри може да пропуштат лични податоци; другите играчи може да ја видат содржината што ја испраќаш. Можеш да блокираш/пријавиш корисници, да го избришеш социјалниот профил или да го исклучиш социјалниот пристап на овој уред. Исклучувањето само по себе не го брише серверскиот профил. Прочитај ги целосните <a href="https://dedopero.servegame.com/privacy-policy">Правила за приватност</a> и <a href="https://dedopero.servegame.com/user-agreement">Услови за користење</a>.</p><p>Пораките на Trialum не се приватни од операторот на услугата додека се пренесуваат. Не користи ги за чувствителни или доверливи информации.</p>')+
       '<label class="legal-check"><input id="socialConsentCheck" type="checkbox"><span>'+(english?'I understand the data and safety information and voluntarily enable Friends, shared play and messages.':'Ги разбирам податоците и безбедносните информации и доброволно ги вклучувам Пријатели, заедничката игротека и пораките.')+'</span></label><div class="btn-line"><button data-do="socialConsentLater">'+(english?'Not now':'Не сега')+'</button><button id="socialConsentEnable" class="primary" data-do="socialConsentAccept" disabled>'+(english?'I agree and enable social services':'Се согласувам и ги вклучувам социјалните услуги')+'</button></div><p class="small subtle">'+(english?'Consent is recorded on this device and its version/time are sent to Trialum with registration or renewal; no age signal is uploaded.':'Согласноста се чува на уредот; нејзината верзија и време се праќаат до Trialum при регистрација или обновување. Возрастниот сигнал не се испраќа.')+'</p></article>';
     if(hasSavedCredential())html+='<div class="card"><p class="small">Постојниот социјален профил е сочуван. Можеш да го избришеш дури и без нова потврда.</p><button data-do="socialDelete">Избриши го серверскиот профил</button></div>';
+    html+=recoveryControls(english);
     return html+'</section>';
   }
   if(!state.ageAllowed){
@@ -557,6 +581,7 @@ function render(){
     if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
     html+='<div class="btn-line"><button data-do="socialConsentDisable">Исклучи социјални услуги на овој уред</button></div>';
     if(hasSavedCredential())html+='<div class="card"><button data-do="socialDelete">Избриши го серверскиот профил (без Age Signals)</button></div>';
+    html+=recoveryControls(english);
     return html+'</section>';
   }
   if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
