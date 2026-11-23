@@ -94,9 +94,7 @@ jobs:
           test -s "$APK" && test -s "$AAB" && test -s "$MAPPING"
           BADGING=$("$AAPT" dump badging "$APK")
           printf '%s\n' "$BADGING" | grep -Fq "package: name='com.trialum.ziivaiskra' versionCode='45' versionName='1.4 v45'"
-          MANIFEST=$(find android-template/app/build/intermediates/merged_manifest -path '*internalBeta*' -name AndroidManifest.xml -type f | head -n 1)
-          test -n "$MANIFEST"
-          grep -Eq '<uses-feature[^>]*android:name="android.hardware.microphone"[^>]*android:required="false"' "$MANIFEST"
+          printf '%s\n' "$BADGING" | grep -Fq "uses-feature-not-required: name='android.hardware.microphone'"
           mkdir -p candidates
           cp "$AAB" candidates/Trialum-1.4-v45-internalBeta-UNSIGNED.aab
           cp "$MAPPING" candidates/mapping.txt
