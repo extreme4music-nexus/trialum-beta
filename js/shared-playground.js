@@ -69,7 +69,12 @@ async function req(path,method='GET',body=null){
    ...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal,
    cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
   const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw Object.assign(Error(data.error||'server_error'),{status:r.status});
+  if(!r.ok){
+   const code=String(data.error||'server_error');
+   if(r.status===428||code==='session_revoked'||code==='social_consent_required')
+     root.TrialumSocial?.handleTransportClose?.({code:1008,reason:code});
+   throw Object.assign(Error(code),{status:r.status});
+  }
   return data;
  }finally{clearTimeout(timeout);}
 }
@@ -306,7 +311,7 @@ function connect(){
    scheduled=setTimeout(()=>{scheduled=null;refresh().catch(()=>{});},180);
   }
  });
- socket.addEventListener('close',()=>{if(ws===socket){ws=null;wsReady=false;subscribed='';subscribedLanguage='';if(st.active)setTimeout(()=>{if(st.active)connect();},4000);}});
+ socket.addEventListener('close',event=>{if(ws===socket){ws=null;wsReady=false;subscribed='';subscribedLanguage='';if(root.TrialumSocial?.handleTransportClose?.(event))return;if(st.active)setTimeout(()=>{if(st.active)connect();},4000);}});
  socket.addEventListener('error',()=>{});
 }
 function onForeground(){
