@@ -98,7 +98,7 @@ test('internal beta unlocks social after consent without granting an adult signa
  assert.equal(h.api.isAdultAllowed(),false,'beta access is not represented as a Google age result');
  assert.equal(h.api.getState().ageStatus,'beta_test_access');
  assert.equal(h.api.isSocialAllowed(),true);
- assert.equal(h.api.isSocialProfileActive(),true);
+ assert.equal(h.api.isSocialProfileActive(),true,JSON.stringify({state:h.api.getState(),calls:h.calls}));
  assert(h.calls.some(x=>x.url.endsWith('/v1/social/me')));
  await h.api.setAgeSignal({status:'not_shared',adultEligible:false});
  assert.equal(h.api.isSocialAllowed(),true,'a failed optional signal must not relock the internal beta');
