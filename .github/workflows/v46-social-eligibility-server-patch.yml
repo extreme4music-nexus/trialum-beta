@@ -1,0 +1,22 @@
+name: v46 social eligibility server patch tests
+on:
+  push:
+    branches:
+      - feature/v46-social-eligibility-controller-20261123
+    paths:
+      - 'server-patch/v46/**'
+      - '.github/workflows/v46-social-eligibility-server-patch.yml'
+permissions:
+  contents: read
+jobs:
+  server-patch-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run deterministic eligibility policy tests
+        run: node --test server-patch/v46/tests/social-eligibility.test.mjs
