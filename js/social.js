@@ -64,7 +64,7 @@ async function request(path,method='GET',body=null,key=credential){
 async function run(fn){
   if(state.busy)return null;
   if(!state.socialConsented){state.error='Прво прочитај и прифати ги условите за социјалните услуги.';emit();return null;}
-  if(!state.ageAllowed||native()?.ageSignalsAdultEligible?.()!==true){state.error='Социјалните функции бараат потврден Google Play 18+ сигнал и согласност.';emit();return null;}
+  if(!socialAccessAllowed()){state.error='Социјалните функции бараат потврден Google Play 18+ сигнал и согласност.';emit();return null;}
   state.busy=true;state.error='';emit();
   try{return await fn();}catch(e){setError(e);return null;}
   finally{state.busy=false;emit();}
