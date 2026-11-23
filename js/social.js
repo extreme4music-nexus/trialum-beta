@@ -107,6 +107,7 @@ async function ensureEligibility(){
  eligibilityBusy=(async()=>{
   const generation=sessionGeneration;
   state.eligibilityReady=false;
+  stopSocialClients();
   let status;
   try{status=await request('eligibility/status');}
   catch(e){if(e?.message!=='eligibility_attestation_required')throw e;status={eligible:false};}
@@ -180,7 +181,7 @@ function setError(e){
     eligibility_proof_invalid:'Google проверката не успеа. Повтори Age Signals, па побарај нова потврда.',
     social_consent_required:'Прегледај ги и прифати ги тековните социјални услови.',
     client_update_required:'Потребно е ажурирање на апликацијата за новиот договор.',
-    registration_outcome_unknown:'Не е познато дали регистрацијата успеала. НЕ повторувај автоматски; провери го постојниот профил или recovery клучот.'
+    registration_outcome_unknown:'Исходот на регистрацијата е неизвесен. Не создавај нов профил додека не го провериш постојниот; локалниот свет е безбеден.'
   };
   state.error=map[e?.message]||'Не успеа поврзувањето. Провери интернет и сервер.';
   emit();
@@ -274,6 +275,8 @@ async function refresh(){
 }
 async function register(name){
  return run(async()=>{
+  const registrationSession=sessionGeneration;
+  if(state.registrationOutcomeUnknown)throw Error('registration_outcome_unknown');
   if(!state.enabled||!native()?.socialStoreCredential||!state.attestationReady)
     throw Error('integrity_verification_unavailable');
   if(credential||hasSavedCredential())throw Error('authentication_required');
@@ -302,8 +305,12 @@ async function register(name){
       nicknamePrivacyConfirmed:true,integrityToken
     });
   }catch(e){
-    if(e?.name==='AbortError'||e?.message==='server_unavailable')
+    // Timeout, dropped response, or transport failure can occur AFTER the server
+    // created a profile. Lock in-session re-registration until a deliberate review.
+    if(!Number.isInteger(e?.status)||e?.name==='AbortError'){
+      state.registrationOutcomeUnknown=true;
       throw Error('registration_outcome_unknown');
+    }
     throw e;
   }
   const secret=response.credential;
@@ -316,10 +323,25 @@ async function register(name){
   if(!stored)throw Error('secure_storage_unavailable');
   credential=secret;
   state.identity={id:response.id,nickname:response.nickname};
-  state.eligibilityReady=true;state.ready=true;state.online=true;state.recoveryEnabled=true;
-  const list=await request('friends').catch(()=>({friends:[]}));
-  state.friends=list.friends||[];emit();
-  return state.identity;
+  state.recoveryEnabled=true;state.registrationOutcomeUnknown=false;
+  state.eligibilityReady=false;state.ready=false;state.friends=[];
+  if(registrationSession!==sessionGeneration||!state.socialConsented||!nativeAdult()){
+    // If consent was revoked while the POST was in flight, the newly returned
+    // bearer must revoke server eligibility; never activate this session.
+    markRevokePending(true);
+    await flushPendingRevoke();
+    emit();return state.identity;
+  }
+  try{
+    // Even in rollout compatibility mode, the app must not open REST/WSS
+    // until it has verified the resulting eligibility status.
+    await ensureEligibility();
+    if(onlineReady()){
+      const list=await request('friends').catch(()=>({friends:[]}));
+      state.friends=list.friends||[];state.ready=true;state.online=true;
+    }
+  }catch(e){state.ready=false;setError(e);}
+  emit();return state.identity;
  });
 }
 // A currently authenticated owner can rotate/reissue a lost kit. Pre-v44
@@ -529,6 +551,7 @@ function render(){
     return html+'</section>';
   }
   if(state.error)html+='<div class="notice social-warning" role="status">'+safe(state.error)+'</div>';
+  if(state.registrationOutcomeUnknown)html+='<div class="notice social-warning">Претходната регистрација можеби успеала. Не повторувај регистрација во оваа сесија; прво провери го профилот и recovery податоците.</div>';
   if(!state.enabled){html+='<div class="notice">🔒 Заедничките пријателства ќе бидат достапни кога ќе се поврзе безбедната HTTPS адреса. Дотогаш твоите миленици остануваат локално зачувани.</div>';}
   else if(hasSavedCredential()&&!state.ready){
     html+='<div class="card"><h3>🔐 Постоечкиот социјален профил е зачуван</h3>'+
@@ -540,7 +563,7 @@ function render(){
     html+='<div class="card social-hero"><h3>✨ Создај приватен профил за дружба</h3>'+
       '<p class="desc">Користи измислен прекар, не вистинско име, контакт, училиште или локација. Пријателството се воспоставува само со двострана потврда. Таен клуч се чува во Android Keystore, не во светот или JSON бекап.</p>'+ 
       '<label for="socialNick">Име во играта</label><input id="socialNick" maxlength="32" autocomplete="off" placeholder="Чувар на искра">'+
-      '<div class="btn-line"><button class="primary" data-do="socialRegister"'+(state.busy||!state.recoveryEnabled?' disabled':'')+'>'+
+      '<div class="btn-line"><button class="primary" data-do="socialRegister"'+(state.busy||!state.recoveryEnabled||state.registrationOutcomeUnknown?' disabled':'')+'>'+
         (english?'Create profile':'Создај профил')+'</button></div>'+
       (!state.recoveryEnabled?'<p class="notice">'+(english?
        'Safe account recovery requires the updated private server. Registration is paused until the server upgrade.':
