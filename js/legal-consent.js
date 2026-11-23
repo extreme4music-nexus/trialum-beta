@@ -2,10 +2,19 @@
 (function(root){
 'use strict';
 const TERMS_KEY='trialum.terms.accepted.v44';
-const SOCIAL_KEY='trialum.social.consent.v39';
+const SOCIAL_KEY='trialum.social.consent.versioned.v44';
+const LEGACY_SOCIAL_KEY='trialum.social.consent.v39';
+let currentSocialConsentVersion='trialum-social-v1';
 const AGREEMENT_VERSION=44;
 const accepted=()=>{try{const value=JSON.parse(localStorage.getItem(TERMS_KEY)||'null');return value?.version===AGREEMENT_VERSION&&typeof value?.acceptedAt==='string';}catch(_){return false;}};
-const socialAccepted=()=>{try{return localStorage.getItem(SOCIAL_KEY)==='accepted';}catch(_){return false;}};
+const socialConsentRecord=()=>{try{
+ const value=JSON.parse(localStorage.getItem(SOCIAL_KEY)||'null');
+ return value&&typeof value==='object'?value:null;
+}catch(_){return null;}};
+const socialAccepted=()=>{
+ const value=socialConsentRecord();
+ return value?.version===currentSocialConsentVersion&&typeof value.acceptedAt==='string';
+};
 function save(key,value){try{localStorage.setItem(key,value);return true;}catch(_){return false;}}
 function tr(text){return root.TrialumI18n?.t?.(text)??text;}
 function agreementAsset(){const language=root.TrialumI18n?.language?.()||'en';return language==='en'?'assets/user-agreement-v44.html':'assets/user-agreement-v44-'+language+'.html';}
@@ -48,7 +57,20 @@ function showPrivacyPolicy(){
 }
 function requireTerms(){return showTerms(false);}
 root.TrialumLegal={requireTerms,openTerms:()=>showTerms(true),openPrivacyPolicy:showPrivacyPolicy,termsAccepted:accepted,socialAccepted,
- grantSocialConsent(){return save(SOCIAL_KEY,'accepted');},
- revokeSocialConsent(){try{localStorage.removeItem(SOCIAL_KEY);return true;}catch(_){return false;}}
+ socialConsentVersion:()=>currentSocialConsentVersion,
+ setSocialConsentVersion(version){
+   // Unknown consent text cannot be accepted by an older build.
+   if(version!=='trialum-social-v1')return false;
+   currentSocialConsentVersion=version;
+   return true;
+ },
+ grantSocialConsent(){return save(SOCIAL_KEY,JSON.stringify({
+   version:currentSocialConsentVersion,acceptedAt:new Date().toISOString()
+ }));},
+ revokeSocialConsent(){try{
+   localStorage.removeItem(SOCIAL_KEY);
+   localStorage.removeItem(LEGACY_SOCIAL_KEY);
+   return true;
+ }catch(_){return false;}}
 };
 })(typeof globalThis!=='undefined'?globalThis:this);
