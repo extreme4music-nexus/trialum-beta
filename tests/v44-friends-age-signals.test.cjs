@@ -1,4 +1,4 @@
-/* Trialum v44 — Google Play Age Signals adult gate, non-tester social access. */
+/* Trialum v45 — internal-beta social access with production Age Signals gate. */
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const vm=require('node:vm'),path=require('node:path');
@@ -67,7 +67,7 @@ test('unknown/declined age always offline, including saved bearer and QA bypass'
  assert.equal(blocked,null);
  assert.equal(h.calls.length,0);
 });
-test('user can request Play age signal without beta tester permission',async()=>{
+test('release users can request Play Age Signals without beta tester tools',async()=>{
  const h=harness({consent:true,adult:false,beta:false,credential:''});
  await h.api.init();
  assert.equal(h.api.requestAgeCheck(),true);
@@ -92,12 +92,36 @@ test('reject unsupported status and native revoked eligibility after result',asy
  h.age(false);
  assert.equal(h.api.isSocialAllowed(),false,'native state is checked again on access');
 });
-test('Friends, messages and playground have no beta allowlist hard gate',()=>{
- for(const file of ['js/social.js','js/messages.js','js/shared-playground.js']){
-  const s=source(file);
-  assert(!s.includes('betaTesterToolsEnabled'),file);
-  assert(!s.includes('qaSocialAgeBypass'),file);
-  assert(s.includes('isSocialProfileActive')||s.includes('ageSignalsAdultEligible'),file);
+test('internal beta unlocks social after consent without granting an adult signal',async()=>{
+ const h=harness({consent:true,adult:false,beta:true,credential:'x'.repeat(43)});
+ await h.api.init();
+ assert.equal(h.api.isAdultAllowed(),false,'beta access is not represented as a Google age result');
+ assert.equal(h.api.getState().ageStatus,'beta_test_access');
+ assert.equal(h.api.isSocialAllowed(),true);
+ assert.equal(h.api.isSocialProfileActive(),true);
+ assert(h.calls.some(x=>x.url.endsWith('/v1/social/me')));
+ await h.api.setAgeSignal({status:'not_shared',adultEligible:false});
+ assert.equal(h.api.isSocialAllowed(),true,'a failed optional signal must not relock the internal beta');
+ assert.equal(h.api.isSocialProfileActive(),true);
+});
+test('internal beta still requires explicit social consent',async()=>{
+ const h=harness({consent:false,adult:false,beta:true,credential:'x'.repeat(43)});
+ await h.api.init();
+ assert.equal(h.api.isSocialAllowed(),false);
+ assert.equal(h.api.isSocialProfileActive(),false);
+ assert.equal(h.calls.length,0,'no social-server request before consent');
+});
+test('only the internal-beta build can bypass Age Signals; release and shared clients keep their gates',()=>{
+ const social=source('js/social.js');
+ const gradle=source('android-template/app/build.gradle.kts');
+ assert(social.includes('betaTestBuild=()=>native()?.betaTesterToolsEnabled?.()===true'));
+ assert(gradle.includes('buildConfigField("Boolean", "BETA_TESTER_TOOLS", "false")'));
+ assert(gradle.includes('create("internalBeta")'));
+ for(const file of ['js/messages.js','js/shared-playground.js']){
+  const content=source(file);
+  assert(!content.includes('betaTesterToolsEnabled'),file);
+  assert(!content.includes('qaSocialAgeBypass'),file);
+  assert(content.includes('isSocialProfileActive'),file);
  }
 });
 test('Android uses current Age Signals 0.0.6 and shared 18+ A/C/D sources',()=>{
