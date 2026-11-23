@@ -52,7 +52,12 @@ async function req(path,method='GET',body=null){
    cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'
   });
   const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(data.error||'network_error');
+  if(!r.ok){
+   const code=String(data.error||'network_error');
+   if(r.status===428||code==='session_revoked'||code==='social_consent_required')
+     root.TrialumSocial?.handleTransportClose?.({code:1008,reason:code});
+   throw Error(code);
+  }
   return data;
  }finally{clearTimeout(timeout);}
 }
@@ -108,7 +113,7 @@ function connect(){
   const current=socket;
   current.addEventListener('open',()=>{if(socket===current)current.send(JSON.stringify({type:'auth',credential:credential()}));});
   current.addEventListener('message',event=>{if(socket!==current)return;let message;try{message=JSON.parse(event.data);}catch(_){return;}receiveLive(message).catch(()=>{});});
-  current.addEventListener('close',()=>{if(socket===current){socket=null;socketReady=false;state.transportOnline=false;sending.clear();emit();if(state.active)reconnectTimer=setTimeout(connect,4000);}});
+  current.addEventListener('close',event=>{if(socket===current){socket=null;socketReady=false;state.transportOnline=false;sending.clear();emit();if(root.TrialumSocial?.handleTransportClose?.(event))return;if(state.active)reconnectTimer=setTimeout(connect,4000);}});
   current.addEventListener('error',()=>{});
  }catch(_){socket=null;state.transportOnline=false;}
 }
